@@ -229,12 +229,6 @@
 /* Define to 1 if you have the `ftruncate' function. */
 #undef HAVE_FTRUNCATE
 
-/* Define to 1 if you have the <gdbm.h> header file. */
-#undef HAVE_GDBM_H
-
-/* Define to 1 if you have the `gdbm_open' function. */
-#undef HAVE_GDBM_OPEN
-
 /* Define to 1 if you have the `getcchar' function. */
 #undef HAVE_GETCCHAR
 
@@ -298,6 +292,9 @@
 /* Define to 1 if you have the <grp.h> header file. */
 #undef HAVE_GRP_H
 
+/* Define to 1 if you have the <hiredis/hiredis.h> header file. */
+#undef HAVE_HIREDIS_HIREDIS_H
+
 /* Define to 1 if you have the `htons' function. */
 #undef HAVE_HTONS
 
@@ -346,8 +343,8 @@
 /* Define to 1 if you have the `dl' library (-ldl). */
 #undef HAVE_LIBDL
 
-/* Define to 1 if you have the `gdbm' library (-lgdbm). */
-#undef HAVE_LIBGDBM
+/* Define to 1 if you have the `hiredis' library (-lhiredis). */
+#undef HAVE_LIBHIREDIS
 
 /* Define to 1 if you have the `m' library (-lm). */
 #undef HAVE_LIBM
@@ -489,6 +486,9 @@
 
 /* Define to 1 if you have the `realpath' function. */
 #undef HAVE_REALPATH
+
+/* Define to 1 if you have the `redisConnect' function. */
+#undef HAVE_REDISCONNECT
 
 /* Define to 1 if you have the `regcomp' function. */
 #undef HAVE_REGCOMP

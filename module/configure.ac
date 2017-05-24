@@ -442,9 +442,9 @@ AC_ARG_ENABLE(cap,
 AC_HELP_STRING([--enable-cap],
 [enable the search for POSIX capabilities (may require additional headers to be added by hand)]))
 
-AC_ARG_ENABLE(gdbm,
-AC_HELP_STRING([--disable-gdbm], [turn off search for gdbm library]),
-[gdbm="$enableval"], [gdbm=yes])
+AC_ARG_ENABLE(redis,
+AC_HELP_STRING([--disable-redis], [turn off search for hiredis library]),
+[redis="$enableval"], [redis=yes])
 
 dnl ------------------
 dnl CHECK THE COMPILER
@@ -953,9 +953,9 @@ elif test x$zsh_cv_decl_ospeed_must_define = xyes; then
   AC_DEFINE(MUST_DEFINE_OSPEED)
 fi
 
-if test x$gdbm != xno; then
-  AC_CHECK_HEADERS(gdbm.h)
-  AC_CHECK_LIB(gdbm, gdbm_open)
+if test x$redis != xno; then
+  AC_CHECK_HEADERS(hiredis/hiredis.h)
+  AC_CHECK_LIB(hiredis, redisConnect)
 fi
 
 AC_CHECK_HEADERS(sys/xattr.h)
@@ -1297,7 +1297,7 @@ AC_CHECK_FUNCS(strftime strptime mktime timelocal \
 	       grantpt unlockpt ptsname \
 	       htons ntohs \
 	       regcomp regexec regerror regfree \
-	       gdbm_open getxattr \
+	       redisConnect getxattr \
 	       realpath canonicalize_file_name \
 	       symlink getcwd \
 	       cygwin_conv_path \
@@ -3304,14 +3304,5 @@ if test "x$additionalfpath" != x; then
 fi
 echo "See config.modules for installed modules and functions.
 "
-
-case x$LIBS in
-  *-lgdbm*)
-  echo "WARNING: zsh will be linked against libgdbm.
-This means the binary is covered by the GNU General Public License.
-This does not affect the source code.
-Run configure with --disable-gdbm if required."
-  ;;
-esac
 
 exit 0

@@ -27,3 +27,4 @@ done
 echo "${fg[green]}Copied ${fg[yellow]}$count${fg[green]} files${reset_color}"
 
 patch -p2 -i ./patch_cfgac.diff
+patch -p2 -i ./patch_cfgac2.diff
