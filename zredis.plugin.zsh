@@ -29,7 +29,7 @@ zredis_compile() {
     # Get CPPFLAGS, CFLAGS, LDFLAGS
     local cppf cf ldf
     zstyle -s ":plugin:zredis" cppflags cppf || cppf="-I/usr/local/include"
-    zstyle -s ":plugin:zredis" cflags cf || cf="-Wall -O2"
+    zstyle -s ":plugin:zredis" cflags cf || cf="-Wall -O2 -g"
     zstyle -s ":plugin:zredis" ldflags ldf || ldf="-L/usr/local/lib"
 
     (
