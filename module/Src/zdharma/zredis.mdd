@@ -1,0 +1,12 @@
+name=zdharma/zredis
+link='if test "x$ac_cv_lib_hiredis_redisConnect" = xyes && test "x$ac_cv_header_hiredis_h" = xyes; then
+  echo dynamic
+else
+  echo no
+fi
+'
+load=no
+
+autofeatures="b:zrtie b:zruntie b:zredispath b:zredisclear p:zredis_tied"
+
+objects="zredis.o"
