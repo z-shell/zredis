@@ -214,11 +214,16 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
     if ( db_index ) {
         reply = redisCommand(rc, "SELECT %d", db_index );
         if (reply == NULL || reply->type == REDIS_REPLY_ERROR) {
-            zwarnnam(nam, "error selecting database #%d (host: %s:%d, message: %s)", db_index, host, port, reply->str);
-            freeReplyObject(reply);
+            if (reply) {
+                zwarnnam(nam, "error selecting database #%d (host: %s:%d, message: %s)", db_index, host, port, reply->str);
+                freeReplyObject(reply);
+            } else {
+                zwarnnam(nam, "IO error selecting database #%d (host: %s:%d)", db_index, host, port);
+            }
             redisFree(rc);
             return 1;
         }
+        freeReplyObject(reply);
     }
 
     if (!(tied_param = createhash(pmname, pmflags))) {
