@@ -407,7 +407,7 @@ redis_getfn(Param pm)
         pm->node.flags |= PM_UPTODATE;
 
         reply = redisCommand(rc, "GET %b", key, (size_t) key_len);
-        if (reply->type == REDIS_REPLY_STRING) {
+        if (reply && reply->type == REDIS_REPLY_STRING) {
             /* Ensure there's no leak */
             if (pm->u.str) {
                 zsfree(pm->u.str);
@@ -424,6 +424,8 @@ redis_getfn(Param pm)
 
             /* Can return pointer, correctly saved inside hash */
             return pm->u.str;
+        } else if (reply) {
+            freeReplyObject(reply);
         }
     } else if (reply) {
         freeReplyObject(reply);
