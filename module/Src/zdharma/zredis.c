@@ -202,15 +202,13 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 
     struct timeval timeout = { 1, 500000 }; // 1.5 seconds
     rc = redisConnectWithTimeout(host, port, timeout);
-    if(rc && rc->err == 0) {
-        append_tied_name(pmname);
-    } else {
+    if(rc == NULL || rc->err != 0) {
         if( rc ) {
             zwarnnam(nam, "error opening database %s:%d/%d (%s)", host, port, db_index, rc->errstr);
         } else {
             zwarnnam(nam, "error opening database %s (insufficient memory)", resource_name_in);
         }
-	return 1;
+        return 1;
     }
 
     if ( db_index ) {
@@ -228,6 +226,8 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
         redisFree(rc);
 	return 1;
     }
+
+    append_tied_name(pmname);
 
     tied_param->gsu.h = &redis_hash_gsu;
 
