@@ -400,7 +400,7 @@ redis_getfn(Param pm)
     rc = ((struct gsu_scalar_ext *)pm->gsu.s)->rc;
 
     reply = redisCommand(rc, "EXISTS %b", key, (size_t) key_len);
-    if (reply->type == REDIS_REPLY_INTEGER && reply->integer == 1) {
+    if (reply && reply->type == REDIS_REPLY_INTEGER && reply->integer == 1) {
         freeReplyObject(reply);
 
         /* We have data – store it, return it */
@@ -425,6 +425,8 @@ redis_getfn(Param pm)
             /* Can return pointer, correctly saved inside hash */
             return pm->u.str;
         }
+    } else if (reply) {
+        freeReplyObject(reply);
     }
 
     /* Free key, restoring its original length */
