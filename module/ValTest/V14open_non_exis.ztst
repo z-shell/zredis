@@ -1,0 +1,26 @@
+# Tests for the zdharma/redis module
+
+%prep
+
+ module_path=( `pwd`/Modules )
+ modname="zdharma/zredis"
+ db1="127.0.0.1:6379/10"
+ db2="127.0.0.1/11"
+ if ! zmodload $modname ; then
+   ZTST_unimplemented="can't load $modname module for testing"
+ fi
+ redis-cli -n 10 flushall
+ redis-cli -n 11 flushall
+
+%test
+
+ zrtie -d db/redis -f ${db1%/*}/1000 dbase 2>/dev/null; ret=$?
+ echo $zredis_tied ${#zredis_tied}
+ return $ret
+1:open non-existent database
+>0
+
+%clean
+
+ redis-cli -n 10 flushall
+ redis-cli -n 11 flushall

@@ -1,0 +1,36 @@
+# Tests for the zdharma/redis module
+
+%prep
+
+ module_path=( `pwd`/Modules )
+ modname="zdharma/zredis"
+ db1="127.0.0.1:6379/10"
+ db2="127.0.0.1/11"
+ if ! zmodload $modname ; then
+   ZTST_unimplemented="can't load $modname module for testing"
+ fi
+ redis-cli -n 10 flushall
+ redis-cli -n 11 flushall
+
+%test
+
+ zrtie -d db/redis -f $db1 dbase
+ dbase=( a b c d )
+ zruntie dbase
+ unset dbase
+ zrtie -d db/redis -f $db1 dbase
+ result=( "${(kv)dbase[@]}" )
+ print -rl -- "${(o)result[@]}"
+ zruntie dbase
+ echo $zredis_tied ${#zredis_tied}
+0:replace hash / database with untie, scan
+>a
+>b
+>c
+>d
+>0
+
+%clean
+
+ redis-cli -n 10 flushall
+ redis-cli -n 11 flushall

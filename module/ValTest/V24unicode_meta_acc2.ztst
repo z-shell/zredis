@@ -1,0 +1,39 @@
+# Tests for the zdharma/redis module
+
+%prep
+
+ module_path=( `pwd`/Modules )
+ modname="zdharma/zredis"
+ db1="127.0.0.1:6379/10"
+ db2="127.0.0.1/11"
+ if ! zmodload $modname ; then
+   ZTST_unimplemented="can't load $modname module for testing"
+ fi
+ redis-cli -n 10 flushall
+ redis-cli -n 11 flushall
+
+%test
+
+ zrtie -d db/redis -f $db1 dbase
+ dbase=( 漢字 漢字 )
+ echo $dbase[漢字]
+ zruntie dbase
+ zrtie -d db/redis -f $db1 dbase
+ echo $dbase[漢字]
+ zruntie dbase
+ key="ab"$'\0'"ef"
+ zrtie -d db/redis -f $db1 dbase
+ dbase+=( $key $key )
+ zruntie dbase
+ zrtie -d db/redis -f $db1 dbase
+ [[ "$dbase[$key]" = "$key" ]] && echo correct
+ zruntie dbase
+0:Unicode & metafication test, different hash access
+>漢字
+>漢字
+>correct
+
+%clean
+
+ redis-cli -n 10 flushall
+ redis-cli -n 11 flushall
