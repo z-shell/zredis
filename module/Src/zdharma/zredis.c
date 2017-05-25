@@ -14,8 +14,8 @@
  * two paragraphs appear in all copies of this software.
  */
 
-#include "zgdbm.mdh"
-#include "zgdbm.pro"
+#include "zredis.mdh"
+#include "zredis.pro"
 
 #ifndef PM_UPTODATE
 #define PM_UPTODATE     (1<<19) /* Parameter has up-to-date data (e.g. loaded from DB) */
@@ -24,74 +24,76 @@
 static Param createhash( char *name, int flags );
 static int append_tied_name( const char *name );
 static int remove_tied_name( const char *name );
-char *unmetafy_zalloc(const char *to_copy, int *new_len);
+static char *unmetafy_zalloc(const char *to_copy, int *new_len);
+static void set_length(char *buf, int size);
 
 /*
  * Make sure we have all the bits I'm using for memory mapping, otherwise
  * I don't know what I'm doing.
  */
-#if defined(HAVE_GDBM_H) && defined(HAVE_GDBM_OPEN)
+#if defined(HAVE_HIREDIS_HIREDIS_H) && defined(HAVE_REDISCONNECT)
 
-#include <gdbm.h>
+#include <hiredis/hiredis.h>
 
-static char *backtype = "db/gdbm";
+static char *backtype = "db/redis";
 
 /*
- * Longer GSU structure, to carry GDBM_FILE of owning
+ * Longer GSU structure, to carry redisContext of owning
  * database. Every parameter (hash value) receives GSU
- * pointer and thus also receives GDBM_FILE - this way
+ * pointer and thus also receives redisContext - this way
  * parameters can access proper database.
  *
  * Main HashTable parameter has the same instance of
  * the custom GSU struct in u.hash->tmpdata field.
- * When database is closed, `dbf` field is set to NULL
+ * When database is closed, `rc` field is set to NULL
  * and hash values know to not access database when
  * being unset (total purge at zuntie).
  *
- * When database closing is ended, custom GSU struct
- * is freed. Only new ztie creates new custom GSU
- * struct instance.
+ * When database closing is ended, the custom GSU struct
+ * is freed. Only new ztie creates new custom GSU struct
+ * instance.
  */
 
 struct gsu_scalar_ext {
     struct gsu_scalar std;
-    GDBM_FILE dbf;
-    char *dbfile_path;
+    redisContext *rc;
+    char *redis_host_port;
 };
 
 /* Source structure - will be copied to allocated one,
- * with `dbf` filled. `dbf` allocation <-> gsu allocation. */
+ * with `rc` filled. `rc` allocation <-> gsu allocation. */
 static const struct gsu_scalar_ext gdbm_gsu_ext =
-{ { gdbmgetfn, gdbmsetfn, gdbmunsetfn }, 0, 0 };
+{ { redis_getfn, redis_setfn, redis_unsetfn }, 0, 0 };
 
 /**/
-static const struct gsu_hash gdbm_hash_gsu =
-{ hashgetfn, gdbmhashsetfn, gdbmhashunsetfn };
+static const struct gsu_hash redis_hash_gsu =
+{ hashgetfn, redis_hash_setfn, redis_hash_unsetfn };
 
 static struct builtin bintab[] = {
-    BUILTIN("ztie", 0, bin_ztie, 1, -1, 0, "d:f:r", NULL),
-    BUILTIN("zuntie", 0, bin_zuntie, 1, -1, 0, "u", NULL),
-    BUILTIN("zgdbmpath", 0, bin_zgdbmpath, 1, -1, 0, "", NULL),
-    BUILTIN("zgdbmclear", 0, bin_zgdbmclear, 2, -1, 0, "", NULL),
+    BUILTIN("zrtie", 0, bin_zrtie, 1, -1, 0, "d:f:r", NULL),
+    BUILTIN("zruntie", 0, bin_zruntie, 1, -1, 0, "u", NULL),
+    BUILTIN("zredishost", 0, bin_zredishost, 1, -1, 0, "", NULL),
+    BUILTIN("zredisclear", 0, bin_zredisclear, 2, -1, 0, "", NULL),
 };
 
 #define ROARRPARAMDEF(name, var) \
     { name, PM_ARRAY | PM_READONLY, (void *) var, NULL,  NULL, NULL, NULL }
 
 /* Holds names of all tied parameters */
-char **zgdbm_tied;
+char **zredis_tied;
 
 static struct paramdef patab[] = {
-    ROARRPARAMDEF( "zgdbm_tied", &zgdbm_tied ),
+    ROARRPARAMDEF( "zredis_tied", &zredis_tied ),
 };
 
 /**/
 static int
-bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
+bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 {
-    char *resource_name, *pmname;
-    GDBM_FILE dbf = NULL;
-    int read_write = GDBM_SYNC, pmflags = PM_REMOVABLE;
+    char *resource_name_in, resource_name[192], *pmname;
+    redisContext *rc = NULL;
+    redisReply *reply;
+    int read_write = 1, pmflags = PM_REMOVABLE;
     Param tied_param;
 
     if(!OPT_ISSET(ops,'d')) {
@@ -99,30 +101,90 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
 	return 1;
     }
     if(!OPT_ISSET(ops,'f')) {
-        zwarnnam(nam, "you must pass `-f' with a filename", NULL);
+        zwarnnam(nam, "you must pass `-f' with host[:port][/[db_idx][/key]]", NULL);
 	return 1;
     }
     if (OPT_ISSET(ops,'r')) {
-	read_write |= GDBM_READER;
+	read_write = 0;
 	pmflags |= PM_READONLY;
-    } else {
-	read_write |= GDBM_WRCREAT;
     }
 
-    /* Here should be a lookup of the backend type against
-     * a registry, if generam DB mechanism is to be added */
     if (strcmp(OPT_ARG(ops, 'd'), backtype) != 0) {
         zwarnnam(nam, "unsupported backend type `%s'", OPT_ARG(ops, 'd'));
 	return 1;
     }
 
-    resource_name = OPT_ARG(ops, 'f');
+    resource_name_in = OPT_ARG(ops, 'f');
+    strncpy(resource_name, resource_name_in, 191);
+    resource_name[191] = '\0';
     pmname = *args;
+
+    const char *host="127.0.0.1", *key="";
+    int port = 6379, db_index = 0;
+
+    /* Parse -f argument */
+    char *processed = resource_name;
+    char *port_start, *key_start, *needle;
+    if ((port_start = strchr(processed, ':'))) {
+        if ( port_start[1] != '\0' ) {
+            if ((needle = strchr(port_start+1, '/'))) {
+                /* Port with following database index */
+                *needle = '\0';
+                if ( port_start[1] != '\0' )
+                    port = atoi(port_start + 1);
+                processed = needle+1;
+            } else {
+                /* Port alone */
+                port = atoi(port_start + 1);
+                processed = NULL;
+            }
+        } else {
+            /* Empty port, nothing follows */
+            processed = NULL;
+        }
+
+        /* Process host name */
+        *port_start = '\0';
+        if (resource_name[0] != '\0')
+            host = resource_name;
+    } else {
+        /* No-port track */
+        if ((needle = strchr(processed, '/')) ) {
+            *needle = '\0';
+            host = resource_name;
+            processed = needle+1;
+        }
+    }
+
+    /* In this place host name and port are already parsed */
+
+    /* Database index */
+    if (processed) {
+        if ((key_start = strchr(processed, '/'))) {
+            /* With key-following track */
+            *key_start = '\0';
+            if (processed[1] != '\0')
+                db_index = atoi(processed);
+            processed = key_start + 1;
+        } else {
+            /* Without key-following track */
+            if (processed[0] != '\0')
+                db_index = atoi(processed);
+            processed = NULL;
+        }
+    }
+
+    /* Key */
+    if (processed) {
+        if (processed[0] != '\0')
+            key = processed;
+    }
+
 
     if ((tied_param = (Param)paramtab->getnode(paramtab, pmname)) &&
 	!(tied_param->node.flags & PM_UNSET)) {
 	/*
-	 * Unset any existing parameter.  Note there's no implicit
+	 * Unset any existing parameter. Note there's no implicit
 	 * "local" here, but if the existing parameter is local
 	 * then new parameter will be also local without following
          * unset.
@@ -138,47 +200,54 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
 	    return 1;
     }
 
-    gdbm_errno=0;
-    dbf = gdbm_open(resource_name, 0, read_write, 0666, 0);
-    if(dbf) {
-	addmodulefd(gdbm_fdesc(dbf), FDT_MODULE);
+    struct timeval timeout = { 1, 500000 }; // 1.5 seconds
+    rc = redisConnectWithTimeout(host, port, timeout);
+    if(rc && rc->err == 0) {
         append_tied_name(pmname);
     } else {
-	zwarnnam(nam, "error opening database file %s (%s)", resource_name, gdbm_strerror(gdbm_errno));
+        if( rc ) {
+            zwarnnam(nam, "error opening database %s:%d/%d (%s)", host, port, db_index, rc->errstr);
+        } else {
+            zwarnnam(nam, "error opening database %s (insufficient memory)", resource_name_in);
+        }
 	return 1;
+    }
+
+    if ( db_index ) {
+        reply = redisCommand(rc, "SELECT %d", db_index );
+        if (reply == NULL || reply->type == REDIS_REPLY_ERROR) {
+            zwarnnam(nam, "error selecting database #%d (host: %s:%d, message: %s)", db_index, host, port, reply->str);
+            freeReplyObject(reply);
+            redisFree(rc);
+            return 1;
+        }
     }
 
     if (!(tied_param = createhash(pmname, pmflags))) {
         zwarnnam(nam, "cannot create the requested parameter %s", pmname);
-	fdtable[gdbm_fdesc(dbf)] = FDT_UNUSED;
-	gdbm_close(dbf);
+        redisFree(rc);
 	return 1;
     }
 
-    tied_param->gsu.h = &gdbm_hash_gsu;
+    tied_param->gsu.h = &redis_hash_gsu;
 
-    /* Allocate parameter sub-gsu, fill dbf field. 
-     * dbf allocation is 1 to 1 accompanied by
+    /* Allocate parameter sub-gsu, fill rc field.
+     * rc allocation is 1 to 1 accompanied by
      * gsu_scalar_ext allocation. */
 
-    struct gsu_scalar_ext *dbf_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
-    dbf_carrier->std = gdbm_gsu_ext.std;
-    dbf_carrier->dbf = dbf;
-    tied_param->u.hash->tmpdata = (void *)dbf_carrier;
+    struct gsu_scalar_ext *rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
+    rc_carrier->std = gdbm_gsu_ext.std;
+    rc_carrier->rc = rc;
+    tied_param->u.hash->tmpdata = (void *)rc_carrier;
 
-    /* Fill also file path field */
-    if (*resource_name != '/') {
-        /* Code copied from check_autoload() */
-        resource_name = zhtricat(metafy(zgetcwd(), -1, META_HEAPDUP), "/", resource_name);
-        resource_name = xsymlink(resource_name, 1);
-    }
-    dbf_carrier->dbfile_path = ztrdup(resource_name);
+    /* Fill also host:port// field */
+    rc_carrier->redis_host_port = ztrdup(resource_name_in);
     return 0;
 }
 
 /**/
 static int
-bin_zuntie(char *nam, char **args, Options ops, UNUSED(int func))
+bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
 {
     Param pm;
     char *pmname;
@@ -191,15 +260,15 @@ bin_zuntie(char *nam, char **args, Options ops, UNUSED(int func))
 	    ret = 1;
 	    continue;
 	}
-	if (pm->gsu.h != &gdbm_hash_gsu) {
-	    zwarnnam(nam, "not a tied gdbm hash: %s", pmname);
+	if (pm->gsu.h != &redis_hash_gsu) {
+	    zwarnnam(nam, "not a tied redis hash: %s", pmname);
 	    ret = 1;
 	    continue;
 	}
 
 	queue_signals();
 	if (OPT_ISSET(ops,'u'))
-	    gdbmuntie(pm);	/* clear read-only-ness */
+	    redisuntie(pm);	/* clear read-only-ness */
 	if (unsetparam_pm(pm, 0, 1)) {
 	    /* assume already reported */
 	    ret = 1;
@@ -212,7 +281,7 @@ bin_zuntie(char *nam, char **args, Options ops, UNUSED(int func))
 
 /**/
 static int
-bin_zgdbmpath(char *nam, char **args, Options ops, UNUSED(int func))
+bin_zredishost(char *nam, char **args, Options ops, UNUSED(int func))
 {
     Param pm;
     char *pmname;
@@ -230,14 +299,14 @@ bin_zgdbmpath(char *nam, char **args, Options ops, UNUSED(int func))
         return 1;
     }
 
-    if (pm->gsu.h != &gdbm_hash_gsu) {
+    if (pm->gsu.h != &redis_hash_gsu) {
         zwarnnam(nam, "not a tied gdbm parameter: %s", pmname);
         return 1;
     }
 
     /* Paranoia, it *will* be always set */
-    if (((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->dbfile_path) {
-        setsparam("REPLY", ztrdup(((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->dbfile_path));
+    if (((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port) {
+        setsparam("REPLY", ztrdup(((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port));
     } else {
         setsparam("REPLY", ztrdup(""));
     }
@@ -247,7 +316,7 @@ bin_zgdbmpath(char *nam, char **args, Options ops, UNUSED(int func))
 
 /**/
 static int
-bin_zgdbmclear(char *nam, char **args, Options ops, UNUSED(int func))
+bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
 {
     Param pm;
     char *pmname, *key;
@@ -266,7 +335,7 @@ bin_zgdbmclear(char *nam, char **args, Options ops, UNUSED(int func))
         return 1;
     }
 
-    if (pm->gsu.h != &gdbm_hash_gsu) {
+    if (pm->gsu.h != &redis_hash_gsu) {
         zwarnnam(nam, "not a tied gdbm parameter: %s", pmname);
         return 1;
     }
@@ -295,11 +364,12 @@ bin_zgdbmclear(char *nam, char **args, Options ops, UNUSED(int func))
 
 /**/
 static char *
-gdbmgetfn(Param pm)
+redis_getfn(Param pm)
 {
-    datum key, content;
-    int ret;
-    GDBM_FILE dbf;
+    char *key;
+    size_t key_len;
+    redisContext *rc;
+    redisReply *reply;
 
     /* Key already retrieved? There is no sense of asking the
      * database again, because:
@@ -314,39 +384,46 @@ gdbmgetfn(Param pm)
         return pm->u.str ? pm->u.str : (char *) hcalloc(1);
     }
 
-    /* Unmetafy key. GDBM fits nice into this
-     * process, as it uses length of data */
+    /* Unmetafy key. Redis fits nice into this
+     * process, as it can use length of data */
     int umlen = 0;
-    char *umkey = unmetafy_zalloc(pm->node.nam,&umlen);
+    char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
 
-    key.dptr = umkey;
-    key.dsize = umlen;
+    key = umkey;
+    key_len = umlen;
 
-    dbf = ((struct gsu_scalar_ext *)pm->gsu.s)->dbf;
+    rc = ((struct gsu_scalar_ext *)pm->gsu.s)->rc;
 
-    if((ret = gdbm_exists(dbf, key))) {
+    reply = redisCommand(rc, "EXISTS %b", key, (size_t) key_len);
+    if (reply->type == REDIS_REPLY_INTEGER && reply->integer == 1) {
+        freeReplyObject(reply);
+
         /* We have data – store it, return it */
         pm->node.flags |= PM_UPTODATE;
 
-        content = gdbm_fetch(dbf, key);
+        reply = redisCommand(rc, "GET %b", key, (size_t) key_len);
+        if (reply->type == REDIS_REPLY_STRING) {
+            /* Ensure there's no leak */
+            if (pm->u.str) {
+                zsfree(pm->u.str);
+            }
 
-        /* Ensure there's no leak */
-        if (pm->u.str) {
-            zsfree(pm->u.str);
+            /* Metafy returned data. All fits - metafy
+             * can obtain data length to avoid using \0 */
+            pm->u.str = metafy(reply->str, reply->len, META_DUP);
+            freeReplyObject(reply);
+
+            /* Free key, restoring its original length */
+            set_length(umkey, key_len);
+            zsfree(umkey);
+
+            /* Can return pointer, correctly saved inside hash */
+            return pm->u.str;
         }
-
-        /* Metafy returned data. All fits - metafy
-         * can obtain data length to avoid using \0 */
-        pm->u.str = metafy(content.dptr, content.dsize, META_DUP);
-
-        /* Free key, restoring its original length */
-        zsfree(umkey);
-
-        /* Can return pointer, correctly saved inside hash */
-        return pm->u.str;
     }
 
-    /* Free key */
+    /* Free key, restoring its original length */
+    set_length(umkey, key_len);
     zsfree(umkey);
 
     /* Can this be "" ? */
@@ -355,14 +432,14 @@ gdbmgetfn(Param pm)
 
 /**/
 static void
-gdbmsetfn(Param pm, char *val)
+redis_setfn(Param pm, char *val)
 {
-    datum key, content;
-    GDBM_FILE dbf;
+    char *key, *content;
+    size_t key_len, content_len;
+    redisContext *rc;
+    redisReply *reply;
 
-    /* Set is done on parameter and on database.
-     * See the allowed workers / readers comment
-     * at gdbmgetfn() */
+    /* Set is done on parameter and on database. */
 
     /* Parameter */
     if (pm->u.str) {
@@ -377,40 +454,44 @@ gdbmsetfn(Param pm, char *val)
     }
 
     /* Database */
-    dbf = ((struct gsu_scalar_ext *)pm->gsu.s)->dbf;
-    if (dbf) {
+    rc = ((struct gsu_scalar_ext *)pm->gsu.s)->rc;
+    if (rc) {
         int umlen = 0;
-        char *umkey = unmetafy_zalloc(pm->node.nam,&umlen);
+        char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
 
-        key.dptr = umkey;
-        key.dsize = umlen;
+        key = umkey;
+        key_len = umlen;
 
         if (val) {
             /* Unmetafy with exact zalloc size */
-            char *umval = unmetafy_zalloc(val,&umlen);
+            char *umval = unmetafy_zalloc(val, &umlen);
 
             /* Store */
-            content.dptr = umval;
-            content.dsize = umlen;
-            (void)gdbm_store(dbf, key, content, GDBM_REPLACE);
+            content = umval;
+            content_len = umlen;
+            reply = redisCommand(rc, "SET %b %b", key, (size_t) key_len, content, (size_t) content_len);
+            freeReplyObject(reply);
 
             /* Free */
+            set_length(umval, content_len);
             zsfree(umval);
         } else {
-            (void)gdbm_delete(dbf, key);
+            reply = redisCommand(rc, "DEL %b", key, (size_t) key_len);
+            freeReplyObject(reply);
         }
 
         /* Free key */
+        set_length(umkey, key_len);
         zsfree(umkey);
     }
 }
 
 /**/
 static void
-gdbmunsetfn(Param pm, UNUSED(int um))
+redis_unsetfn(Param pm, UNUSED(int um))
 {
     /* Set with NULL */
-    gdbmsetfn(pm, NULL);
+    redis_setfn(pm, NULL);
 }
 
 /**/
@@ -452,28 +533,42 @@ getgdbmnode(HashTable ht, const char *name)
 static void
 scangdbmkeys(HashTable ht, ScanFunc func, int flags)
 {
-    datum key;
-    GDBM_FILE dbf = ((struct gsu_scalar_ext *)ht->tmpdata)->dbf;
+    char *key;
+    size_t key_len;
+    redisContext *rc;
+    redisReply *reply;
+
+    rc = ((struct gsu_scalar_ext *)ht->tmpdata)->rc;
 
     /* Iterate keys adding them to hash, so
      * we have Param to use in `func` */
-    key = gdbm_firstkey(dbf);
+    reply = redisCommand(rc, "KEYS *");
+    if (reply == NULL || reply->type != REDIS_REPLY_ARRAY) {
+        if (reply)
+            freeReplyObject(reply);
+        return;
+    }
 
-    while(key.dptr) {
+    for (size_t j = 0; j < reply->elements; j++) {
+        redisReply *entry = reply->element[j];
+        if (entry == NULL || entry->type != REDIS_REPLY_STRING) {
+            continue;
+        }
+
+        key = entry->str;
+        key_len = entry->len;
+
         /* This returns database-interfacing Param,
          * it will return u.str or first fetch data
          * if not PM_UPTODATE (newly created) */
-        char *zkey = metafy(key.dptr, key.dsize, META_DUP);
+        char *zkey = metafy(key, key_len, META_DUP);
         HashNode hn = getgdbmnode(ht, zkey);
         zsfree( zkey );
 
 	func(hn, flags);
-
-        /* Iterate - no problem as interfacing Param
-         * will do at most only fetches, not stores */
-        key = gdbm_nextkey(dbf, key);
     }
 
+    freeReplyObject(reply);
 }
 
 /*
@@ -482,36 +577,52 @@ scangdbmkeys(HashTable ht, ScanFunc func, int flags)
 
 /**/
 static void
-gdbmhashsetfn(Param pm, HashTable ht)
+redis_hash_setfn(Param pm, HashTable ht)
 {
-    int i;
+    size_t i, j;
     HashNode hn;
-    GDBM_FILE dbf;
-    datum key, content;
+    char *key, *content;
+    size_t key_len, content_len;
+    redisContext *rc;
+    redisReply *reply, *entry, *reply2;
 
     if (!pm->u.hash || pm->u.hash == ht)
 	return;
 
-    if (!(dbf = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->dbf))
+    if (!(rc = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->rc))
 	return;
 
-    key = gdbm_firstkey(dbf);
-    while (key.dptr) {
-	queue_signals();
-	(void)gdbm_delete(dbf, key);
-	free(key.dptr);
-	unqueue_signals();
-	key = gdbm_firstkey(dbf);
+    /* KEYS */
+    reply = redisCommand(rc, "KEYS *");
+    if (reply == NULL || reply->type != REDIS_REPLY_ARRAY) {
+        if (reply)
+            freeReplyObject(reply);
+        return;
     }
 
-    /* just deleted everything, clean up */
-    (void)gdbm_reorganize(dbf);
+    for (j = 0; j < reply->elements; j++) {
+        entry = reply->element[j];
+        if (entry == NULL || entry->type != REDIS_REPLY_STRING) {
+            continue;
+        }
+        key = entry->str;
+        key_len = entry->len;
+
+	queue_signals();
+
+        /* DEL */
+        reply2 = redisCommand(rc, "DEL %b", key, (size_t) key_len);
+        freeReplyObject(reply2);
+
+	unqueue_signals();
+    }
+    freeReplyObject(reply);
 
     if (!ht)
 	return;
 
-     /* Put new strings into database, waiting
-      * for their interfacing-Params to be created */
+     /* Put new strings into database, having
+      * their interfacing-Params created */
 
     for (i = 0; i < ht->hsize; i++)
 	for (hn = ht->nodes[i]; hn; hn = hn->next) {
@@ -524,25 +635,28 @@ gdbmhashsetfn(Param pm, HashTable ht)
 
             /* Unmetafy key */
             int umlen = 0;
-            char *umkey = unmetafy_zalloc(v.pm->node.nam,&umlen);
+            char *umkey = unmetafy_zalloc(v.pm->node.nam, &umlen);
 
-	    key.dptr = umkey;
-	    key.dsize = umlen;
+	    key = umkey;
+	    key_len = umlen;
 
 	    queue_signals();
 
-            /* Unmetafy */
-            char *umval = unmetafy_zalloc(getstrvalue(&v),&umlen);
+            /* Unmetafy data */
+            char *umval = unmetafy_zalloc(getstrvalue(&v), &umlen);
 
-            /* Store */
-	    content.dptr = umval;
-	    content.dsize = umlen;
-	    (void)gdbm_store(dbf, key, content, GDBM_REPLACE);	
+	    content = umval;
+	    content_len = umlen;
 
-            /* Free - thanks to unmetafy_zalloc size of
-             * the strings is exact zalloc size - can
-             * pass to zsfree */
+            /* SET */
+            reply = redisCommand(rc, "SET %b %b", key, (size_t) key_len, content, (size_t) content_len);
+            if (reply)
+                freeReplyObject(reply);
+
+            /* Free, restoring original length */
+            set_length(umval, content_len);
             zsfree(umval);
+            set_length(umkey, key_len);
             zsfree(umkey);
 
 	    unqueue_signals();
@@ -551,17 +665,16 @@ gdbmhashsetfn(Param pm, HashTable ht)
 
 /**/
 static void
-gdbmuntie(Param pm)
+redisuntie(Param pm)
 {
-    GDBM_FILE dbf = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->dbf;
+    redisContext *rc = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->rc;
     HashTable ht = pm->u.hash;
 
-    if (dbf) { /* paranoia */
-	fdtable[gdbm_fdesc(dbf)] = FDT_UNUSED;
-        gdbm_close(dbf);
+    if (rc) { /* paranoia */
+        redisFree(rc);
 
         /* Let hash fields know there's no backend */
-        ((struct gsu_scalar_ext *)ht->tmpdata)->dbf = NULL;
+        ((struct gsu_scalar_ext *)ht->tmpdata)->rc = NULL;
 
         /* Remove from list of tied parameters */
         remove_tied_name(pm->node.nam);
@@ -577,9 +690,9 @@ gdbmuntie(Param pm)
 
 /**/
 static void
-gdbmhashunsetfn(Param pm, UNUSED(int exp))
+redis_hash_unsetfn(Param pm, UNUSED(int exp))
 {
-    gdbmuntie(pm);
+    redisuntie(pm);
 
     /* Remember custom GSU structure assigned to
      * u.hash->tmpdata before hash gets deleted */
@@ -590,16 +703,12 @@ gdbmhashunsetfn(Param pm, UNUSED(int exp))
     pm->gsu.h->setfn(pm, NULL);
 
     /* Don't need custom GSU structure with its
-     * GDBM_FILE pointer anymore */
-    zsfree( gsu_ext->dbfile_path );
+     * redisContext pointer anymore */
+    zsfree( gsu_ext->redis_host_port );
     zfree( gsu_ext, sizeof(struct gsu_scalar_ext));
 
     pm->node.flags |= PM_UNSET;
 }
-
-#else
-# error no gdbm
-#endif /* have gdbm */
 
 static struct features module_features = {
     bintab, sizeof(bintab)/sizeof(*bintab),
@@ -635,7 +744,7 @@ enables_(Module m, int **enables)
 int
 boot_(UNUSED(Module m))
 {
-    zgdbm_tied = zshcalloc((1) * sizeof(char *));
+    zredis_tied = zshcalloc((1) * sizeof(char *));
     return 0;
 }
 
@@ -643,7 +752,7 @@ boot_(UNUSED(Module m))
 int
 cleanup_(Module m)
 {
-    /* This frees `zgdbm_tied` */
+    /* This frees `zredis_tied` */
     return setfeatureenables(m, &module_features, NULL);
 }
 
@@ -686,15 +795,15 @@ static Param createhash( char *name, int flags ) {
 }
 
 /*
- * Adds parameter name to `zgdbm_tied`
+ * Adds parameter name to `zredis_tied`
  */
 
 static int append_tied_name( const char *name ) {
-    int old_len = arrlen(zgdbm_tied);
+    int old_len = arrlen(zredis_tied);
     char **new_zgdbm_tied = zshcalloc( (old_len+2) * sizeof(char *));
 
     /* Copy */
-    char **p = zgdbm_tied;
+    char **p = zredis_tied;
     char **dst = new_zgdbm_tied;
     while (*p) {
         *dst++ = *p++;
@@ -704,25 +813,25 @@ static int append_tied_name( const char *name ) {
     *dst = ztrdup(name);
 
     /* Substitute, free old one */
-    zfree(zgdbm_tied, sizeof(char *) * (old_len + 1));
-    zgdbm_tied = new_zgdbm_tied;
+    zfree(zredis_tied, sizeof(char *) * (old_len + 1));
+    zredis_tied = new_zgdbm_tied;
 
     return 0;
 }
 
 /*
- * Removes parameter name from `zgdbm_tied`
+ * Removes parameter name from `zredis_tied`
  */
 
 static int remove_tied_name( const char *name ) {
-    int old_len = arrlen(zgdbm_tied);
+    int old_len = arrlen(zredis_tied);
 
     /* Two stage, to always have arrlen() == zfree-size - 1.
      * Could do allocation and revert when `not found`, but
      * what would be better about that. */
 
     /* Find one to remove */
-    char **p = zgdbm_tied;
+    char **p = zredis_tied;
     while (*p) {
         if (0==strcmp(name,*p)) {
             break;
@@ -738,12 +847,12 @@ static int remove_tied_name( const char *name ) {
 
     /* Second stage. Size changed? Only old_size-1
      * change is possible, but.. paranoia way */
-    int new_len = arrlen(zgdbm_tied);
+    int new_len = arrlen(zredis_tied);
     if (new_len != old_len) {
         char **new_zgdbm_tied = zshcalloc((new_len+1) * sizeof(char *));
 
         /* Copy */
-        p = zgdbm_tied;
+        p = zredis_tied;
         char **dst = new_zgdbm_tied;
         while (*p) {
             *dst++ = *p++;
@@ -751,8 +860,8 @@ static int remove_tied_name( const char *name ) {
         *dst = NULL;
 
         /* Substitute, free old one */
-        zfree(zgdbm_tied, sizeof(char *) * (old_len + 1));
-        zgdbm_tied = new_zgdbm_tied;
+        zfree(zredis_tied, sizeof(char *) * (old_len + 1));
+        zredis_tied = new_zgdbm_tied;
     }
 
     return 0;
@@ -766,12 +875,12 @@ static int remove_tied_name( const char *name ) {
  *
  * No zsfree()-confusing string will be produced.
  */
-char *unmetafy_zalloc(const char *to_copy, int *new_len) {
+static char *unmetafy_zalloc(const char *to_copy, int *new_len) {
     char *work, *to_return;
     int my_new_len = 0;
 
     work = ztrdup(to_copy);
-    work = unmetafy(work,&my_new_len);
+    work = unmetafy(work, &my_new_len);
 
     if (new_len)
         *new_len = my_new_len;
@@ -787,3 +896,19 @@ char *unmetafy_zalloc(const char *to_copy, int *new_len) {
 
     return to_return;
 }
+
+/*
+ * For zsh-allocator, rest of Zsh seems to use
+ * free() instead of zsfree(), and such length
+ * restoration causes slowdown, but all is this
+ * way strict - correct */
+static void set_length(char *buf, int size) {
+    buf[size]='\0';
+    while ( -- size >= 0 ) {
+        buf[size]=' ';
+    }
+}
+
+#else
+# error no gdbm
+#endif /* have gdbm */
