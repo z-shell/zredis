@@ -21,9 +21,9 @@
 #define PM_UPTODATE     (1<<19) /* Parameter has up-to-date data (e.g. loaded from DB) */
 #endif
 
-static Param createhash( char *name, int flags );
-static int append_tied_name( const char *name );
-static int remove_tied_name( const char *name );
+static Param createhash(char *name, int flags);
+static int append_tied_name(const char *name);
+static int remove_tied_name(const char *name);
 static char *unmetafy_zalloc(const char *to_copy, int *new_len);
 static void set_length(char *buf, int size);
 
@@ -83,7 +83,7 @@ static struct builtin bintab[] = {
 char **zredis_tied;
 
 static struct paramdef patab[] = {
-    ROARRPARAMDEF( "zredis_tied", &zredis_tied ),
+    ROARRPARAMDEF("zredis_tied", &zredis_tied),
 };
 
 /**/
@@ -126,11 +126,11 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
     char *processed = resource_name;
     char *port_start, *key_start, *needle;
     if ((port_start = strchr(processed, ':'))) {
-        if ( port_start[1] != '\0' ) {
+        if (port_start[1] != '\0') {
             if ((needle = strchr(port_start+1, '/'))) {
                 /* Port with following database index */
                 *needle = '\0';
-                if ( port_start[1] != '\0' )
+                if (port_start[1] != '\0')
                     port = atoi(port_start + 1);
                 processed = needle+1;
             } else {
@@ -149,7 +149,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
             host = resource_name;
     } else {
         /* No-port track */
-        if ((needle = strchr(processed, '/')) ) {
+        if ((needle = strchr(processed, '/'))) {
             *needle = '\0';
             host = resource_name;
             processed = needle+1;
@@ -203,7 +203,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
     struct timeval timeout = { 1, 500000 }; // 1.5 seconds
     rc = redisConnectWithTimeout(host, port, timeout);
     if(rc == NULL || rc->err != 0) {
-        if( rc ) {
+        if(rc) {
             zwarnnam(nam, "error opening database %s:%d/%d (%s)", host, port, db_index, rc->errstr);
         } else {
             zwarnnam(nam, "error opening database %s (insufficient memory)", resource_name_in);
@@ -211,8 +211,8 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
         return 1;
     }
 
-    if ( db_index ) {
-        reply = redisCommand(rc, "SELECT %d", db_index );
+    if (db_index) {
+        reply = redisCommand(rc, "SELECT %d", db_index);
         if (reply == NULL || reply->type == REDIS_REPLY_ERROR) {
             if (reply) {
                 zwarnnam(nam, "error selecting database #%d (host: %s:%d, message: %s)", db_index, host, port, reply->str);
@@ -346,7 +346,7 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
     }
 
     HashTable ht = pm->u.hash;
-    HashNode hn = gethashnode2( ht, key );
+    HashNode hn = gethashnode2(ht, key);
     Param val_pm = (Param) hn;
     if (val_pm) {
         val_pm->node.flags &= ~(PM_UPTODATE);
@@ -385,7 +385,7 @@ redis_getfn(Param pm)
      * - if we are writers, we for sure have newest copy of data
      * - if we are readers, we for sure have newest copy of data
      */
-    if ( pm->node.flags & PM_UPTODATE ) {
+    if (pm->node.flags & PM_UPTODATE) {
         return pm->u.str ? pm->u.str : (char *) hcalloc(1);
     }
 
@@ -508,7 +508,7 @@ redis_unsetfn(Param pm, UNUSED(int um))
 static HashNode
 getgdbmnode(HashTable ht, const char *name)
 {
-    HashNode hn = gethashnode2( ht, name );
+    HashNode hn = gethashnode2(ht, name);
     Param val_pm = (Param) hn;
 
     /* Entry for key doesn't exist? Create it now,
@@ -529,11 +529,11 @@ getgdbmnode(HashTable ht, const char *name)
      * not by number of key *uses*.
      * */
 
-    if ( ! val_pm ) {
-        val_pm = (Param) zshcalloc( sizeof (*val_pm) );
+    if (!val_pm) {
+        val_pm = (Param) zshcalloc(sizeof (*val_pm));
         val_pm->node.flags = PM_SCALAR | PM_HASHELEM; /* no PM_UPTODATE */
         val_pm->gsu.s = (GsuScalar) ht->tmpdata;
-        ht->addnode( ht, ztrdup( name ), val_pm ); // sets pm->node.nam
+        ht->addnode(ht, ztrdup(name), val_pm); // sets pm->node.nam
     }
 
     return (HashNode) val_pm;
@@ -573,7 +573,7 @@ scangdbmkeys(HashTable ht, ScanFunc func, int flags)
          * if not PM_UPTODATE (newly created) */
         char *zkey = metafy(key, key_len, META_DUP);
         HashNode hn = getgdbmnode(ht, zkey);
-        zsfree( zkey );
+        zsfree(zkey);
 
 	func(hn, flags);
     }
@@ -714,8 +714,8 @@ redis_hash_unsetfn(Param pm, UNUSED(int exp))
 
     /* Don't need custom GSU structure with its
      * redisContext pointer anymore */
-    zsfree( gsu_ext->redis_host_port );
-    zfree( gsu_ext, sizeof(struct gsu_scalar_ext));
+    zsfree(gsu_ext->redis_host_port);
+    zfree(gsu_ext, sizeof(struct gsu_scalar_ext));
 
     pm->node.flags |= PM_UNSET;
 }
@@ -777,7 +777,7 @@ finish_(UNUSED(Module m))
  * Utility functions *
  *********************/
 
-static Param createhash( char *name, int flags ) {
+static Param createhash(char *name, int flags) {
     Param pm;
     HashTable ht;
 
@@ -808,9 +808,9 @@ static Param createhash( char *name, int flags ) {
  * Adds parameter name to `zredis_tied`
  */
 
-static int append_tied_name( const char *name ) {
+static int append_tied_name(const char *name) {
     int old_len = arrlen(zredis_tied);
-    char **new_zgdbm_tied = zshcalloc( (old_len+2) * sizeof(char *));
+    char **new_zgdbm_tied = zshcalloc((old_len+2) * sizeof(char *));
 
     /* Copy */
     char **p = zredis_tied;
@@ -833,7 +833,7 @@ static int append_tied_name( const char *name ) {
  * Removes parameter name from `zredis_tied`
  */
 
-static int remove_tied_name( const char *name ) {
+static int remove_tied_name(const char *name) {
     int old_len = arrlen(zredis_tied);
 
     /* Two stage, to always have arrlen() == zfree-size - 1.
@@ -914,7 +914,7 @@ static char *unmetafy_zalloc(const char *to_copy, int *new_len) {
  * way strict - correct */
 static void set_length(char *buf, int size) {
     buf[size]='\0';
-    while ( -- size >= 0 ) {
+    while (-- size >= 0) {
         buf[size]=' ';
     }
 }
