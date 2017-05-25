@@ -479,7 +479,8 @@ redis_setfn(Param pm, char *val)
             content = umval;
             content_len = umlen;
             reply = redisCommand(rc, "SET %b %b", key, (size_t) key_len, content, (size_t) content_len);
-            freeReplyObject(reply);
+            if (reply)
+                freeReplyObject(reply);
 
             /* Free */
             set_length(umval, content_len);
