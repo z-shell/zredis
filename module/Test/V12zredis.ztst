@@ -14,22 +14,6 @@
 
 %test
 
- echo First $zredis_tied ${#zredis_tied}
- zrtie -d db/redis -f $db1 dbase
- echo $zredis_tied ${#zredis_tied}
- zrtie -d db/redis -f $db2 dbase2
- echo $zredis_tied ${#zredis_tied}
- zruntie dbase
- echo $zredis_tied ${#zredis_tied}
- zruntie dbase2
- echo $zredis_tied ${#zredis_tied}
-0:zredis_tied parameter
->First 0
->dbase 1
->dbase dbase2 2
->dbase2 1
->0
-
  (zmodload -u $modname && zmodload $modname)
 0:unload and reload the module without crashing
 
@@ -40,8 +24,10 @@
  zrtie -d db/redis -f $db1 dbase
  echo $dbase[testkey]
  zruntie dbase
+ echo $zredis_tied ${#zredis_tied}
 0:store key in database 1
 >testdata
+>0
 
  zrtie -d db/redis -f $db2 dbase
  dbase[testkey]=testdata
@@ -50,8 +36,10 @@
  zrtie -d db/redis -f $db2 dbase
  echo $dbase[testkey]
  zruntie dbase
+ echo $zredis_tied ${#zredis_tied}
 0:store key in database 2
 >testdata
+>0
 
  zrtie -d db/redis -f $db1 dbase2
  unset 'dbase2[testkey]'
@@ -59,8 +47,10 @@
  zrtie -d db/redis -f $db1 dbase
  echo $dbase[testkey]
  zruntie dbase
+ echo $zredis_tied ${#zredis_tied}
 0:remove key from database 1 (different variables)
 >
+>0
 
  zrtie -d db/redis -f $db1 dbase
  dbase[testkey]=testdata
@@ -74,9 +64,11 @@
  zrtie -d db/redis -f $db1 dbase
  echo $dbase[testkey]
  zruntie dbase
+ echo $zredis_tied ${#zredis_tied}
 0:store & remove key from database (the same variables)
 >testdata
 >
+>0
 
  zrtie -d db/redis -f $db1 dbase
  dbase[testkey]=testdata
@@ -88,37 +80,45 @@
  echo $dbase[testkey2]
  echo $dbase[testkey3]
  zruntie dbase
+ echo $zredis_tied ${#zredis_tied}
 0:store 2 keys fetching 1st
 >testdata
 >testdata
 >testdataxtestdata
+>0
 
  zrtie -d db/redis -f $db1 dbase
  val=$dbase[testkey2]
  unset 'dbase[testkey2]'
  echo $val
  zruntie dbase
+ echo $zredis_tied ${#zredis_tied}
 0:unset key that was fetched
 >testdata
+>0
 
  zrtie -d db/redis -f $db1 dbase
  local -a result
  result=( "${(kv)dbase[@]}" )
  print -rl -- "${(o)result[@]}"
  zruntie dbase
+ echo $zredis_tied ${#zredis_tied}
 0:scan read-only tied hash, directly assign local -a
 >testdata
 >testdataxtestdata
 >testkey
 >testkey3
+>0
 
  zrtie -d db/redis -f $db1 dbase
  dbase=( a a )
  print -rl -- "${(kv)dbase[@]}"
  zruntie dbase
+ echo $zredis_tied ${#zredis_tied}
 0:Use scan directly after overwrite of database
 >a
 >a
+>0
 
  zrtie -d db/redis -f $db1 dbase
  dbase=( a b c d )
@@ -128,39 +128,50 @@
  result=( "${(kv)dbase[@]}" )
  print -rl -- "${(o)result[@]}"
  zruntie dbase
+ echo $zredis_tied ${#zredis_tied}
 0:replace hash / database with untie, scan
 >a
 >b
 >c
 >d
+>0
 
  zrtie -d db/redis -f $db1 dbase
  local -a arr
  arr=( "${dbase[@]}" )
  print -rl -- "${(o)arr[@]}"
  zruntie dbase
+ echo $zredis_tied ${#zredis_tied}
 0:scan with no (kv)
 >b
 >d
+>0
 
  zrtie -d db/redis -f $db1 dbase
  result=( "${(k)dbase[@]}" )
  print -rl -- "${(o)result[@]}"
  zruntie dbase
+ echo $zredis_tied ${#zredis_tied}
 0:scan with keys only - (k)
 >a
 >c
+>0
 
  zrtie -d db/redis -f $db1 dbase
  result=( "${(v)dbase[@]}" )
  print -rl -- "${(o)result[@]}"
  zruntie dbase
+ echo $zredis_tied ${#zredis_tied}
 0:scan with values only, explicit - (v)
 >b
 >d
+>0
 
- zrtie -d db/redis -f ${db1%/*}/1000 dbase 2>/dev/null
+ zrtie -d db/redis -f ${db1%/*}/1000 dbase 2>/dev/null; ret=$?
+ echo $zredis_tied ${#zredis_tied}
+ return $ret
 1:read-only open non-existent database
+>0
 
  zrtie -d db/redis -f $db1 dbase
  dbase=( )
@@ -239,6 +250,22 @@
 >association-local-special
 >fromarray
 >Can connect: b
+
+ echo First $zredis_tied ${#zredis_tied}
+ zrtie -d db/redis -f $db1 dbase
+ echo $zredis_tied ${#zredis_tied}
+ zrtie -d db/redis -f $db2 dbase2
+ echo $zredis_tied ${#zredis_tied}
+ zruntie dbase
+ echo $zredis_tied ${#zredis_tied}
+ zruntie dbase2
+ echo $zredis_tied ${#zredis_tied}
+0:zredis_tied parameter
+>First 0
+>dbase 1
+>dbase dbase2 2
+>dbase2 1
+>0
 
  unset zredis_tied 2>/dev/null
 1:unset of read-only zgdbm_tied parameter
