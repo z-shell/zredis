@@ -26,6 +26,8 @@ static int append_tied_name(const char *name);
 static int remove_tied_name(const char *name);
 static char *unmetafy_zalloc(const char *to_copy, int *new_len);
 static void set_length(char *buf, int size);
+static void parse_host_string(const char *input, char *buffer, int size,
+                                char **host, int *port, int *db_index, char **key);
 
 /*
  * Make sure we have all the bits I'm using for memory mapping, otherwise
@@ -90,11 +92,12 @@ static struct paramdef patab[] = {
 static int
 bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 {
-    char *resource_name_in, resource_name[192], *pmname;
     redisContext *rc = NULL;
     redisReply *reply;
     int read_write = 1, pmflags = PM_REMOVABLE;
     Param tied_param;
+
+    /* Check options */
 
     if(!OPT_ISSET(ops,'d')) {
         zwarnnam(nam, "you must pass `-d %s'", backtype);
@@ -114,72 +117,18 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 	return 1;
     }
 
-    resource_name_in = OPT_ARG(ops, 'f');
-    strncpy(resource_name, resource_name_in, 191);
-    resource_name[191] = '\0';
-    pmname = *args;
+    /* Parse host data */
 
-    const char *host="127.0.0.1", *key="";
+    char *pmname, *resource_name_in, resource_name[192];
+    char *host="127.0.0.1", *key="";
     int port = 6379, db_index = 0;
 
-    /* Parse -f argument */
-    char *processed = resource_name;
-    char *port_start, *key_start, *needle;
-    if ((port_start = strchr(processed, ':'))) {
-        if (port_start[1] != '\0') {
-            if ((needle = strchr(port_start+1, '/'))) {
-                /* Port with following database index */
-                *needle = '\0';
-                if (port_start[1] != '\0')
-                    port = atoi(port_start + 1);
-                processed = needle+1;
-            } else {
-                /* Port alone */
-                port = atoi(port_start + 1);
-                processed = NULL;
-            }
-        } else {
-            /* Empty port, nothing follows */
-            processed = NULL;
-        }
+    resource_name_in = OPT_ARG(ops, 'f');
+    pmname = *args;
 
-        /* Process host name */
-        *port_start = '\0';
-        if (resource_name[0] != '\0')
-            host = resource_name;
-    } else {
-        /* No-port track */
-        if ((needle = strchr(processed, '/'))) {
-            *needle = '\0';
-            host = resource_name;
-            processed = needle+1;
-        }
-    }
+    parse_host_string( resource_name_in, resource_name, 192, &host, &port, &db_index, &key);
 
-    /* In this place host name and port are already parsed */
-
-    /* Database index */
-    if (processed) {
-        if ((key_start = strchr(processed, '/'))) {
-            /* With key-following track */
-            *key_start = '\0';
-            if (processed[1] != '\0')
-                db_index = atoi(processed);
-            processed = key_start + 1;
-        } else {
-            /* Without key-following track */
-            if (processed[0] != '\0')
-                db_index = atoi(processed);
-            processed = NULL;
-        }
-    }
-
-    /* Key */
-    if (processed) {
-        if (processed[0] != '\0')
-            key = processed;
-    }
-
+    /* Unset existing parameter */
 
     if ((tied_param = (Param)paramtab->getnode(paramtab, pmname)) &&
 	!(tied_param->node.flags & PM_UNSET)) {
@@ -200,6 +149,8 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 	    return 1;
     }
 
+    /* Connect */
+
     struct timeval timeout = { 1, 500000 }; // 1.5 seconds
     rc = redisConnectWithTimeout(host, port, timeout);
     if(rc == NULL || rc->err != 0) {
@@ -210,6 +161,8 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
         }
         return 1;
     }
+
+    /* Select database */
 
     if (db_index) {
         reply = redisCommand(rc, "SELECT %d", db_index);
@@ -225,6 +178,8 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
         }
         freeReplyObject(reply);
     }
+
+    /* Create hash */
 
     if (!(tied_param = createhash(pmname, pmflags))) {
         zwarnnam(nam, "cannot create the requested parameter %s", pmname);
@@ -916,6 +871,71 @@ static void set_length(char *buf, int size) {
     buf[size]='\0';
     while (-- size >= 0) {
         buf[size]=' ';
+    }
+}
+
+static void parse_host_string(const char *input, char *resource_name, int size,
+                                char **host, int *port, int *db_index, char **key)
+{
+    strncpy(resource_name, input, size-1);
+    resource_name[size-1] = '\0';
+
+    /* Parse -f argument */
+    char *processed = resource_name;
+    char *port_start, *key_start, *needle;
+    if ((port_start = strchr(processed, ':'))) {
+        if (port_start[1] != '\0') {
+            if ((needle = strchr(port_start+1, '/'))) {
+                /* Port with following database index */
+                *needle = '\0';
+                if (port_start[1] != '\0')
+                    *port = atoi(port_start + 1);
+                processed = needle+1;
+            } else {
+                /* Port alone */
+                *port = atoi(port_start + 1);
+                processed = NULL;
+            }
+        } else {
+            /* Empty port, nothing follows */
+            processed = NULL;
+        }
+
+        /* Process host name */
+        *port_start = '\0';
+        if (resource_name[0] != '\0')
+            *host = resource_name;
+    } else {
+        /* No-port track */
+        if ((needle = strchr(processed, '/'))) {
+            *needle = '\0';
+            *host = resource_name;
+            processed = needle+1;
+        }
+    }
+
+    /* In this place host name and port are already parsed */
+
+    /* Database index */
+    if (processed) {
+        if ((key_start = strchr(processed, '/'))) {
+            /* With key-following track */
+            *key_start = '\0';
+            if (processed[1] != '\0')
+                *db_index = atoi(processed);
+            processed = key_start + 1;
+        } else {
+            /* Without key-following track */
+            if (processed[0] != '\0')
+                *db_index = atoi(processed);
+            processed = NULL;
+        }
+    }
+
+    /* Key */
+    if (processed) {
+        if (processed[0] != '\0')
+            *key = processed;
     }
 }
 
