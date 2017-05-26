@@ -114,20 +114,20 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 
     if(!OPT_ISSET(ops,'d')) {
         zwarnnam(nam, "you must pass `-d %s'", backtype);
-	return 1;
+        return 1;
     }
     if(!OPT_ISSET(ops,'f')) {
         zwarnnam(nam, "you must pass `-f' with host[:port][/[db_idx][/key]]", NULL);
-	return 1;
+        return 1;
     }
     if (OPT_ISSET(ops,'r')) {
-	read_write = 0;
-	pmflags |= PM_READONLY;
+        read_write = 0;
+        pmflags |= PM_READONLY;
     }
 
     if (strcmp(OPT_ARG(ops, 'd'), backtype) != 0) {
         zwarnnam(nam, "unsupported backend type `%s'", OPT_ARG(ops, 'd'));
-	return 1;
+        return 1;
     }
 
     /* Parse host data */
@@ -144,22 +144,22 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
     /* Unset existing parameter */
 
     if ((tied_param = (Param)paramtab->getnode(paramtab, pmname)) &&
-	!(tied_param->node.flags & PM_UNSET)) {
-	/*
-	 * Unset any existing parameter. Note there's no implicit
-	 * "local" here, but if the existing parameter is local
-	 * then new parameter will be also local without following
+        !(tied_param->node.flags & PM_UNSET)) {
+        /*
+         * Unset any existing parameter. Note there's no implicit
+         * "local" here, but if the existing parameter is local
+         * then new parameter will be also local without following
          * unset.
-	 *
-	 * We need to do this before attempting to open the DB
-	 * in case this variable is already tied to a DB.
-	 *
-	 * This can fail if the variable is readonly or restricted.
-	 * We could call unsetparam() and check errflag instead
-	 * of the return status.
-	 */
-	if (unsetparam_pm(tied_param, 0, 1))
-	    return 1;
+         *
+         * We need to do this before attempting to open the DB
+         * in case this variable is already tied to a DB.
+         *
+         * This can fail if the variable is readonly or restricted.
+         * We could call unsetparam() and check errflag instead
+         * of the return status.
+         */
+        if (unsetparam_pm(tied_param, 0, 1))
+            return 1;
     }
 
     /* Connect */
@@ -173,7 +173,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
     if (!(tied_param = createhash(pmname, pmflags))) {
         zwarnnam(nam, "cannot create the requested parameter %s", pmname);
         redisFree(rc);
-	return 1;
+        return 1;
     }
 
     append_tied_name(pmname);
@@ -203,26 +203,26 @@ bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
     int ret = 0;
 
     for (pmname = *args; *args++; pmname = *args) {
-	pm = (Param) paramtab->getnode(paramtab, pmname);
-	if(!pm) {
-	    zwarnnam(nam, "cannot untie %s", pmname);
-	    ret = 1;
-	    continue;
-	}
-	if (pm->gsu.h != &redis_hash_gsu) {
-	    zwarnnam(nam, "not a tied redis hash: %s", pmname);
-	    ret = 1;
-	    continue;
-	}
+        pm = (Param) paramtab->getnode(paramtab, pmname);
+        if(!pm) {
+            zwarnnam(nam, "cannot untie %s", pmname);
+            ret = 1;
+            continue;
+        }
+        if (pm->gsu.h != &redis_hash_gsu) {
+            zwarnnam(nam, "not a tied redis hash: %s", pmname);
+            ret = 1;
+            continue;
+        }
 
-	queue_signals();
-	if (OPT_ISSET(ops,'u'))
-	    redisuntie(pm);	/* clear read-only-ness */
-	if (unsetparam_pm(pm, 0, 1)) {
-	    /* assume already reported */
-	    ret = 1;
-	}
-	unqueue_signals();
+        queue_signals();
+        if (OPT_ISSET(ops,'u'))
+            redisuntie(pm);     /* clear read-only-ness */
+        if (unsetparam_pm(pm, 0, 1)) {
+            /* assume already reported */
+            ret = 1;
+        }
+        unqueue_signals();
     }
 
     return ret;
@@ -546,10 +546,10 @@ redis_hash_setfn(Param pm, HashTable ht)
     redisReply *reply, *entry, *reply2;
 
     if (!pm->u.hash || pm->u.hash == ht)
-	return;
+        return;
 
     if (!(rc = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->rc))
-	return;
+        return;
 
     /* KEYS */
     reply = redisCommand(rc, "KEYS *");
@@ -583,34 +583,34 @@ redis_hash_setfn(Param pm, HashTable ht)
     freeReplyObject(reply);
 
     if (!ht)
-	return;
+        return;
 
      /* Put new strings into database, having
       * their interfacing-Params created */
 
     for (i = 0; i < ht->hsize; i++)
-	for (hn = ht->nodes[i]; hn; hn = hn->next) {
-	    struct value v;
+        for (hn = ht->nodes[i]; hn; hn = hn->next) {
+            struct value v;
 
-	    v.isarr = v.flags = v.start = 0;
-	    v.end = -1;
-	    v.arr = NULL;
-	    v.pm = (Param) hn;
+            v.isarr = v.flags = v.start = 0;
+            v.end = -1;
+            v.arr = NULL;
+            v.pm = (Param) hn;
 
             /* Unmetafy key */
             int umlen = 0;
             char *umkey = unmetafy_zalloc(v.pm->node.nam, &umlen);
 
-	    key = umkey;
-	    key_len = umlen;
+            key = umkey;
+            key_len = umlen;
 
-	    queue_signals();
+            queue_signals();
 
             /* Unmetafy data */
             char *umval = unmetafy_zalloc(getstrvalue(&v), &umlen);
 
-	    content = umval;
-	    content_len = umlen;
+            content = umval;
+            content_len = umlen;
 
             /* SET */
             reply = redisCommand(rc, "SET %b %b", key, (size_t) key_len, content, (size_t) content_len);
@@ -623,8 +623,8 @@ redis_hash_setfn(Param pm, HashTable ht)
             set_length(umkey, key_len);
             zsfree(umkey);
 
-	    unqueue_signals();
-	}
+            unqueue_signals();
+        }
 }
 
 /**/
@@ -741,7 +741,7 @@ static Param createhash(char *name, int flags) {
     }
 
     if (pm->old)
-	pm->level = locallevel;
+        pm->level = locallevel;
 
     /* This creates standard hash. */
     ht = pm->u.hash = newparamtable(32, name);
