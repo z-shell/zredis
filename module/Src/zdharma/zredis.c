@@ -49,6 +49,7 @@ static void parse_host_string(const char *input, char *buffer, int size,
                                 char **host, int *port, int *db_index, char **key);
 static int connect(char *nam, redisContext **rc, const char *host, int port, int db_index,
                     const char *resource_name_in);
+static int type(redisContext *rc, char *key, size_t key_len);
 
 static char *backtype = "db/redis";
 
@@ -967,10 +968,10 @@ static int connect(char *nam, redisContext **rc, const char *host, int port,
     return 1;
 }
 
-static int type(redisContext *rc, char *key, int key_len) {
+static int type(redisContext *rc, char *key, size_t key_len) {
     redisReply *reply = NULL;
     reply = redisCommand(rc, "TYPE %b", key, (size_t) key_len);
-    if (reply == NULL || reply->type != REDIS_REPLY_STRING) {
+    if (reply == NULL || reply->type != REDIS_REPLY_STATUS) {
         if (reply)
             freeReplyObject(reply);
         return RD_TYPE_UNKNOWN;
