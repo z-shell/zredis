@@ -524,18 +524,11 @@ redis_get_node(HashTable ht, const char *name)
      * and Zsh - through special gsu. So, any seen
      * key results in new interfacing parameter.
      *
-     * Previous code was returning heap arena Param
-     * that wasn't actually added to the hash. It was
-     * plainly name / database-key holder. Here we
-     * add the Param to its hash, it is not PM_UPTODATE.
+     * Add the Param to its hash, it is not PM_UPTODATE.
      * It will be loaded from database *and filled*
      * or left in that state if the database doesn't
      * contain it.
-     *
-     * No heap arena memory is used, memory usage is
-     * now limited - by number of distinct keys seen,
-     * not by number of key *uses*.
-     * */
+     */
 
     if (!val_pm) {
         val_pm = (Param) zshcalloc(sizeof (*val_pm));
