@@ -248,7 +248,7 @@ bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
         if (pm->gsu.h == &redis_hash_gsu) {
             queue_signals();
             if (OPT_ISSET(ops,'u'))
-                redis_hash_untie(pm);     /* clear read-only-ness */
+                pm->node.flags &= ~PM_READONLY;
             if (unsetparam_pm(pm, 0, 1)) {
                 /* assume already reported */
                 ret = 1;
@@ -256,7 +256,7 @@ bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
             unqueue_signals();
         } else if (pm->gsu.s->getfn == &redis_str_getfn) {
             if (pm->node.flags & PM_READONLY && !OPT_ISSET(ops,'u')) {
-                zwarnnam(nam, "cannot untie `%s', parameter is read only", pmname);
+                zwarnnam(nam, "cannot untie `%s', parameter is read only, use -u option", pmname);
                 continue;
             }
             pm->node.flags &= ~PM_READONLY;
