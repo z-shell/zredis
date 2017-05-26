@@ -300,16 +300,24 @@ bin_zredishost(char *nam, char **args, Options ops, UNUSED(int func))
         return 1;
     }
 
-    if (pm->gsu.h != &redis_hash_gsu) {
+
+    if (pm->gsu.h == &redis_hash_gsu) {
+        /* Paranoia, it *will* be always set */
+        if (((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port) {
+            setsparam("REPLY", ztrdup(((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port));
+        } else {
+            setsparam("REPLY", ztrdup(""));
+        }
+    } else if(pm->gsu.s->getfn == &redis_str_getfn) {
+        const char *hostspec = ((struct gsu_scalar_ext *)pm->gsu.s)->redis_host_port;
+        if (hostspec) {
+            setsparam("REPLY", ztrdup(hostspec));
+        } else {
+            setsparam("REPLY", ztrdup(""));
+        }
+    } else {
         zwarnnam(nam, "not a tied zredis parameter: %s", pmname);
         return 1;
-    }
-
-    /* Paranoia, it *will* be always set */
-    if (((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port) {
-        setsparam("REPLY", ztrdup(((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port));
-    } else {
-        setsparam("REPLY", ztrdup(""));
     }
 
     return 0;
