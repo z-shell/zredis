@@ -21,14 +21,6 @@
 #define PM_UPTODATE     (1<<19) /* Parameter has up-to-date data (e.g. loaded from DB) */
 #endif
 
-static Param createhash(char *name, int flags);
-static int append_tied_name(const char *name);
-static int remove_tied_name(const char *name);
-static char *unmetafy_zalloc(const char *to_copy, int *new_len);
-static void set_length(char *buf, int size);
-static void parse_host_string(const char *input, char *buffer, int size,
-                                char **host, int *port, int *db_index, char **key);
-
 /*
  * Make sure we have all the bits I'm using for memory mapping, otherwise
  * I don't know what I'm doing.
@@ -36,6 +28,14 @@ static void parse_host_string(const char *input, char *buffer, int size,
 #if defined(HAVE_HIREDIS_HIREDIS_H) && defined(HAVE_REDISCONNECT)
 
 #include <hiredis/hiredis.h>
+
+static Param createhash(char *name, int flags);
+static int append_tied_name(const char *name);
+static int remove_tied_name(const char *name);
+static char *unmetafy_zalloc(const char *to_copy, int *new_len);
+static void set_length(char *buf, int size);
+static void parse_host_string(const char *input, char *buffer, int size,
+                                char **host, int *port, int *db_index, char **key);
 
 static char *backtype = "db/redis";
 
@@ -126,7 +126,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
     resource_name_in = OPT_ARG(ops, 'f');
     pmname = *args;
 
-    parse_host_string( resource_name_in, resource_name, 192, &host, &port, &db_index, &key);
+    parse_host_string(resource_name_in, resource_name, 192, &host, &port, &db_index, &key);
 
     /* Unset existing parameter */
 
