@@ -347,11 +347,11 @@ redis_getfn(Param pm)
     if (reply && reply->type == REDIS_REPLY_INTEGER && reply->integer == 1) {
         freeReplyObject(reply);
 
-        /* We have data – store it, return it */
-        pm->node.flags |= PM_UPTODATE;
-
         reply = redisCommand(rc, "GET %b", key, (size_t) key_len);
         if (reply && reply->type == REDIS_REPLY_STRING) {
+            /* We have data – store it, return it */
+            pm->node.flags |= PM_UPTODATE;
+
             /* Ensure there's no leak */
             if (pm->u.str) {
                 zsfree(pm->u.str);
