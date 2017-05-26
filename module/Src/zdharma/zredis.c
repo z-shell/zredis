@@ -512,6 +512,11 @@ scan_keys(HashTable ht, ScanFunc func, int flags)
         key = entry->str;
         key_len = entry->len;
 
+        /* Only scan string keys, ignore the rest (hashes, sets, etc.) */
+        if (RD_TYPE_STRING != type(rc, key, (size_t) key_len)) {
+            continue;
+        }
+
         /* This returns database-interfacing Param,
          * it will return u.str or first fetch data
          * if not PM_UPTODATE (newly created) */
@@ -519,7 +524,7 @@ scan_keys(HashTable ht, ScanFunc func, int flags)
         HashNode hn = getgdbmnode(ht, zkey);
         zsfree(zkey);
 
-	func(hn, flags);
+        func(hn, flags);
     }
 
     freeReplyObject(reply);
