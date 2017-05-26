@@ -99,7 +99,7 @@ static struct builtin bintab[] = {
     BUILTIN("zrtie", 0, bin_zrtie, 1, -1, 0, "d:f:r", NULL),
     BUILTIN("zruntie", 0, bin_zruntie, 1, -1, 0, "u", NULL),
     BUILTIN("zredishost", 0, bin_zredishost, 1, -1, 0, "", NULL),
-    BUILTIN("zredisclear", 0, bin_zredisclear, 2, -1, 0, "", NULL),
+    BUILTIN("zredisclear", 0, bin_zredisclear, 1, -1, 0, "", NULL),
 };
 
 #define ROARRPARAMDEF(name, var) \
@@ -339,21 +339,27 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
     }
 
     pm = (Param) paramtab->getnode(paramtab, pmname);
-    if(!pm) {
+    if (!pm) {
         zwarnnam(nam, "no such parameter: %s", pmname);
         return 1;
     }
 
-    if (pm->gsu.h != &redis_hash_gsu) {
+    if (pm->gsu.h == &redis_hash_gsu) {
+        if (!key) {
+            zwarnnam(nam, "Key name, which is to be cleared in hash `%s', is required", pmname);
+            return 1;
+        }
+        HashTable ht = pm->u.hash;
+        HashNode hn = gethashnode2(ht, key);
+        Param val_pm = (Param) hn;
+        if (val_pm) {
+            val_pm->node.flags &= ~(PM_UPTODATE);
+        }
+    } else if (pm->gsu.s->getfn == &redis_str_getfn) {
+        pm->node.flags &= ~(PM_UPTODATE);
+    } else {
         zwarnnam(nam, "not a tied zredis parameter: %s", pmname);
         return 1;
-    }
-
-    HashTable ht = pm->u.hash;
-    HashNode hn = gethashnode2(ht, key);
-    Param val_pm = (Param) hn;
-    if (val_pm) {
-        val_pm->node.flags &= ~(PM_UPTODATE);
     }
 
     return 0;
