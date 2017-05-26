@@ -1,3 +1,7 @@
+/* -*- Mode: C; c-basic-offset: 4 -*-
+ * vim:sw=4:sts=4:et
+ */
+
 /*
  * zredis.c - bindings for (hi)redis
  *
