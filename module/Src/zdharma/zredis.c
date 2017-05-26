@@ -73,6 +73,7 @@ static void parse_host_string(const char *input, char *buffer, int size,
 static int connect(char *nam, redisContext **rc, const char *host, int port, int db_index,
                     const char *resource_name_in);
 static int type(redisContext *rc, char *key, size_t key_len);
+static void zrtie_usage();
 
 static char *backtype = "db/redis";
 
@@ -118,7 +119,7 @@ static const struct gsu_scalar_ext string_gsu_ext =
     { { redis_str_getfn, redis_str_setfn, redis_str_unsetfn }, 0, 0, 0, 0, 0 };
 
 static struct builtin bintab[] = {
-    BUILTIN("zrtie", 0, bin_zrtie, 1, -1, 0, "d:f:rp", NULL),
+    BUILTIN("zrtie", 0, bin_zrtie, 1, -1, 0, "d:f:rph", NULL),
     BUILTIN("zruntie", 0, bin_zruntie, 1, -1, 0, "u", NULL),
     BUILTIN("zredishost", 0, bin_zredishost, 1, -1, 0, "", NULL),
     BUILTIN("zredisclear", 0, bin_zredisclear, 1, 2, 0, "", NULL),
@@ -144,12 +145,17 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 
     /* Check options */
 
-    if(!OPT_ISSET(ops,'d')) {
-        zwarnnam(nam, "you must pass `-d %s'", backtype);
+    if (OPT_ISSET(ops,'h')) {
+        zrtie_usage();
+        return 0;
+    }
+
+    if (!OPT_ISSET(ops,'d')) {
+        zwarnnam(nam, "you must pass `-d %s', see `-h help'", backtype);
         return 1;
     }
-    if(!OPT_ISSET(ops,'f')) {
-        zwarnnam(nam, "you must pass `-f' with host[:port][/[db_idx][/key]]", NULL);
+    if (!OPT_ISSET(ops,'f')) {
+        zwarnnam(nam, "you must pass `-f' with {host}[:port][/[db_idx][/key]], see `-h help'", NULL);
         return 1;
     }
     if (OPT_ISSET(ops,'r')) {
@@ -158,7 +164,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
     }
 
     if (strcmp(OPT_ARG(ops, 'd'), backtype) != 0) {
-        zwarnnam(nam, "unsupported backend type `%s'", OPT_ARG(ops, 'd'));
+        zwarnnam(nam, "unsupported backend type `%s', see `-h help'", OPT_ARG(ops, 'd'));
         return 1;
     }
 
@@ -1240,6 +1246,16 @@ static int type(redisContext *rc, char *key, size_t key_len) {
         return RD_TYPE_HASH;
     }
     return RD_TYPE_UNKNOWN;
+}
+
+static void zrtie_usage() {
+    fprintf(stdout, YELLOW "Usage:" RESET " zrtie -d db/redis [-p] [-r] " MAGENTA "-f {host-spec}"
+            RESET " " RED "{parameter_name}" RESET "\n");
+    fprintf(stdout, YELLOW "Options:" RESET "\n");
+    fprintf(stdout, GREEN " -d" RESET ": select database type, can change in future, currently only \"db/redis\"\n");
+    fprintf(stdout, GREEN " -p" RESET ": passthrough - always do a fresh query to database, don't use cache\n");
+    fprintf(stdout, GREEN " -r" RESET ": create read-only parameter\n" );
+    fprintf(stdout, GREEN " -f" RESET ": database address in format {host}[:port][/[db_idx][/key]]\n");
 }
 
 #else
