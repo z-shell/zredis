@@ -86,14 +86,14 @@ struct gsu_scalar_ext {
 /* Source structure - will be copied to allocated one,
  * with `rc` filled. `rc` allocation <-> gsu allocation. */
 static const struct gsu_scalar_ext hashel_gsu_ext =
-  { { redis_getfn, redis_setfn, redis_unsetfn }, 0, 0, 0, 0 };
+    { { redis_getfn, redis_setfn, redis_unsetfn }, 0, 0, 0, 0 };
 
 /* Hash GSU, normal one */
 static const struct gsu_hash redis_hash_gsu =
-{ hashgetfn, redis_hash_setfn, redis_hash_unsetfn };
+    { hashgetfn, redis_hash_setfn, redis_hash_unsetfn };
 
 static const struct gsu_scalar_ext string_gsu_ext =
-  { { redis_str_getfn, redis_str_setfn, redis_str_unsetfn }, 0, 0, 0, 0 };
+    { { redis_str_getfn, redis_str_setfn, redis_str_unsetfn }, 0, 0, 0, 0 };
 
 static struct builtin bintab[] = {
     BUILTIN("zrtie", 0, bin_zrtie, 1, -1, 0, "d:f:r", NULL),
