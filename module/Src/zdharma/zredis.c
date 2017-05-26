@@ -301,7 +301,7 @@ bin_zredishost(char *nam, char **args, Options ops, UNUSED(int func))
     }
 
     if (pm->gsu.h != &redis_hash_gsu) {
-        zwarnnam(nam, "not a tied gdbm parameter: %s", pmname);
+        zwarnnam(nam, "not a tied zredis parameter: %s", pmname);
         return 1;
     }
 
@@ -337,7 +337,7 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
     }
 
     if (pm->gsu.h != &redis_hash_gsu) {
-        zwarnnam(nam, "not a tied gdbm parameter: %s", pmname);
+        zwarnnam(nam, "not a tied zredis parameter: %s", pmname);
         return 1;
     }
 
@@ -355,7 +355,7 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
 
 /*
  * The param is actual param in hash – always, because
- * getgdbmnode creates every new key seen. However, it
+ * redis_get_node creates every new key seen. However, it
  * might be not PM_UPTODATE - which means that database
  * wasn't yet queried.
  *
@@ -498,15 +498,15 @@ redis_unsetfn(Param pm, UNUSED(int um))
 
 /**/
 static HashNode
-getgdbmnode(HashTable ht, const char *name)
+redis_get_node(HashTable ht, const char *name)
 {
     HashNode hn = gethashnode2(ht, name);
     Param val_pm = (Param) hn;
 
     /* Entry for key doesn't exist? Create it now,
      * it will be interfacing between the database
-     * and Zsh - through special gdbm_gsu. So, any
-     * seen key results in new interfacing parameter.
+     * and Zsh - through special gsu. So, any seen
+     * key results in new interfacing parameter.
      *
      * Previous code was returning heap arena Param
      * that wasn't actually added to the hash. It was
@@ -569,7 +569,7 @@ scan_keys(HashTable ht, ScanFunc func, int flags)
          * it will return u.str or first fetch data
          * if not PM_UPTODATE (newly created) */
         char *zkey = metafy(key, key_len, META_DUP);
-        HashNode hn = getgdbmnode(ht, zkey);
+        HashNode hn = redis_get_node(ht, zkey);
         zsfree(zkey);
 
         func(hn, flags);
@@ -944,7 +944,7 @@ static Param createhash(char *name, int flags) {
     }
 
     /* These provide special features */
-    ht->getnode = ht->getnode2 = getgdbmnode;
+    ht->getnode = ht->getnode2 = redis_get_node;
     ht->scantab = scan_keys;
 
     return pm;
@@ -956,11 +956,11 @@ static Param createhash(char *name, int flags) {
 
 static int append_tied_name(const char *name) {
     int old_len = arrlen(zredis_tied);
-    char **new_zgdbm_tied = zshcalloc((old_len+2) * sizeof(char *));
+    char **new_zredis_tied = zshcalloc((old_len+2) * sizeof(char *));
 
     /* Copy */
     char **p = zredis_tied;
-    char **dst = new_zgdbm_tied;
+    char **dst = new_zredis_tied;
     while (*p) {
         *dst++ = *p++;
     }
@@ -970,7 +970,7 @@ static int append_tied_name(const char *name) {
 
     /* Substitute, free old one */
     zfree(zredis_tied, sizeof(char *) * (old_len + 1));
-    zredis_tied = new_zgdbm_tied;
+    zredis_tied = new_zredis_tied;
 
     return 0;
 }
@@ -1005,11 +1005,11 @@ static int remove_tied_name(const char *name) {
      * change is possible, but.. paranoia way */
     int new_len = arrlen(zredis_tied);
     if (new_len != old_len) {
-        char **new_zgdbm_tied = zshcalloc((new_len+1) * sizeof(char *));
+        char **new_zredis_tied = zshcalloc((new_len+1) * sizeof(char *));
 
         /* Copy */
         p = zredis_tied;
-        char **dst = new_zgdbm_tied;
+        char **dst = new_zredis_tied;
         while (*p) {
             *dst++ = *p++;
         }
@@ -1017,7 +1017,7 @@ static int remove_tied_name(const char *name) {
 
         /* Substitute, free old one */
         zfree(zredis_tied, sizeof(char *) * (old_len + 1));
-        zredis_tied = new_zgdbm_tied;
+        zredis_tied = new_zredis_tied;
     }
 
     return 0;
@@ -1202,5 +1202,5 @@ static int type(redisContext *rc, char *key, size_t key_len) {
 }
 
 #else
-# error no gdbm
-#endif /* have gdbm */
+# error no hiredis
+#endif /* have hiredis */
