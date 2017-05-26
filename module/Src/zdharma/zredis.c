@@ -484,7 +484,7 @@ getgdbmnode(HashTable ht, const char *name)
 
 /**/
 static void
-scangdbmkeys(HashTable ht, ScanFunc func, int flags)
+scan_keys(HashTable ht, ScanFunc func, int flags)
 {
     char *key;
     size_t key_len;
@@ -742,7 +742,7 @@ static Param createhash(char *name, int flags) {
 
     /* These provide special features */
     ht->getnode = ht->getnode2 = getgdbmnode;
-    ht->scantab = scangdbmkeys;
+    ht->scantab = scan_keys;
 
     return pm;
 }
