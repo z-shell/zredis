@@ -99,7 +99,7 @@ static struct builtin bintab[] = {
     BUILTIN("zrtie", 0, bin_zrtie, 1, -1, 0, "d:f:r", NULL),
     BUILTIN("zruntie", 0, bin_zruntie, 1, -1, 0, "u", NULL),
     BUILTIN("zredishost", 0, bin_zredishost, 1, -1, 0, "", NULL),
-    BUILTIN("zredisclear", 0, bin_zredisclear, 1, -1, 0, "", NULL),
+    BUILTIN("zredisclear", 0, bin_zredisclear, 1, 2, 0, "", NULL),
 };
 
 #define ROARRPARAMDEF(name, var) \
@@ -357,6 +357,8 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
         }
     } else if (pm->gsu.s->getfn == &redis_str_getfn) {
         pm->node.flags &= ~(PM_UPTODATE);
+        if (key)
+            zwarnnam(nam, "Ignored argument `%s'", key);
     } else {
         zwarnnam(nam, "not a tied zredis parameter: %s", pmname);
         return 1;
