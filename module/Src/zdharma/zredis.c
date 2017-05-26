@@ -36,6 +36,8 @@ static char *unmetafy_zalloc(const char *to_copy, int *new_len);
 static void set_length(char *buf, int size);
 static void parse_host_string(const char *input, char *buffer, int size,
                                 char **host, int *port, int *db_index, char **key);
+static int connect(char *nam, redisContext **rc, const char *host, int port, int db_index,
+                    const char *resource_name_in);
 
 static char *backtype = "db/redis";
 
@@ -93,7 +95,6 @@ static int
 bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 {
     redisContext *rc = NULL;
-    redisReply *reply;
     int read_write = 1, pmflags = PM_REMOVABLE;
     Param tied_param;
 
@@ -151,32 +152,8 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 
     /* Connect */
 
-    struct timeval timeout = { 1, 500000 }; // 1.5 seconds
-    rc = redisConnectWithTimeout(host, port, timeout);
-    if(rc == NULL || rc->err != 0) {
-        if(rc) {
-            zwarnnam(nam, "error opening database %s:%d/%d (%s)", host, port, db_index, rc->errstr);
-        } else {
-            zwarnnam(nam, "error opening database %s (insufficient memory)", resource_name_in);
-        }
+    if(!connect(nam, &rc, host, port, db_index, resource_name_in)) {
         return 1;
-    }
-
-    /* Select database */
-
-    if (db_index) {
-        reply = redisCommand(rc, "SELECT %d", db_index);
-        if (reply == NULL || reply->type == REDIS_REPLY_ERROR) {
-            if (reply) {
-                zwarnnam(nam, "error selecting database #%d (host: %s:%d, message: %s)", db_index, host, port, reply->str);
-                freeReplyObject(reply);
-            } else {
-                zwarnnam(nam, "IO error selecting database #%d (host: %s:%d)", db_index, host, port);
-            }
-            redisFree(rc);
-            return 1;
-        }
-        freeReplyObject(reply);
     }
 
     /* Create hash */
@@ -939,6 +916,45 @@ static void parse_host_string(const char *input, char *resource_name, int size,
     }
 }
 
+static int connect(char *nam, redisContext **rc, const char *host, int port,
+                   int db_index, const char *resource_name_in)
+{
+    redisReply *reply;
+
+    /* Connect */
+    struct timeval timeout = { 1, 500000 }; // 1.5 seconds
+    *rc = redisConnectWithTimeout(host, port, timeout);
+
+    if(*rc == NULL || (*rc)->err != 0) {
+        if(rc) {
+            zwarnnam(nam, "error opening database %s:%d/%d (%s)", host, port, db_index, (*rc)->errstr);
+            redisFree(*rc);
+            *rc = NULL;
+        } else {
+            zwarnnam(nam, "error opening database %s (insufficient memory)", resource_name_in);
+        }
+        return 0;
+    }
+
+    /* Select database */
+    if (db_index) {
+        reply = redisCommand(*rc, "SELECT %d", db_index);
+        if (reply == NULL || reply->type == REDIS_REPLY_ERROR) {
+            if (reply) {
+                zwarnnam(nam, "error selecting database #%d (host: %s:%d, message: %s)", db_index, host, port, reply->str);
+                freeReplyObject(reply);
+            } else {
+                zwarnnam(nam, "IO error selecting database #%d (host: %s:%d)", db_index, host, port);
+            }
+            redisFree(*rc);
+            *rc = NULL;
+            return 0;
+        }
+        freeReplyObject(reply);
+    }
+
+    return 1;
+}
 #else
 # error no gdbm
 #endif /* have gdbm */
