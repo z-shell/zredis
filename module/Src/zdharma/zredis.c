@@ -567,13 +567,18 @@ redis_hash_setfn(Param pm, HashTable ht)
         key = entry->str;
         key_len = entry->len;
 
-	queue_signals();
+        /* Only scan string keys, ignore the rest (hashes, sets, etc.) */
+        if (RD_TYPE_STRING != type(rc, key, (size_t) key_len)) {
+            continue;
+        }
+
+        queue_signals();
 
         /* DEL */
         reply2 = redisCommand(rc, "DEL %b", key, (size_t) key_len);
         freeReplyObject(reply2);
 
-	unqueue_signals();
+        unqueue_signals();
     }
     freeReplyObject(reply);
 
