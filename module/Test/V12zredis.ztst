@@ -359,6 +359,16 @@
 >value1
 >value2
 
+ zrtie -p -d db/redis -f $db1 dbase
+ dbase[testkey]=value1
+ echo $dbase[testkey]
+ fun() { while read line; do echo $line; done }
+ eval "dbase[testkey]=value2" | fun
+ echo $dbase[testkey]
+0:Test store in forked Zsh, with -p passthrough
+>value1
+>value2
+
 %clean
 
  redis-cli -n 10 flushdb
