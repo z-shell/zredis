@@ -38,6 +38,8 @@
 #define RD_TYPE_ZSET 4
 #define RD_TYPE_HASH 5
 
+static char *type_names[7] = { "invalid", "string", "list", "set", "sorted-set", "hash", "error" };
+
 #include <hiredis/hiredis.h>
 
 static Param createhash(char *name, int flags);
@@ -68,22 +70,30 @@ static char *backtype = "db/redis";
  * When database closing is ended, the custom GSU struct
  * is freed. Only new ztie creates new custom GSU struct
  * instance.
+ *
+ * This is for hashes, and is called *scalar*, because
+ * it's for hash elements, PM_SCALAR | PM_HASHELEM.
  */
 
 struct gsu_scalar_ext {
     struct gsu_scalar std;
     redisContext *rc;
     char *redis_host_port;
+    char *key;
+    size_t key_len;
 };
 
 /* Source structure - will be copied to allocated one,
  * with `rc` filled. `rc` allocation <-> gsu allocation. */
-static const struct gsu_scalar_ext gdbm_gsu_ext =
-{ { redis_getfn, redis_setfn, redis_unsetfn }, 0, 0 };
+static const struct gsu_scalar_ext hashel_gsu_ext =
+  { { redis_getfn, redis_setfn, redis_unsetfn }, 0, 0, 0, 0 };
 
-/**/
+/* Hash GSU, normal one */
 static const struct gsu_hash redis_hash_gsu =
 { hashgetfn, redis_hash_setfn, redis_hash_unsetfn };
+
+static const struct gsu_scalar_ext string_gsu_ext =
+  { { redis_str_getfn, redis_str_setfn, redis_str_unsetfn }, 0, 0, 0, 0 };
 
 static struct builtin bintab[] = {
     BUILTIN("zrtie", 0, bin_zrtie, 1, -1, 0, "d:f:r", NULL),
@@ -168,29 +178,53 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
         return 1;
     }
 
-    /* Create hash */
+    struct gsu_scalar_ext *rc_carrier = NULL;
 
-    if (!(tied_param = createhash(pmname, pmflags))) {
-        zwarnnam(nam, "cannot create the requested parameter %s", pmname);
-        redisFree(rc);
-        return 1;
+    /* Main string storage? */
+    if (0 == strcmp(key,"")) {
+        /* Create hash */
+        if (!(tied_param = createhash(pmname, pmflags))) {
+            zwarnnam(nam, "cannot create the requested parameter: %s", pmname);
+            redisFree(rc);
+            return 1;
+        }
+
+        /* Allocate parameter sub-gsu, fill rc field.
+         * rc allocation is 1 to 1 accompanied by
+         * gsu_scalar_ext allocation. */
+
+        rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
+        rc_carrier->std = hashel_gsu_ext.std;
+        rc_carrier->rc = rc;
+        tied_param->u.hash->tmpdata = (void *)rc_carrier;
+        tied_param->gsu.h = &redis_hash_gsu;
+    } else {
+        int tpe = type(rc, key, (size_t) strlen(key));
+        if (tpe == RD_TYPE_STRING) {
+            if (!(tied_param = createparam(pmname, pmflags | PM_SPECIAL))) {
+                zwarnnam(nam, "cannot create the requested parameter: %s", pmname);
+                redisFree(rc);
+                return 1;
+            }
+            rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
+            rc_carrier->std = string_gsu_ext.std;
+            rc_carrier->rc = rc;
+            rc_carrier->key = ztrdup(key);
+            rc_carrier->key_len = strlen(key);
+            tied_param->gsu.s = (GsuScalar) rc_carrier;
+        } else {
+            redisFree(rc);
+            zwarnnam(nam, "Unknown key type: %s", type_names[tpe]);
+            return 1;
+        }
     }
-
-    append_tied_name(pmname);
-
-    tied_param->gsu.h = &redis_hash_gsu;
-
-    /* Allocate parameter sub-gsu, fill rc field.
-     * rc allocation is 1 to 1 accompanied by
-     * gsu_scalar_ext allocation. */
-
-    struct gsu_scalar_ext *rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
-    rc_carrier->std = gdbm_gsu_ext.std;
-    rc_carrier->rc = rc;
-    tied_param->u.hash->tmpdata = (void *)rc_carrier;
 
     /* Fill also host:port// field */
     rc_carrier->redis_host_port = ztrdup(resource_name_in);
+
+    /* Save in tied-enumeration array */
+    append_tied_name(pmname);
+
     return 0;
 }
 
@@ -203,26 +237,44 @@ bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
     int ret = 0;
 
     for (pmname = *args; *args++; pmname = *args) {
+        /* Get param */
         pm = (Param) paramtab->getnode(paramtab, pmname);
         if(!pm) {
-            zwarnnam(nam, "cannot untie %s", pmname);
-            ret = 1;
-            continue;
-        }
-        if (pm->gsu.h != &redis_hash_gsu) {
-            zwarnnam(nam, "not a tied redis hash: %s", pmname);
+            zwarnnam(nam, "cannot untie `%s', parameter not found", pmname);
             ret = 1;
             continue;
         }
 
-        queue_signals();
-        if (OPT_ISSET(ops,'u'))
-            redisuntie(pm);     /* clear read-only-ness */
-        if (unsetparam_pm(pm, 0, 1)) {
-            /* assume already reported */
+        if (pm->gsu.h == &redis_hash_gsu) {
+            queue_signals();
+            if (OPT_ISSET(ops,'u'))
+                redis_hash_untie(pm);     /* clear read-only-ness */
+            if (unsetparam_pm(pm, 0, 1)) {
+                /* assume already reported */
+                ret = 1;
+            }
+            unqueue_signals();
+        } else if (pm->gsu.s->getfn == &redis_str_getfn) {
+            if (pm->node.flags & PM_READONLY && !OPT_ISSET(ops,'u')) {
+                zwarnnam(nam, "cannot untie `%s', parameter is read only", pmname);
+                continue;
+            }
+            pm->node.flags &= ~PM_READONLY;
+
+            queue_signals();
+            /* Detach from database, untie doesn't clear the database */
+            redis_str_untie(pm);
+
+            if (unsetparam_pm(pm, 0, 1)) {
+                /* assume already reported */
+                ret = 1;
+            }
+            unqueue_signals();
+        } else {
+            zwarnnam(nam, "not a tied redis parameter: `%s'", pmname);
             ret = 1;
+            continue;
         }
-        unqueue_signals();
     }
 
     return ret;
@@ -299,6 +351,8 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
     return 0;
 }
 
+/*************** HASH ELEM ***************/
+
 /*
  * The param is actual param in hash – always, because
  * getgdbmnode creates every new key seen. However, it
@@ -320,15 +374,7 @@ redis_getfn(Param pm)
     redisContext *rc;
     redisReply *reply;
 
-    /* Key already retrieved? There is no sense of asking the
-     * database again, because:
-     * - there can be only multiple readers
-     * - so, no writer + reader use is allowed
-     *
-     * Thus:
-     * - if we are writers, we for sure have newest copy of data
-     * - if we are readers, we for sure have newest copy of data
-     */
+    /* Key already retrieved? */
     if (pm->node.flags & PM_UPTODATE) {
         return pm->u.str ? pm->u.str : (char *) hcalloc(1);
     }
@@ -447,6 +493,8 @@ redis_unsetfn(Param pm, UNUSED(int um))
     /* Set with NULL */
     redis_setfn(pm, NULL);
 }
+
+/*************** HASH ***************/
 
 /**/
 static HashNode
@@ -629,7 +677,31 @@ redis_hash_setfn(Param pm, HashTable ht)
 
 /**/
 static void
-redisuntie(Param pm)
+redis_hash_unsetfn(Param pm, UNUSED(int exp))
+{
+    /* This will make database contents survive the
+     * unset, as standard GSU will be put in place */
+    redis_hash_untie(pm);
+
+    /* Remember custom GSU structure assigned to
+     * u.hash->tmpdata before hash gets deleted */
+    struct gsu_scalar_ext * gsu_ext = pm->u.hash->tmpdata;
+
+    /* Uses normal unsetter. Will delete all owned
+     * parameters and also hashtable. */
+    pm->gsu.h->setfn(pm, NULL);
+
+    /* Don't need custom GSU structure with its
+     * redisContext pointer anymore */
+    zsfree(gsu_ext->redis_host_port);
+    zfree(gsu_ext, sizeof(struct gsu_scalar_ext));
+
+    pm->node.flags |= PM_UNSET;
+}
+
+/**/
+static void
+redis_hash_untie(Param pm)
 {
     redisContext *rc = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->rc;
     HashTable ht = pm->u.hash;
@@ -652,27 +724,147 @@ redisuntie(Param pm)
     pm->gsu.h = &stdhash_gsu;
 }
 
+/*************** STRING ***************/
+
+/**/
+static char *
+redis_str_getfn(Param pm)
+{
+    char *key;
+    size_t key_len;
+    redisContext *rc;
+    redisReply *reply;
+
+    /* Key already retrieved? */
+    if (pm->node.flags & PM_UPTODATE) {
+        return pm->u.str ? pm->u.str : (char *) hcalloc(1);
+    }
+
+    struct gsu_scalar_ext *gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
+    rc = gsu_ext->rc;
+    key = gsu_ext->key;
+    key_len = gsu_ext->key_len;
+
+    reply = redisCommand(rc, "EXISTS %b", key, (size_t) key_len);
+    if (reply && reply->type == REDIS_REPLY_INTEGER && reply->integer == 1) {
+        freeReplyObject(reply);
+
+        reply = redisCommand(rc, "GET %b", key, (size_t) key_len);
+        if (reply && reply->type == REDIS_REPLY_STRING) {
+            /* We have data – store it, return it */
+            pm->node.flags |= PM_UPTODATE;
+
+            /* Ensure there's no leak */
+            if (pm->u.str) {
+                zsfree(pm->u.str);
+            }
+
+            /* Metafy returned data. All fits - metafy
+             * can obtain data length to avoid using \0 */
+            pm->u.str = metafy(reply->str, reply->len, META_DUP);
+            freeReplyObject(reply);
+
+            /* Can return pointer, correctly saved inside param */
+            return pm->u.str;
+        } else if (reply) {
+            freeReplyObject(reply);
+        }
+    } else if (reply) {
+        freeReplyObject(reply);
+    }
+
+    /* Can this be "" ? */
+    return (char *) hcalloc(1);
+}
+
 /**/
 static void
-redis_hash_unsetfn(Param pm, UNUSED(int exp))
+redis_str_setfn(Param pm, char *val)
 {
-    redisuntie(pm);
+    char *key, *content;
+    size_t key_len, content_len;
+    redisContext *rc;
+    redisReply *reply;
 
-    /* Remember custom GSU structure assigned to
-     * u.hash->tmpdata before hash gets deleted */
-    struct gsu_scalar_ext * gsu_ext = pm->u.hash->tmpdata;
+    /* Set is done on parameter and on database. */
 
-    /* Uses normal unsetter. Will delete all owned
-     * parameters and also hashtable. */
-    pm->gsu.h->setfn(pm, NULL);
+    /* Parameter */
+    if (pm->u.str) {
+        zsfree(pm->u.str);
+        pm->u.str = NULL;
+        pm->node.flags &= ~(PM_UPTODATE);
+    }
 
-    /* Don't need custom GSU structure with its
-     * redisContext pointer anymore */
-    zsfree(gsu_ext->redis_host_port);
-    zfree(gsu_ext, sizeof(struct gsu_scalar_ext));
+    if (val) {
+        pm->u.str = ztrdup(val);
+        pm->node.flags |= PM_UPTODATE;
+    }
+
+    /* Database */
+    struct gsu_scalar_ext *gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
+    rc = gsu_ext->rc;
+    key = gsu_ext->key;
+    key_len = gsu_ext->key_len;
+
+    if (rc) {
+        if (val) {
+            /* Unmetafy with exact zalloc size */
+            int umlen = 0;
+            char *umval = unmetafy_zalloc(val, &umlen);
+
+            /* Store */
+            content = umval;
+            content_len = umlen;
+            reply = redisCommand(rc, "SET %b %b", key, (size_t) key_len, content, (size_t) content_len);
+            if (reply)
+                freeReplyObject(reply);
+
+            /* Free */
+            set_length(umval, content_len);
+            zsfree(umval);
+        } else {
+            reply = redisCommand(rc, "DEL %b", key, (size_t) key_len);
+            freeReplyObject(reply);
+        }
+    }
+}
+
+
+/**/
+static void
+redis_str_unsetfn(Param pm, UNUSED(int um))
+{
+    /* Will clear the database */
+    redis_str_setfn(pm, NULL);
+
+    /* Will detach from database and free custom memory */
+    redis_str_untie(pm);
 
     pm->node.flags |= PM_UNSET;
 }
+
+/**/
+static void
+redis_str_untie(Param pm)
+{
+    struct gsu_scalar_ext *gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
+
+    if (gsu_ext->rc) /* paranoia */
+        redisFree(gsu_ext->rc);
+
+    /* Remove from list of tied parameters */
+    remove_tied_name(pm->node.nam);
+
+    pm->node.flags &= ~(PM_SPECIAL|PM_READONLY);
+    pm->gsu.s = &stdscalar_gsu;
+
+    /* Free gsu_ext */
+    zsfree(gsu_ext->redis_host_port);
+    zsfree(gsu_ext->key);
+    zfree(gsu_ext, sizeof(struct gsu_scalar_ext));
+}
+
+/*************** MAIN CODE ***************/
 
 static struct features module_features = {
     bintab, sizeof(bintab)/sizeof(*bintab),
