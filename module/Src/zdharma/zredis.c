@@ -77,6 +77,7 @@ static char *backtype = "db/redis";
 
 struct gsu_scalar_ext {
     struct gsu_scalar std;
+    int use_cache;
     redisContext *rc;
     char *redis_host_port;
     char *key;
@@ -86,17 +87,17 @@ struct gsu_scalar_ext {
 /* Source structure - will be copied to allocated one,
  * with `rc` filled. `rc` allocation <-> gsu allocation. */
 static const struct gsu_scalar_ext hashel_gsu_ext =
-    { { redis_getfn, redis_setfn, redis_unsetfn }, 0, 0, 0, 0 };
+    { { redis_getfn, redis_setfn, redis_unsetfn }, 0, 0, 0, 0, 0 };
 
 /* Hash GSU, normal one */
 static const struct gsu_hash redis_hash_gsu =
     { hashgetfn, redis_hash_setfn, redis_hash_unsetfn };
 
 static const struct gsu_scalar_ext string_gsu_ext =
-    { { redis_str_getfn, redis_str_setfn, redis_str_unsetfn }, 0, 0, 0, 0 };
+    { { redis_str_getfn, redis_str_setfn, redis_str_unsetfn }, 0, 0, 0, 0, 0 };
 
 static struct builtin bintab[] = {
-    BUILTIN("zrtie", 0, bin_zrtie, 1, -1, 0, "d:f:r", NULL),
+    BUILTIN("zrtie", 0, bin_zrtie, 1, -1, 0, "d:f:rp", NULL),
     BUILTIN("zruntie", 0, bin_zruntie, 1, -1, 0, "u", NULL),
     BUILTIN("zredishost", 0, bin_zredishost, 1, -1, 0, "", NULL),
     BUILTIN("zredisclear", 0, bin_zredisclear, 1, 2, 0, "", NULL),
@@ -195,6 +196,9 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 
         rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
         rc_carrier->std = hashel_gsu_ext.std;
+        rc_carrier->use_cache = 1;
+        if (OPT_ISSET(ops,'p'))
+            rc_carrier->use_cache = 0;
         rc_carrier->rc = rc;
         tied_param->u.hash->tmpdata = (void *)rc_carrier;
         tied_param->gsu.h = &redis_hash_gsu;
@@ -208,6 +212,9 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
             }
             rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
             rc_carrier->std = string_gsu_ext.std;
+            rc_carrier->use_cache = 1;
+            if (OPT_ISSET(ops,'p'))
+                rc_carrier->use_cache = 0;
             rc_carrier->rc = rc;
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
@@ -377,21 +384,24 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
  *
  * It will be left in this state if database doesn't
  * contain such key. That might be a drawback, maybe
- * setting to empty value has sense, as no other writer
- * can exist. This would remove subtle hcalloc(1) leak.
+ * setting to empty value has sense. This would remove
+ * subtle hcalloc(1) leak.
  */
 
 /**/
 static char *
 redis_getfn(Param pm)
 {
+    struct gsu_scalar_ext *gsu_ext;
     char *key;
     size_t key_len;
     redisContext *rc;
     redisReply *reply;
 
+    gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
+
     /* Key already retrieved? */
-    if (pm->node.flags & PM_UPTODATE) {
+    if ((pm->node.flags & PM_UPTODATE) && gsu_ext->use_cache) {
         return pm->u.str ? pm->u.str : (char *) hcalloc(1);
     }
 
@@ -403,7 +413,7 @@ redis_getfn(Param pm)
     key = umkey;
     key_len = umlen;
 
-    rc = ((struct gsu_scalar_ext *)pm->gsu.s)->rc;
+    rc = gsu_ext->rc;
 
     reply = redisCommand(rc, "EXISTS %b", key, (size_t) key_len);
     if (reply && reply->type == REDIS_REPLY_INTEGER && reply->integer == 1) {
@@ -739,17 +749,18 @@ redis_hash_untie(Param pm)
 static char *
 redis_str_getfn(Param pm)
 {
+    struct gsu_scalar_ext *gsu_ext;
     char *key;
     size_t key_len;
     redisContext *rc;
     redisReply *reply;
 
+    gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
     /* Key already retrieved? */
-    if (pm->node.flags & PM_UPTODATE) {
+    if ((pm->node.flags & PM_UPTODATE) && gsu_ext->use_cache) {
         return pm->u.str ? pm->u.str : (char *) hcalloc(1);
     }
 
-    struct gsu_scalar_ext *gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
     rc = gsu_ext->rc;
     key = gsu_ext->key;
     key_len = gsu_ext->key_len;
