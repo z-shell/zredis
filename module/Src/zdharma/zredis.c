@@ -27,6 +27,13 @@
  */
 #if defined(HAVE_HIREDIS_HIREDIS_H) && defined(HAVE_REDISCONNECT)
 
+#define RD_TYPE_UNKNOWN 0
+#define RD_TYPE_STRING 1
+#define RD_TYPE_LIST 2
+#define RD_TYPE_SET 3
+#define RD_TYPE_ZSET 4
+#define RD_TYPE_HASH 5
+
 #include <hiredis/hiredis.h>
 
 static Param createhash(char *name, int flags);
@@ -955,6 +962,38 @@ static int connect(char *nam, redisContext **rc, const char *host, int port,
 
     return 1;
 }
+
+static int type(redisContext *rc, char *key, int key_len) {
+    redisReply *reply = NULL;
+    reply = redisCommand(rc, "TYPE %b", key, (size_t) key_len);
+    if (reply == NULL || reply->type != REDIS_REPLY_STRING) {
+        if (reply)
+            freeReplyObject(reply);
+        return RD_TYPE_UNKNOWN;
+    }
+    if (0 == strncmp("string", reply->str, reply->len)) {
+        freeReplyObject(reply);
+        return RD_TYPE_STRING;
+    }
+    if (0 == strncmp("list", reply->str, reply->len)) {
+        freeReplyObject(reply);
+        return RD_TYPE_LIST;
+    }
+    if (0 == strncmp("set", reply->str, reply->len)) {
+        freeReplyObject(reply);
+        return RD_TYPE_SET;
+    }
+    if (0 == strncmp("zset", reply->str, reply->len)) {
+        freeReplyObject(reply);
+        return RD_TYPE_ZSET;
+    }
+    if (0 == strncmp("hash", reply->str, reply->len)) {
+        freeReplyObject(reply);
+        return RD_TYPE_HASH;
+    }
+    return RD_TYPE_UNKNOWN;
+}
+
 #else
 # error no gdbm
 #endif /* have gdbm */
