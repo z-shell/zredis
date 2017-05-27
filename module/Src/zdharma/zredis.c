@@ -62,7 +62,7 @@ static char *type_names[7] = { "invalid", "string", "list", "set", "sorted-set",
 
 #include <hiredis/hiredis.h>
 
-static Param createhash(char *name, int flags);
+static Param createhash(char *name, int flags, int which);
 static int append_tied_name(const char *name);
 static int remove_tied_name(const char *name);
 static char *unmetafy_zalloc(const char *to_copy, int *new_len);
@@ -132,6 +132,15 @@ static const struct gsu_scalar_ext string_gsu_ext =
 
 static const struct gsu_array_ext arrset_gsu_ext =
     { { redis_arrset_getfn, redis_arrset_setfn, redis_arrset_unsetfn }, 0, 0, 0, 0, 0 };
+
+/* PM_HASHELEM GSU for zset */
+static const struct gsu_scalar_ext hashel_zset_gsu_ext =
+    { { redis_zset_getfn, redis_zset_setfn, redis_zset_unsetfn }, 0, 0, 0, 0, 0 };
+
+/* Hash GSU for zset, normal one */
+static const struct gsu_hash hash_zset_gsu =
+    { hashgetfn, redis_hash_zset_setfn, redis_hash_zset_unsetfn };
+
 /* }}} */
 /* ARRAY: builtin {{{ */
 static struct builtin bintab[] = {
@@ -228,7 +237,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
     /* Main string storage? */
     if (0 == strcmp(key,"")) {
         /* Create hash */
-        if (!(tied_param = createhash(pmname, pmflags))) {
+        if (!(tied_param = createhash(pmname, pmflags, 0))) {
             zwarnnam(nam, "cannot create the requested hash parameter: %s", pmname);
             redisFree(rc);
             return 1;
@@ -293,6 +302,29 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
             rc_carrier->redis_host_port = ztrdup(resource_name_in);
 
             tied_param->gsu.s = (GsuScalar) rc_carrier;
+        } else if (tpe == RD_TYPE_ZSET) {
+            /* Create hash */
+            if (!(tied_param = createhash(pmname, pmflags, 1))) {
+                zwarnnam(nam, "cannot create the requested hash (for zset) parameter: %s", pmname);
+                redisFree(rc);
+                return 1;
+            }
+
+            struct gsu_scalar_ext *rc_carrier = NULL;
+            rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
+            rc_carrier->std = hashel_zset_gsu_ext.std;
+            rc_carrier->use_cache = 1;
+            if (OPT_ISSET(ops,'p'))
+                rc_carrier->use_cache = 0;
+            rc_carrier->rc = rc;
+            rc_carrier->key = ztrdup(key);
+            rc_carrier->key_len = strlen(key);
+
+            /* Fill also host:port// field */
+            rc_carrier->redis_host_port = ztrdup(resource_name_in);
+
+            tied_param->u.hash->tmpdata = (void *)rc_carrier;
+            tied_param->gsu.h = &hash_zset_gsu;
         } else {
             redisFree(rc);
             zwarnnam(nam, "Unknown key type: %s", type_names[tpe]);
@@ -1175,6 +1207,402 @@ redis_arrset_untie(Param pm)
 }
 /* }}} */
 
+/************ ZSET HASH ELEM *************/
+
+/* FUNCTION: redis_zset_getfn {{{ */
+
+/*
+ * The param is actual param in hash – always, because
+ * redis_zset_get_node creates every new key seen. However,
+ * it might be not PM_UPTODATE - which means that database
+ * wasn't yet queried.
+ *
+ * It will be left in this state if database doesn't
+ * contain such key. That might be a drawback, maybe
+ * setting to empty value has sense.
+ */
+
+/**/
+static char *
+redis_zset_getfn(Param pm)
+{
+    struct gsu_scalar_ext *gsu_ext;
+    char *main_key, *key;
+    size_t main_key_len, key_len;
+    redisContext *rc;
+    redisReply *reply;
+
+    gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
+
+    /* Key already retrieved? */
+    if ((pm->node.flags & PM_UPTODATE) && gsu_ext->use_cache) {
+        return pm->u.str ? pm->u.str : (char *) hcalloc(1);
+    }
+
+    /* Unmetafy key. Redis fits nice into this
+     * process, as it can use length of data */
+    int umlen = 0;
+    char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
+
+    key = umkey;
+    key_len = umlen;
+
+    rc = gsu_ext->rc;
+    main_key = gsu_ext->key;
+    main_key_len = gsu_ext->key_len;
+
+    reply = redisCommand(rc, "ZSCORE %b %b", main_key, (size_t) main_key_len, key, (size_t) key_len);
+    if (reply && reply->type == REDIS_REPLY_STRING) {
+        /* We have data – store it and return it */
+        pm->node.flags |= PM_UPTODATE;
+
+        /* Ensure there's no leak */
+        if (pm->u.str) {
+            zsfree(pm->u.str);
+        }
+
+        /* Metafy returned data. All fits - metafy
+          * can obtain data length to avoid using \0 */
+        pm->u.str = metafy(reply->str, reply->len, META_DUP);
+        freeReplyObject(reply);
+
+        /* Free key, restoring its original length */
+        set_length(umkey, key_len);
+        zsfree(umkey);
+
+        /* Can return pointer, correctly saved inside hash */
+        return pm->u.str;
+    } else if (reply) {
+        freeReplyObject(reply);
+    }
+
+    /* Free key, restoring its original length */
+    set_length(umkey, key_len);
+    zsfree(umkey);
+
+    /* Can this be "" ? */
+    return (char *) hcalloc(1);
+}
+/* }}} */
+/* FUNCTION: redis_zset_setfn {{{ */
+/**/
+static void
+redis_zset_setfn(Param pm, char *val)
+{
+    char *main_key, *key, *content;
+    size_t main_key_len, key_len, content_len;
+    struct gsu_scalar_ext *gsu_ext;
+    redisContext *rc;
+    redisReply *reply;
+
+    /* Set is done on parameter and on database. */
+
+    /* Parameter */
+    if (pm->u.str) {
+        zsfree(pm->u.str);
+        pm->u.str = NULL;
+        pm->node.flags &= ~(PM_UPTODATE);
+    }
+
+    if (val) {
+        pm->u.str = ztrdup(val);
+        pm->node.flags |= PM_UPTODATE;
+    }
+
+    /* Database */
+    gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
+    rc = gsu_ext->rc;
+
+    if (rc) {
+        int umlen = 0;
+        char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
+
+        key = umkey;
+        key_len = umlen;
+
+        main_key = gsu_ext->key;
+        main_key_len = gsu_ext->key_len;
+
+        if (val) {
+            /* Unmetafy with exact zalloc size */
+            char *umval = unmetafy_zalloc(val, &umlen);
+
+            content = umval;
+            content_len = umlen;
+
+            /* ZADD myzset 1.0 element1 */
+            reply = redisCommand(rc, "ZADD %b %b %b",
+                                 main_key, (size_t) main_key_len,
+                                 content, (size_t) content_len,
+                                 key, (size_t) key_len );
+            if (reply)
+                freeReplyObject(reply);
+
+            /* Free */
+            set_length(umval, content_len);
+            zsfree(umval);
+        } else {
+            reply = redisCommand(rc, "ZREM %b %b", main_key, (size_t) main_key_len, key, (size_t) key_len);
+            if (reply)
+                freeReplyObject(reply);
+        }
+
+        /* Free key */
+        set_length(umkey, key_len);
+        zsfree(umkey);
+    }
+}
+/* }}} */
+/* FUNCTION: redis_zset_unsetfn {{{ */
+/**/
+static void
+redis_zset_unsetfn(Param pm, UNUSED(int um))
+{
+    /* Set with NULL */
+    redis_zset_setfn(pm, NULL);
+}
+/* }}} */
+
+/*************** ZSET HASH ***************/
+
+/* FUNCTION: redis_zset_get_node {{{ */
+/**/
+static HashNode
+redis_zset_get_node(HashTable ht, const char *name)
+{
+    HashNode hn = gethashnode2(ht, name);
+    Param val_pm = (Param) hn;
+
+    /* Entry for key doesn't exist? Create it now,
+     * it will be interfacing between the database
+     * and Zsh - through special gsu. So, any seen
+     * key results in new interfacing parameter.
+     *
+     * Add the Param to its hash, it is not PM_UPTODATE.
+     * It will be loaded from database *and filled*
+     * or left in that state if the database doesn't
+     * contain it.
+     */
+
+    if (!val_pm) {
+        val_pm = (Param) zshcalloc(sizeof (*val_pm));
+        val_pm->node.flags = PM_SCALAR | PM_HASHELEM; /* no PM_UPTODATE */
+        val_pm->gsu.s = (GsuScalar) ht->tmpdata;
+        ht->addnode(ht, ztrdup(name), val_pm); // sets pm->node.nam
+    }
+
+    return (HashNode) val_pm;
+}
+/* }}} */
+/* FUNCTION: zset_scan_keys {{{ */
+/**/
+static void
+zset_scan_keys(HashTable ht, ScanFunc func, int flags)
+{
+    char *main_key, *key;
+    size_t main_key_len, key_len;
+    unsigned long long cursor = 0;
+    redisContext *rc;
+    redisReply *reply, *reply2;
+    struct gsu_scalar_ext *gsu_ext;
+
+    gsu_ext = (struct gsu_scalar_ext *) ht->tmpdata;
+    rc = gsu_ext->rc;
+    main_key = gsu_ext->key;
+    main_key_len = gsu_ext->key_len;
+
+    /* Iterate keys adding them to hash, so we have Param to use in `func` */
+    do {
+      reply = redisCommand(rc, "ZSCAN %b %llu", main_key, (size_t) main_key_len, cursor);
+      if (reply == NULL || reply->type != REDIS_REPLY_ARRAY || reply->elements != 2) {
+          if (reply && reply->type == REDIS_REPLY_ERROR) {
+              zwarn("Problem occured during ZSCAN: %s", reply->str);
+          } else {
+              zwarn("Problem occured during ZSCAN, no error message available");
+          }
+          if (reply)
+              freeReplyObject(reply);
+          break;
+      }
+
+      /* Get new cursor */
+      if (reply->element[0]->type == REDIS_REPLY_STRING) {
+          cursor = strtoull(reply->element[0]->str, NULL, 10);
+      } else {
+          zwarn("Error 2 occured during ZSCAN");
+          break;
+      }
+
+      reply2 = reply->element[1];
+      if (reply2 == NULL || reply2->type != REDIS_REPLY_ARRAY) {
+          zwarn("Error 3 occured during ZSCAN");
+          break;
+      }
+
+      for (size_t j = 0; j < reply2->elements; j+= 2) {
+          redisReply *entry = reply2->element[j];
+          if (entry == NULL || entry->type != REDIS_REPLY_STRING) {
+              continue;
+          }
+
+          key = entry->str;
+          key_len = entry->len;
+
+          /* This returns database-interfacing Param,
+          * it will return u.str or first fetch data
+          * if not PM_UPTODATE (newly created) */
+          char *zkey = metafy(key, key_len, META_DUP);
+          HashNode hn = redis_zset_get_node(ht, zkey);
+          zsfree(zkey);
+
+          func(hn, flags);
+      }
+      freeReplyObject(reply);
+    } while (cursor != 0);
+}
+/* }}} */
+/* FUNCTION: redis_hash_zset_setfn {{{ */
+
+/*
+ * Replace database with new hash
+ */
+
+/**/
+static void
+redis_hash_zset_setfn(Param pm, HashTable ht)
+{
+    HashNode hn;
+    char *main_key, *key, *content;
+    size_t main_key_len, key_len, content_len, i;
+    redisContext *rc;
+    redisReply *reply;
+    struct gsu_scalar_ext *gsu_ext;
+
+    if (!pm->u.hash || pm->u.hash == ht)
+        return;
+
+    gsu_ext = (struct gsu_scalar_ext *) pm->u.hash->tmpdata;
+    rc = gsu_ext->rc;
+    if (!rc) {
+        /* TODO: RECONNECT */
+        return;
+    }
+
+    main_key = gsu_ext->key;
+    main_key_len = gsu_ext->key_len;
+
+    /* PRUNE */
+    reply = redisCommand(rc, "ZREMRANGEBYSCORE %b -inf +inf", main_key, (size_t) main_key_len);
+    if (reply == NULL || reply->type != REDIS_REPLY_INTEGER) {
+        zwarn("Error 4 occured, database not updated");
+        if (reply)
+            freeReplyObject(reply);
+        return;
+    }
+    freeReplyObject(reply);
+
+    emptyhashtable(pm->u.hash);
+
+    if (!ht)
+        return;
+
+     /* Put new strings into database, having
+      * their interfacing-Params created */
+
+    for (i = 0; i < ht->hsize; i++)
+        for (hn = ht->nodes[i]; hn; hn = hn->next) {
+            struct value v;
+
+            v.isarr = v.flags = v.start = 0;
+            v.end = -1;
+            v.arr = NULL;
+            v.pm = (Param) hn;
+
+            /* Unmetafy key */
+            int umlen = 0;
+            char *umkey = unmetafy_zalloc(v.pm->node.nam, &umlen);
+
+            key = umkey;
+            key_len = umlen;
+
+            queue_signals();
+
+            /* Unmetafy data */
+            char *umval = unmetafy_zalloc(getstrvalue(&v), &umlen);
+
+            content = umval;
+            content_len = umlen;
+
+            /* ZADD myzset 1.0 element1 */
+            reply = redisCommand(rc, "ZADD %b %b %b", main_key, (size_t) main_key_len,
+                                 content, (size_t) content_len,
+                                 key, (size_t) key_len);
+            if (reply)
+                freeReplyObject(reply);
+
+            /* Free, restoring original length */
+            set_length(umval, content_len);
+            zsfree(umval);
+            set_length(umkey, key_len);
+            zsfree(umkey);
+
+            unqueue_signals();
+        }
+}
+/* }}} */
+/* FUNCTION: redis_hash_zset_unsetfn {{{ */
+/**/
+static void
+redis_hash_zset_unsetfn(Param pm, UNUSED(int exp))
+{
+    /* This will make database contents survive the
+     * unset, as standard GSU will be put in place */
+    redis_hash_zset_untie(pm);
+
+    /* Remember custom GSU structure assigned to
+     * u.hash->tmpdata before hash gets deleted */
+    struct gsu_scalar_ext * gsu_ext = pm->u.hash->tmpdata;
+
+    /* Uses normal unsetter. Will delete all owned
+     * parameters and also hashtable. */
+    pm->gsu.h->setfn(pm, NULL);
+
+    /* Don't need custom GSU structure with its
+     * redisContext pointer anymore */
+    zsfree(gsu_ext->redis_host_port);
+    zsfree(gsu_ext->key);
+    zfree(gsu_ext, sizeof(struct gsu_scalar_ext));
+
+    pm->node.flags |= PM_UNSET;
+}
+/* }}} */
+/* FUNCTION: redis_hash_zset_untie {{{ */
+/**/
+static void
+redis_hash_zset_untie(Param pm)
+{
+    redisContext *rc = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->rc;
+    HashTable ht = pm->u.hash;
+
+    if (rc) { /* paranoia */
+        redisFree(rc);
+
+        /* Let hash fields know there's no backend */
+        ((struct gsu_scalar_ext *)ht->tmpdata)->rc = NULL;
+
+        /* Remove from list of tied parameters */
+        remove_tied_name(pm->node.nam);
+    }
+
+    /* for completeness ... createspecialhash() should have an inverse */
+    ht->getnode = ht->getnode2 = gethashnode2;
+    ht->scantab = NULL;
+
+    pm->node.flags &= ~(PM_SPECIAL|PM_READONLY);
+    pm->gsu.h = &stdhash_gsu;
+}
+/* }}} */
+
 /*************** MAIN CODE ***************/
 
 /* ARRAY features {{{ */
@@ -1242,7 +1670,7 @@ finish_(UNUSED(Module m))
 /**************** UTILITY ****************/
 
 /* FUNCTION: createhash {{{ */
-static Param createhash(char *name, int flags)
+static Param createhash(char *name, int flags, int which)
 {
     Param pm;
     HashTable ht;
@@ -1265,8 +1693,15 @@ static Param createhash(char *name, int flags)
     }
 
     /* These provide special features */
-    ht->getnode = ht->getnode2 = redis_get_node;
-    ht->scantab = scan_keys;
+    if ( which == 0 ) {
+        ht->getnode = ht->getnode2 = redis_get_node;
+        ht->scantab = scan_keys;
+    } else if ( which == 1 ) {
+        ht->getnode = ht->getnode2 = redis_zset_get_node;
+        ht->scantab = zset_scan_keys;
+    } else {
+        return NULL;
+    }
 
     return pm;
 }
