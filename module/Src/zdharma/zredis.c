@@ -761,6 +761,8 @@ redis_hash_setfn(Param pm, HashTable ht)
     }
     freeReplyObject(reply);
 
+    emptyhashtable(pm->u.hash);
+
     if (!ht)
         return;
 
