@@ -1259,6 +1259,7 @@ static Param createhash(char *name, int flags)
         paramtab->removenode(paramtab, name);
         paramtab->freenode(&pm->node);
         zwarnnam(name, "Out of memory when allocating hash");
+        return NULL;
     }
 
     /* These provide special features */
