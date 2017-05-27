@@ -1063,7 +1063,7 @@ redis_arrset_setfn(Param pm, char **val)
 {
     char *key, *content;
     size_t key_len, content_len;
-    int alen, j;
+    int alen = 0, j;
     redisContext *rc;
     redisReply *reply;
 
@@ -1078,11 +1078,10 @@ redis_arrset_setfn(Param pm, char **val)
 
     if (val) {
         uniqarray(val);
+        alen = arrlen(val);
         pm->u.arr = val;
         pm->node.flags |= PM_UPTODATE;
     }
-
-    alen = arrlen(val);
 
     /* Database */
     struct gsu_array_ext *gsu_ext = (struct gsu_array_ext *) pm->gsu.a;
