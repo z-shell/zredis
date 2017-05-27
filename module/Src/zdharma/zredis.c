@@ -349,6 +349,21 @@ bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
                 ret = 1;
             }
             unqueue_signals();
+        } else if (pm->gsu.a->getfn == &redis_arrset_getfn) {
+            if (pm->node.flags & PM_READONLY && !OPT_ISSET(ops,'u')) {
+                zwarnnam(nam, "cannot untie `%s', parameter is read only, use -u option", pmname);
+                continue;
+            }
+            pm->node.flags &= ~PM_READONLY;
+            queue_signals();
+            /* Detach from database, untie doesn't clear the database */
+            redis_arrset_untie(pm);
+
+            if (unsetparam_pm(pm, 0, 1)) {
+                /* assume already reported */
+                ret = 1;
+            }
+            unqueue_signals();
         } else {
             zwarnnam(nam, "not a tied redis parameter: `%s'", pmname);
             ret = 1;
