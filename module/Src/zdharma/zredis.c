@@ -607,7 +607,8 @@ redis_setfn(Param pm, char *val)
             zsfree(umval);
         } else {
             reply = redisCommand(rc, "DEL %b", key, (size_t) key_len);
-            freeReplyObject(reply);
+            if (reply)
+                freeReplyObject(reply);
         }
 
         /* Free key */
@@ -753,7 +754,8 @@ redis_hash_setfn(Param pm, HashTable ht)
 
         /* DEL */
         reply2 = redisCommand(rc, "DEL %b", key, (size_t) key_len);
-        freeReplyObject(reply2);
+        if (reply2)
+            freeReplyObject(reply2);
 
         unqueue_signals();
     }
@@ -959,7 +961,8 @@ redis_str_setfn(Param pm, char *val)
             zsfree(umval);
         } else {
             reply = redisCommand(rc, "DEL %b", key, (size_t) key_len);
-            freeReplyObject(reply);
+            if (reply)
+                freeReplyObject(reply);
         }
     }
 }
@@ -1124,7 +1127,8 @@ redis_arrset_setfn(Param pm, char **val)
             }
         } else {
             reply = redisCommand(rc, "DEL %b", key, (size_t) key_len);
-            freeReplyObject(reply);
+            if (reply)
+                freeReplyObject(reply);
         }
     }
 
