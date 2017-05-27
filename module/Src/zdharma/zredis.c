@@ -94,10 +94,10 @@ static char *backtype = "db/redis";
  * is freed. Only new ztie creates new custom GSU struct
  * instance.
  *
- * This is for hashes, and is called *scalar*, because
- * it's for hash elements, PM_SCALAR | PM_HASHELEM.
+ * This is also for hashes, and is called *scalar*, because
+ * it's for hash *elements*, PM_SCALAR | PM_HASHELEM. Also
+ * for strings.
  */
-
 struct gsu_scalar_ext {
     struct gsu_scalar std;
     int use_cache;
@@ -217,7 +217,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
     if (0 == strcmp(key,"")) {
         /* Create hash */
         if (!(tied_param = createhash(pmname, pmflags))) {
-            zwarnnam(nam, "cannot create the requested parameter: %s", pmname);
+            zwarnnam(nam, "cannot create the requested hash parameter: %s", pmname);
             redisFree(rc);
             return 1;
         }
@@ -238,7 +238,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
         int tpe = type(rc, key, (size_t) strlen(key));
         if (tpe == RD_TYPE_STRING) {
             if (!(tied_param = createparam(pmname, pmflags | PM_SPECIAL))) {
-                zwarnnam(nam, "cannot create the requested parameter: %s", pmname);
+                zwarnnam(nam, "cannot create the requested scalar parameter: %s", pmname);
                 redisFree(rc);
                 return 1;
             }
@@ -820,7 +820,7 @@ redis_str_getfn(Param pm)
 
         reply = redisCommand(rc, "GET %b", key, (size_t) key_len);
         if (reply && reply->type == REDIS_REPLY_STRING) {
-            /* We have data – store it, return it */
+            /* We have data – store it and return it */
             pm->node.flags |= PM_UPTODATE;
 
             /* Ensure there's no leak */
@@ -833,7 +833,7 @@ redis_str_getfn(Param pm)
             pm->u.str = metafy(reply->str, reply->len, META_DUP);
             freeReplyObject(reply);
 
-            /* Can return pointer, correctly saved inside param */
+            /* Can return pointer, correctly saved inside Param */
             return pm->u.str;
         } else if (reply) {
             freeReplyObject(reply);
