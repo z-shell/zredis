@@ -488,7 +488,7 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
 
     if (pm->gsu.h == &redis_hash_gsu) {
         if (!key) {
-            zwarnnam(nam, "Key name, which is to be cleared in hash `%s', is required", pmname);
+            zwarnnam(nam, "Key name, which is to be cache-cleared in hash `%s', is required", pmname);
             return 1;
         }
         HashTable ht = pm->u.hash;
