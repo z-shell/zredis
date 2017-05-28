@@ -396,6 +396,15 @@ bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
                 ret = 1;
             }
             unqueue_signals();
+        } else if (pm->gsu.h == &hash_zset_gsu) {
+            queue_signals();
+            if (OPT_ISSET(ops,'u'))
+                pm->node.flags &= ~PM_READONLY;
+            if (unsetparam_pm(pm, 0, 1)) {
+                /* assume already reported */
+                ret = 1;
+            }
+            unqueue_signals();
         } else {
             zwarnnam(nam, "not a tied redis parameter: `%s'", pmname);
             ret = 1;
