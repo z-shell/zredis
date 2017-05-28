@@ -2464,6 +2464,8 @@ static int is_tied(Param pm) {
         return 1;
     } else if (pm->gsu.h == &hash_zset_gsu) {
         return 1;
+    } else if (pm->gsu.h == &hash_hset_gsu) {
+        return 1;
     }
 
     return 0;
