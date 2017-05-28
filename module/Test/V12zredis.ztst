@@ -21,9 +21,9 @@
  dbase[testkey]=testdata
  zruntie dbase
  unset dbase
- zrtie -d db/redis -f $db1 dbase
+ zrtie -r -d db/redis -f $db1 dbase
  echo $dbase[testkey]
- zruntie dbase
+ zruntie -u dbase
  echo $zredis_tied ${#zredis_tied}
 0:store key in database 1
 >testdata
@@ -61,9 +61,9 @@
  zrtie -d db/redis -f $db1 dbase
  unset 'dbase[testkey]'
  zruntie dbase
- zrtie -d db/redis -f $db1 dbase
+ zrtie -r -d db/redis -f $db1 dbase
  echo $dbase[testkey]
- zruntie dbase
+ zruntie -u dbase
  echo $zredis_tied ${#zredis_tied}
 0:store & remove key from database (the same variables)
 >testdata
@@ -124,10 +124,10 @@
  dbase=( a b c d )
  zruntie dbase
  unset dbase
- zrtie -d db/redis -f $db1 dbase
+ zrtie -r -d db/redis -f $db1 dbase
  result=( "${(kv)dbase[@]}" )
  print -rl -- "${(o)result[@]}"
- zruntie dbase
+ zruntie -u dbase
  echo $zredis_tied ${#zredis_tied}
 0:replace hash / database with untie, scan
 >a
