@@ -1331,7 +1331,7 @@ redis_arrset_untie(Param pm)
     remove_tied_name(pm->node.nam);
 
     pm->node.flags &= ~(PM_SPECIAL|PM_READONLY);
-    pm->gsu.s = &stdscalar_gsu;
+    pm->gsu.a = &stdarray_gsu;
 
     /* Free gsu_ext */
     zsfree(gsu_ext->redis_host_port);
@@ -2409,7 +2409,7 @@ redis_arrlist_untie(Param pm)
     remove_tied_name(pm->node.nam);
 
     pm->node.flags &= ~(PM_SPECIAL|PM_READONLY);
-    pm->gsu.s = &stdscalar_gsu;
+    pm->gsu.a = &stdarray_gsu;
 
     /* Free gsu_ext */
     zsfree(gsu_ext->redis_host_port);
