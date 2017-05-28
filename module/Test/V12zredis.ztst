@@ -355,6 +355,7 @@
  echo $dbase[testkey]
  zredisclear dbase testkey
  echo $dbase[testkey]
+ zruntie dbase
 0:Test store in forked Zsh
 >value1
 >value2
@@ -365,6 +366,7 @@
  fun() { while read line; do echo $line; done }
  eval "dbase[testkey]=value2" | fun
  echo $dbase[testkey]
+ zruntie dbase
 0:Test store in forked Zsh, with -p passthrough
 >value1
 >value2

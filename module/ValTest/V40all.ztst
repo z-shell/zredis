@@ -355,6 +355,7 @@
  echo $dbase[testkey]
  zredisclear dbase testkey
  echo $dbase[testkey]
+ zruntie dbase
 0:Test store in forked Zsh
 >value1
 >value2
