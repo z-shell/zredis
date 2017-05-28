@@ -128,9 +128,11 @@ static const struct gsu_scalar_ext hashel_gsu_ext =
 static const struct gsu_hash redis_hash_gsu =
     { hashgetfn, redis_hash_setfn, redis_hash_unsetfn };
 
+/* String (scalar to key) mapping */
 static const struct gsu_scalar_ext string_gsu_ext =
     { { redis_str_getfn, redis_str_setfn, redis_str_unsetfn }, 0, 0, 0, 0, 0 };
 
+/* Array to set mapping */
 static const struct gsu_array_ext arrset_gsu_ext =
     { { redis_arrset_getfn, redis_arrset_setfn, redis_arrset_unsetfn }, 0, 0, 0, 0, 0 };
 
@@ -297,7 +299,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
             tied_param->gsu.s = (GsuScalar) rc_carrier;
         } else if (tpe == RD_TYPE_SET) {
             if (!(tied_param = createparam(pmname, pmflags | PM_ARRAY | PM_SPECIAL))) {
-                zwarnnam(nam, "cannot create the requested array parameter: %s", pmname);
+                zwarnnam(nam, "cannot create the requested array (for set) parameter: %s", pmname);
                 redisFree(rc);
                 return 1;
             }
