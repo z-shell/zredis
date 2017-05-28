@@ -2825,6 +2825,8 @@ static void zrtie_usage() {
     fprintf(stdout, GREEN " -p" RESET ": passthrough - always do a fresh query to database, don't use cache\n");
     fprintf(stdout, GREEN " -r" RESET ": create read-only parameter\n" );
     fprintf(stdout, GREEN " -f" RESET ": database address in format {host}[:port][/[db_idx][/key]]\n");
+    fprintf(stdout, "The " RED "{parameter_name}" RESET " - choose name for the created database-bound parameter\n");
+    fflush(stdout);
 }
 /* }}} */
 /* FUNCTION: zrzset_usage */
