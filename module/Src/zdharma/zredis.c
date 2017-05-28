@@ -550,6 +550,17 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
         if (val_pm) {
             val_pm->node.flags &= ~(PM_UPTODATE);
         }
+    } else if(pm->gsu.h == &hash_hset_gsu) {
+        if (!key) {
+            zwarnnam(nam, "Key name, which is to be cache-cleared in hash/hset `%s', is required", pmname);
+            return 1;
+        }
+        HashTable ht = pm->u.hash;
+        HashNode hn = gethashnode2(ht, key);
+        Param val_pm = (Param) hn;
+        if (val_pm) {
+            val_pm->node.flags &= ~(PM_UPTODATE);
+        }
     } else {
         zwarnnam(nam, "not a tied zredis parameter: %s", pmname);
         return 1;
