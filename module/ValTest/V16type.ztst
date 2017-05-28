@@ -9,8 +9,8 @@
  if ! zmodload $modname ; then
    ZTST_unimplemented="can't load $modname module for testing"
  fi
- redis-cli -n 10 flushall
- redis-cli -n 11 flushall
+ redis-cli -n 10 flushdb
+ redis-cli -n 11 flushdb
 
 %test
 
@@ -22,5 +22,5 @@
 
 %clean
 
- redis-cli -n 10 flushall
- redis-cli -n 11 flushall
+ redis-cli -n 10 flushdb
+ redis-cli -n 11 flushdb
