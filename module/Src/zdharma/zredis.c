@@ -152,6 +152,10 @@ static const struct gsu_scalar_ext hashel_hset_gsu_ext =
 static const struct gsu_hash hash_hset_gsu =
     { hashgetfn, redis_hash_hset_setfn, redis_hash_hset_unsetfn };
 
+/* Array to list mapping */
+static const struct gsu_array_ext arrlist_gsu_ext =
+    { { redis_arrlist_getfn, redis_arrlist_setfn, redis_arrlist_unsetfn }, 0, 0, 0, 0, 0 };
+
 /* }}} */
 /* ARRAY: builtin {{{ */
 static struct builtin bintab[] = {
@@ -363,6 +367,26 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 
             tied_param->u.hash->tmpdata = (void *)rc_carrier;
             tied_param->gsu.h = &hash_hset_gsu;
+        } else if (tpe == RD_TYPE_LIST) {
+            if (!(tied_param = createparam(pmname, pmflags | PM_ARRAY | PM_SPECIAL))) {
+                zwarnnam(nam, "cannot create the requested array (for list) parameter: %s", pmname);
+                redisFree(rc);
+                return 1;
+            }
+            struct gsu_array_ext *rc_carrier = NULL;
+            rc_carrier = (struct gsu_array_ext *) zalloc(sizeof(struct gsu_array_ext));
+            rc_carrier->std = arrlist_gsu_ext.std;
+            rc_carrier->use_cache = 1;
+            if (OPT_ISSET(ops,'p'))
+                rc_carrier->use_cache = 0;
+            rc_carrier->rc = rc;
+            rc_carrier->key = ztrdup(key);
+            rc_carrier->key_len = strlen(key);
+
+            /* Fill also host:port// field */
+            rc_carrier->redis_host_port = ztrdup(resource_name_in);
+
+            tied_param->gsu.s = (GsuScalar) rc_carrier;
         } else {
             redisFree(rc);
             zwarnnam(nam, "Unknown key type: %s", type_names[tpe]);
@@ -2100,6 +2124,184 @@ redis_hash_hset_untie(Param pm)
 
     pm->node.flags &= ~(PM_SPECIAL|PM_READONLY);
     pm->gsu.h = &stdhash_gsu;
+}
+/* }}} */
+
+/****************** LIST *****************/
+
+/* FUNCTION: redis_arrlist_getfn {{{ */
+
+/**/
+char **
+redis_arrlist_getfn(Param pm)
+{
+    struct gsu_array_ext *gsu_ext;
+    char *key;
+    size_t key_len;
+    redisContext *rc;
+    redisReply *reply;
+    int j;
+
+    gsu_ext = (struct gsu_array_ext *) pm->gsu.a;
+    /* Key already retrieved? */
+    if ((pm->node.flags & PM_UPTODATE) && gsu_ext->use_cache) {
+        return pm->u.arr ? pm->u.arr : &my_nullarray;
+    }
+
+    rc = gsu_ext->rc;
+    key = gsu_ext->key;
+    key_len = gsu_ext->key_len;
+
+    reply = redisCommand(rc, "EXISTS %b", key, (size_t) key_len);
+    if (reply && reply->type == REDIS_REPLY_INTEGER && reply->integer == 1) {
+        freeReplyObject(reply);
+
+        reply = redisCommand(rc, "LRANGE %b 0 -1", key, (size_t) key_len);
+        if (reply && reply->type == REDIS_REPLY_ARRAY) {
+            /* We have data – store it and return it */
+            pm->node.flags |= PM_UPTODATE;
+
+            /* Ensure there's no leak */
+            if (pm->u.arr) {
+                freearray(pm->u.arr);
+                pm->u.arr = NULL;
+            }
+
+            pm->u.arr = zalloc((reply->elements + 1) * sizeof(char*));
+
+            for (j = 0; j < reply->elements; j++) {
+                if (NULL == reply->element[j]) {
+                    pm->u.arr[j] = ztrdup("");
+                    zwarn("Error 8 when fetching elements");
+                    continue;
+                } else if (reply->element[j]->type != REDIS_REPLY_STRING) {
+                    pm->u.arr[j] = ztrdup("");
+                    if (NULL != reply->element[j]->str && reply->element[j]->len > 0) {
+                        zwarn("Error 9 when fetching elements (message: %s)", reply->element[j]->str);
+                    } else {
+                        zwarn("Error 9 when fetching elements");
+                    }
+                    continue;
+                }
+                /* Metafy returned data. All fits - metafy
+                 * can obtain data length to avoid using \0 */
+                pm->u.arr[j] = metafy(reply->element[j]->str,
+                                      reply->element[j]->len,
+                                      META_DUP);
+            }
+            pm->u.arr[reply->elements] = NULL;
+
+            freeReplyObject(reply);
+
+            /* Can return pointer, correctly saved inside Param */
+            return pm->u.arr;
+        } else if (reply) {
+            freeReplyObject(reply);
+        }
+    } else if (reply) {
+        freeReplyObject(reply);
+    }
+
+    /* Array with 0 elements */
+    return &my_nullarray;
+}
+/* }}} */
+/* FUNCTION: redis_arrlist_setfn {{{ */
+/**/
+mod_export void
+redis_arrlist_setfn(Param pm, char **val)
+{
+    char *key, *content;
+    size_t key_len, content_len;
+    int alen = 0, j;
+    redisContext *rc;
+    redisReply *reply;
+
+    /* Set is done on parameter and on database. */
+
+    /* Parameter */
+    if (pm->u.arr && pm->u.arr != val) {
+        freearray(pm->u.arr);
+        pm->u.arr = NULL;
+        pm->node.flags &= ~(PM_UPTODATE);
+    }
+
+    if (val) {
+        uniqarray(val);
+        alen = arrlen(val);
+        pm->u.arr = val;
+        pm->node.flags |= PM_UPTODATE;
+    }
+
+    /* Database */
+    struct gsu_array_ext *gsu_ext = (struct gsu_array_ext *) pm->gsu.a;
+    rc = gsu_ext->rc;
+    key = gsu_ext->key;
+    key_len = gsu_ext->key_len;
+
+    if (rc) {
+        reply = redisCommand(rc, "DEL %b", key, (size_t) key_len);
+        if (reply)
+            freeReplyObject(reply);
+
+        if (val) {
+            for (j=0; j<alen; j ++) {
+                /* Unmetafy with exact zalloc size */
+                int umlen = 0;
+                char *umval = unmetafy_zalloc(val[j], &umlen);
+
+                /* Store */
+                content = umval;
+                content_len = umlen;
+                reply = redisCommand(rc, "RPUSH %b %b", key, (size_t) key_len, content, (size_t) content_len);
+                if (reply)
+                    freeReplyObject(reply);
+
+                /* Free */
+                set_length(umval, umlen);
+                zsfree(umval);
+            }
+        }
+    }
+
+    if (pm->ename && val)
+        arrfixenv(pm->ename, val);
+}
+/* }}} */
+/* FUNCTION: redis_arrlist_unsetfn {{{ */
+/**/
+mod_export void
+redis_arrlist_unsetfn(Param pm, UNUSED(int exp))
+{
+    /* Will clear the database */
+    redis_arrlist_setfn(pm, NULL);
+
+    /* Will detach from database and free custom memory */
+    redis_arrlist_untie(pm);
+
+    pm->node.flags |= PM_UNSET;
+}
+/* }}} */
+/* FUNCTION: redis_arrlist_untie {{{ */
+/**/
+static void
+redis_arrlist_untie(Param pm)
+{
+    struct gsu_array_ext *gsu_ext = (struct gsu_array_ext *) pm->gsu.a;
+
+    if (gsu_ext->rc) /* paranoia */
+        redisFree(gsu_ext->rc);
+
+    /* Remove from list of tied parameters */
+    remove_tied_name(pm->node.nam);
+
+    pm->node.flags &= ~(PM_SPECIAL|PM_READONLY);
+    pm->gsu.s = &stdscalar_gsu;
+
+    /* Free gsu_ext */
+    zsfree(gsu_ext->redis_host_port);
+    zsfree(gsu_ext->key);
+    zfree(gsu_ext, sizeof(struct gsu_array_ext));
 }
 /* }}} */
 
