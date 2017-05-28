@@ -10,7 +10,11 @@ emulate zsh
 integer success failure skipped retval
 for file in "${(f)ZTST_testlist}"; do
   if (( ${+commands[colour-valgrind]} )); then
-      colour-valgrind --leak-check=full $ZTST_exe +Z -f $ZTST_srcdir/ztst.zsh $file
+      if [[ 2 -nt 1 ]]; then
+          colour-valgrind $ZTST_exe +Z -f $ZTST_srcdir/ztst.zsh $file
+      else
+          colour-valgrind --leak-check=full $ZTST_exe +Z -f $ZTST_srcdir/ztst.zsh $file
+      fi
   else
       valgrind --leak-check=full $ZTST_exe +Z -f $ZTST_srcdir/ztst.zsh $file
   fi
