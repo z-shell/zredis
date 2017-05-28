@@ -1231,10 +1231,6 @@ redis_arrset_setfn(Param pm, char **val)
                 set_length(umval, umlen);
                 zsfree(umval);
             }
-        } else {
-            reply = redisCommand(rc, "DEL %b", key, (size_t) key_len);
-            if (reply)
-                freeReplyObject(reply);
         }
     }
 
