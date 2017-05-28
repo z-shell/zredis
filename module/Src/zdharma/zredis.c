@@ -1153,6 +1153,19 @@ redis_arrset_getfn(Param pm)
             pm->u.arr = zalloc((reply->elements + 1) * sizeof(char*));
 
             for (j = 0; j < reply->elements; j++) {
+                if (NULL == reply->element[j]) {
+                    pm->u.arr[j] = ztrdup("");
+                    zwarn("Error 10 when fetching set elements");
+                    continue;
+                } else if (reply->element[j]->type != REDIS_REPLY_STRING) {
+                    pm->u.arr[j] = ztrdup("");
+                    if (NULL != reply->element[j]->str && reply->element[j]->len > 0) {
+                        zwarn("Error 11 when fetching set elements (message: %s)", reply->element[j]->str);
+                    } else {
+                        zwarn("Error 11 when fetching set elements");
+                    }
+                    continue;
+                }
                 /* Metafy returned data. All fits - metafy
                  * can obtain data length to avoid using \0 */
                 pm->u.arr[j] = metafy(reply->element[j]->str,
