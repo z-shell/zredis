@@ -2688,6 +2688,8 @@ static int is_tied(Param pm) {
         return 1;
     } else if (pm->gsu.h == &hash_hset_gsu) {
         return 1;
+    } else if (pm->gsu.a->getfn == &redis_arrlist_getfn) {
+        return 1;
     }
 
     return 0;
