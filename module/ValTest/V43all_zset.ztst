@@ -381,6 +381,13 @@
 >
 >
 
+ zrtie -r -d db/redis -f $db1 dbase
+ zrzset dbase
+ print -rl -- "${reply[@]}"
+0:Test zrzset
+>漢字
+>testkey
+
 %clean
 
  redis-cli -n 10 flushdb
