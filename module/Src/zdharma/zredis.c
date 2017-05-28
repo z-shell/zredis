@@ -74,9 +74,11 @@ static int connect(char *nam, redisContext **rc, const char *host, int port, int
 static int type(redisContext *rc, char *key, size_t key_len);
 static int is_tied(Param pm);
 static void zrtie_usage();
+static void myfreeparamnode(HashNode hn);
 
 static char *backtype = "db/redis";
 static char *my_nullarray = NULL;
+static int no_database_action = 0;
 /* }}} */
 /* ARRAY: GSU {{{ */
 
@@ -736,7 +738,7 @@ redis_setfn(Param pm, char *val)
     rc = ((struct gsu_scalar_ext *)pm->gsu.s)->rc;
 
     /* Can be NULL, when calling unset after untie */
-    if (rc) {
+    if (rc && no_database_action == 0) {
         int umlen = 0;
         char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
 
@@ -913,7 +915,9 @@ redis_hash_setfn(Param pm, HashTable ht)
     }
     freeReplyObject(reply);
 
+    no_database_action = 1;
     emptyhashtable(pm->u.hash);
+    no_database_action = 0;
 
     if (!ht)
         return;
@@ -1443,7 +1447,7 @@ redis_zset_setfn(Param pm, char *val)
     rc = gsu_ext->rc;
 
     /* Can be NULL, when calling unset after untie */
-    if (rc) {
+    if (rc && no_database_action == 0) {
         int umlen = 0;
         char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
 
@@ -1631,7 +1635,9 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
     }
     freeReplyObject(reply);
 
+    no_database_action = 1;
     emptyhashtable(pm->u.hash);
+    no_database_action = 0;
 
     if (!ht)
         return;
@@ -1840,7 +1846,7 @@ redis_hset_setfn(Param pm, char *val)
     rc = gsu_ext->rc;
 
     /* Can be NULL, when calling unset after untie */
-    if (rc) {
+    if (rc && no_database_action == 0) {
         int umlen = 0;
         char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
 
@@ -2049,7 +2055,9 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
 
     freeReplyObject(reply);
 
+    no_database_action = 1;
     emptyhashtable(pm->u.hash);
+    no_database_action = 0;
 
     if (!ht)
         return;
@@ -2418,6 +2426,9 @@ static Param createhash(char *name, int flags, int which)
         return NULL;
     }
 
+    /* Does free Param (unsetfn is called) */
+    ht->freenode = myfreeparamnode;
+
     /* These provide special features */
     if ( which == 0 ) {
         ht->getnode = ht->getnode2 = redis_get_node;
@@ -2728,6 +2739,28 @@ static void zrtie_usage() {
     fprintf(stdout, GREEN " -p" RESET ": passthrough - always do a fresh query to database, don't use cache\n");
     fprintf(stdout, GREEN " -r" RESET ": create read-only parameter\n" );
     fprintf(stdout, GREEN " -f" RESET ": database address in format {host}[:port][/[db_idx][/key]]\n");
+}
+/* }}} */
+/* FUNCTION: myfreeparamnode {{{ */
+static void
+myfreeparamnode(HashNode hn)
+{
+    Param pm = (Param) hn;
+ 
+    /* Upstream: The second argument of unsetfn() is used by modules to
+     * differentiate "exp"licit unset from implicit unset, as when
+     * a parameter is going out of scope.  It's not clear which
+     * of these applies here, but passing 1 has always worked.
+     */
+
+    /* if (delunset) */
+      pm->gsu.s->unsetfn(pm, 1);
+
+    zsfree(pm->node.nam);
+    /* If this variable was tied by the user, ename was ztrdup'd */
+    if (pm->node.flags & PM_TIED)
+        zsfree(pm->ename);
+    zfree(pm, sizeof(struct param));
 }
 /* }}} */
 
