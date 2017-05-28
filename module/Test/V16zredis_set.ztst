@@ -79,8 +79,8 @@
  zruntie aset2
  zrtie -d db/redis -f $db1 aset
  zrtie -d db/redis -f $db2 aset2
- echo "${(qqo@)aset}"
- echo "${(qqo@)aset2}"
+ echo -E "${(qqo@)aset}"
+ echo -E "${(qqo@)aset2}"
  zruntie aset
  zruntie aset2
  echo $zredis_tied ${#zredis_tied}
@@ -93,11 +93,11 @@
  zrtie -d db/redis -f $db2 aset2
  val=( $aset2 )
  unset aset2
- echo $val
+ echo ${(o)val}
  zrtie -d db/redis -f $db2 aset2 2>&1
  echo $zredis_tied ${#zredis_tied}
 0:unset key that was fetched
->second first
+>first second
 >(eval):zrtie:5: Unknown key type: invalid
 >0
 
