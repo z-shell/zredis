@@ -72,6 +72,7 @@ static void parse_host_string(const char *input, char *buffer, int size,
 static int connect(char *nam, redisContext **rc, const char *host, int port, int db_index,
                     const char *resource_name_in);
 static int type(redisContext *rc, char *key, size_t key_len);
+static int is_tied(Param pm);
 static void zrtie_usage();
 
 static char *backtype = "db/redis";
@@ -1996,6 +1997,21 @@ static int type(redisContext *rc, char *key, size_t key_len) {
     }
     freeReplyObject(reply);
     return RD_TYPE_UNKNOWN;
+}
+/* }}} */
+/* FUNCTION: is_tied {{{ */
+static int is_tied(Param pm) {
+    if (pm->gsu.h == &redis_hash_gsu) {
+        return 1;
+    } else if (pm->gsu.s->getfn == &redis_str_getfn) {
+        return 1;
+    } else if (pm->gsu.a->getfn == &redis_arrset_getfn) {
+        return 1;
+    } else if (pm->gsu.h == &hash_zset_gsu) {
+        return 1;
+    }
+
+    return 0;
 }
 /* }}} */
 /* FUNCTION: zrtie_usage {{{ */
