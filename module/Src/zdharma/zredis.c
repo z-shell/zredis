@@ -706,8 +706,7 @@ redis_getfn(Param pm)
     set_length(umkey, key_len);
     zsfree(umkey);
 
-    /* Can this be "" ? */
-    return (char *) hcalloc(1);
+    return "";
 }
 /* }}} */
 /* FUNCTION: redis_setfn {{{ */
@@ -1067,8 +1066,7 @@ redis_str_getfn(Param pm)
         freeReplyObject(reply);
     }
 
-    /* Can this be "" ? */
-    return (char *) hcalloc(1);
+    return "";
 }
 /* }}} */
 /* FUNCTION: redis_str_setfn {{{ */
@@ -1413,8 +1411,7 @@ redis_zset_getfn(Param pm)
     set_length(umkey, key_len);
     zsfree(umkey);
 
-    /* Can this be "" ? */
-    return (char *) hcalloc(1);
+    return "";
 }
 /* }}} */
 /* FUNCTION: redis_zset_setfn {{{ */
