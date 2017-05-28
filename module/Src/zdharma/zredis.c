@@ -520,6 +520,8 @@ bin_zredishost(char *nam, char **args, Options ops, UNUSED(int func))
         hostspec = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port;
     } else if(pm->gsu.h == &hash_hset_gsu) {
         hostspec = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port;
+    } else if(pm->gsu.a->getfn == &redis_arrlist_getfn) {
+        hostspec = ((struct gsu_array_ext *)pm->gsu.a)->redis_host_port;
     } else {
         zwarnnam(nam, "not a tied zredis parameter: `%s', REPLY unchanged", pmname);
         return 1;
