@@ -472,47 +472,29 @@ bin_zredishost(char *nam, char **args, Options ops, UNUSED(int func))
         return 1;
     }
 
+    const char *hostspec = NULL;
 
     if (pm->gsu.h == &redis_hash_gsu) {
         /* Paranoia, it *will* be always set */
-        if (((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port) {
-            setsparam("REPLY", ztrdup(((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port));
-        } else {
-            setsparam("REPLY", ztrdup(""));
-        }
+        hostspec = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port;
     } else if(pm->gsu.s->getfn == &redis_str_getfn) {
-        const char *hostspec = ((struct gsu_scalar_ext *)pm->gsu.s)->redis_host_port;
-        if (hostspec) {
-            setsparam("REPLY", ztrdup(hostspec));
-        } else {
-            setsparam("REPLY", ztrdup(""));
-        }
+        hostspec = ((struct gsu_scalar_ext *)pm->gsu.s)->redis_host_port;
     } else if(pm->gsu.a->getfn == &redis_arrset_getfn) {
-        const char *hostspec = ((struct gsu_array_ext *)pm->gsu.a)->redis_host_port;
-        if (hostspec) {
-            setsparam("REPLY", ztrdup(hostspec));
-        } else {
-            setsparam("REPLY", ztrdup(""));
-        }
+        hostspec = ((struct gsu_array_ext *)pm->gsu.a)->redis_host_port;
     } else if(pm->gsu.h == &hash_zset_gsu) {
-        const char *hostspec = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port;
-        if (hostspec) {
-            setsparam("REPLY", ztrdup(hostspec));
-        } else {
-            setsparam("REPLY", ztrdup(""));
-        }
+        hostspec = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port;
     } else if(pm->gsu.h == &hash_hset_gsu) {
-        const char *hostspec = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port;
-        if (hostspec) {
-            setsparam("REPLY", ztrdup(hostspec));
-        } else {
-            setsparam("REPLY", ztrdup(""));
-        }
+        hostspec = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port;
     } else {
-        zwarnnam(nam, "not a tied zredis parameter: %s", pmname);
+        zwarnnam(nam, "not a tied zredis parameter: `%s', REPLY unchanged", pmname);
         return 1;
     }
 
+    if (hostspec) {
+        setsparam("REPLY", ztrdup(hostspec));
+    } else {
+        setsparam("REPLY", ztrdup(""));
+    }
     return 0;
 }
 /* }}} */
