@@ -449,6 +449,13 @@ bin_zredishost(char *nam, char **args, Options ops, UNUSED(int func))
         } else {
             setsparam("REPLY", ztrdup(""));
         }
+    } else if(pm->gsu.h == &hash_zset_gsu) {
+        const char *hostspec = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->redis_host_port;
+        if (hostspec) {
+            setsparam("REPLY", ztrdup(hostspec));
+        } else {
+            setsparam("REPLY", ztrdup(""));
+        }
     } else {
         zwarnnam(nam, "not a tied zredis parameter: %s", pmname);
         return 1;
