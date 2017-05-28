@@ -210,8 +210,12 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 
     /* Unset existing parameter */
 
-    if ((tied_param = (Param)paramtab->getnode(paramtab, pmname)) &&
-        !(tied_param->node.flags & PM_UNSET)) {
+    if ((tied_param = (Param)paramtab->getnode(paramtab, pmname)) && !(tied_param->node.flags & PM_UNSET)) {
+        if (is_tied(tied_param)) {
+            zwarnnam(nam, "Refusing to re-tie already tied parameter `%s'", pmname);
+            zwarnnam(nam, "The involved `unset' could clear the database-part handled by `%s'", pmname);
+            return 1;
+        }
         /*
          * Unset any existing parameter. Note there's no implicit
          * "local" here, but if the existing parameter is local
