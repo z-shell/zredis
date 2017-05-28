@@ -1967,6 +1967,7 @@ static int type(redisContext *rc, char *key, size_t key_len) {
         freeReplyObject(reply);
         return RD_TYPE_HASH;
     }
+    freeReplyObject(reply);
     return RD_TYPE_UNKNOWN;
 }
 /* }}} */
