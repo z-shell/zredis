@@ -74,6 +74,7 @@ static int connect(char *nam, redisContext **rc, const char *host, int port, int
 static int type(redisContext *rc, char *key, size_t key_len);
 static int is_tied(Param pm);
 static void zrtie_usage();
+static void zrzset_usage();
 static void myfreeparamnode(HashNode hn);
 
 static char *backtype = "db/redis";
@@ -165,6 +166,7 @@ static struct builtin bintab[] = {
     BUILTIN("zruntie", 0, bin_zruntie, 1, -1, 0, "u", NULL),
     BUILTIN("zredishost", 0, bin_zredishost, 1, -1, 0, "", NULL),
     BUILTIN("zredisclear", 0, bin_zredisclear, 1, 2, 0, "", NULL),
+    BUILTIN("zrzset", 0, bin_zrzset, 0, 1, 0, "h", NULL),
 };
 /* }}} */
 /* ARRAY: other {{{ */
@@ -1736,6 +1738,88 @@ redis_hash_zset_untie(Param pm)
 }
 /* }}} */
 
+/*************** ZSET UTIL ***************/
+
+/* FUNCTION: bin_zrzset {{{ */
+/**/
+static int
+bin_zrzset(char *nam, char **args, Options ops, UNUSED(int func))
+{
+    Param pm;
+    int i;
+    const char *pmname;
+
+    if (OPT_ISSET(ops,'h')) {
+        zrzset_usage();
+        return 0;
+    }
+
+    pmname = *args;
+
+    if (!pmname) {
+        zwarnnam(nam, "zset parameter name (to be copied to $reply) is required");
+        return 1;
+    }
+
+    pm = (Param) paramtab->getnode(paramtab, pmname);
+    if(!pm) {
+        zwarnnam(nam, "no such parameter: %s", pmname);
+        return 1;
+    }
+
+    if (pm->gsu.h == &redis_hash_gsu) {
+        zwarnnam(nam, "`%s' is a main-storage hash, aborting", pmname);
+    } else if(pm->gsu.s->getfn == &redis_str_getfn) {
+        zwarnnam(nam, "`%s' is a string parameter, aborting", pmname);
+    } else if(pm->gsu.a->getfn == &redis_arrset_getfn) {
+        zwarnnam(nam, "`%s' is a set (array) parameter, aborting", pmname);
+    } else if(pm->gsu.h == &hash_zset_gsu) {
+        char **arr, *main_key;
+        size_t main_key_len;
+        redisContext *rc;
+        redisReply *reply, *entry;
+        struct gsu_scalar_ext *gsu_ext;
+
+        gsu_ext = (struct gsu_scalar_ext *) pm->u.hash->tmpdata;
+        rc = gsu_ext->rc;
+        main_key = gsu_ext->key;
+        main_key_len = gsu_ext->key_len;
+
+        if (rc) {
+            reply = redisCommand(rc, "ZRANGE %b 0 -1", main_key, (size_t) main_key_len);
+            if (reply == NULL || reply->type != REDIS_REPLY_ARRAY) {
+                zwarn("Error 12 occured (ZRANGE call), aborting");
+                if (reply)
+                    freeReplyObject(reply);
+                return 1;
+            }
+
+            arr = zshcalloc((reply->elements+1) * sizeof(char *));
+            for (i = 0; i < reply->elements; i++) {
+                entry = reply->element[i];
+                arr[i] = metafy(entry->str, entry->len, META_DUP);
+            }
+            arr[reply->elements] = NULL;
+            freeReplyObject(reply);
+
+            pm = assignaparam("reply", arr, 0);
+            return 0;
+        } else {
+            zwarn("Error 13 occured: no database connection");
+            return 1;
+        }
+    } else if(pm->gsu.h == &hash_hset_gsu) {
+        zwarnnam(nam, "`%s' is a hset (hash) parameter, aborting", pmname);
+    } else if(pm->gsu.a->getfn == &redis_arrlist_getfn) {
+        zwarnnam(nam, "`%s' is a list (array) parameter, aborting", pmname);
+    } else {
+        zwarnnam(nam, "not a tied zredis parameter: `%s', $reply array unchanged", pmname);
+    }
+
+    return 1;
+}
+/* }}} */
+
 /************ HSET HASH ELEM *************/
 
 /* FUNCTION: redis_hset_getfn {{{ */
@@ -2736,6 +2820,12 @@ static void zrtie_usage() {
     fprintf(stdout, GREEN " -p" RESET ": passthrough - always do a fresh query to database, don't use cache\n");
     fprintf(stdout, GREEN " -r" RESET ": create read-only parameter\n" );
     fprintf(stdout, GREEN " -f" RESET ": database address in format {host}[:port][/[db_idx][/key]]\n");
+}
+/* }}} */
+/* FUNCTION: zrzset_usage */
+static void zrzset_usage() {
+    fprintf(stdout, YELLOW "Usage:" RESET " zrzset {tied-param-name}\n");
+    fprintf(stdout, YELLOW "Output:" RESET " $reply array, to hold elements of the sorted set\n");
 }
 /* }}} */
 /* FUNCTION: myfreeparamnode {{{ */
