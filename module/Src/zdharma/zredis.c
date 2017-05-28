@@ -598,6 +598,10 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
         if (val_pm) {
             val_pm->node.flags &= ~(PM_UPTODATE);
         }
+    } else if (pm->gsu.a->getfn == &redis_arrlist_getfn) {
+        pm->node.flags &= ~(PM_UPTODATE);
+        if (key)
+            zwarnnam(nam, "Ignored argument `%s'", key);
     } else {
         zwarnnam(nam, "not a tied zredis parameter: %s", pmname);
         return 1;
