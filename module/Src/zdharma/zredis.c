@@ -734,6 +734,8 @@ redis_setfn(Param pm, char *val)
 
     /* Database */
     rc = ((struct gsu_scalar_ext *)pm->gsu.s)->rc;
+
+    /* Can be NULL, when calling unset after untie */
     if (rc) {
         int umlen = 0;
         char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
@@ -1440,6 +1442,7 @@ redis_zset_setfn(Param pm, char *val)
     gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
     rc = gsu_ext->rc;
 
+    /* Can be NULL, when calling unset after untie */
     if (rc) {
         int umlen = 0;
         char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
@@ -1836,6 +1839,7 @@ redis_hset_setfn(Param pm, char *val)
     gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
     rc = gsu_ext->rc;
 
+    /* Can be NULL, when calling unset after untie */
     if (rc) {
         int umlen = 0;
         char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
