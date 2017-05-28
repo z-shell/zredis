@@ -371,6 +371,16 @@
 >value1
 >value2
 
+ zrtie -d db/redis -f $db1 dbase
+ echo $dbase[a] $dbase[b] $dbase[c]
+ unset dbase
+ zrtie -r -d db/redis -f $db1 dbase
+ echo $dbase[a] $dbase[b] $dbase[c]
+ zruntie -u dbase
+0:Test references to not-existing elements
+>
+>
+
 %clean
 
  redis-cli -n 10 flushdb
