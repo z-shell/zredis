@@ -445,7 +445,7 @@ bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
             unqueue_signals();
         } else if (pm->gsu.a->getfn == &redis_arrset_getfn) {
             if (pm->node.flags & PM_READONLY && !OPT_ISSET(ops,'u')) {
-                zwarnnam(nam, "cannot untie `%s', parameter is read only, use -u option", pmname);
+                zwarnnam(nam, "cannot untie array `%s', the set-bound parameter is read only, use -u option", pmname);
                 continue;
             }
             pm->node.flags &= ~PM_READONLY;
