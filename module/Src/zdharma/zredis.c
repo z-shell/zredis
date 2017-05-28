@@ -162,7 +162,7 @@ static const struct gsu_array_ext arrlist_gsu_ext =
 /* }}} */
 /* ARRAY: builtin {{{ */
 static struct builtin bintab[] = {
-    BUILTIN("zrtie", 0, bin_zrtie, 1, -1, 0, "d:f:rph", NULL),
+    BUILTIN("zrtie", 0, bin_zrtie, 0, -1, 0, "d:f:rph", NULL),
     BUILTIN("zruntie", 0, bin_zruntie, 1, -1, 0, "u", NULL),
     BUILTIN("zredishost", 0, bin_zredishost, 1, -1, 0, "", NULL),
     BUILTIN("zredisclear", 0, bin_zredisclear, 1, 2, 0, "", NULL),
@@ -198,11 +198,11 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
     }
 
     if (!OPT_ISSET(ops,'d')) {
-        zwarnnam(nam, "you must pass `-d %s', see `-h help'", backtype);
+        zwarnnam(nam, "you must pass `-d %s', see `-h'", backtype);
         return 1;
     }
     if (!OPT_ISSET(ops,'f')) {
-        zwarnnam(nam, "you must pass `-f' with {host}[:port][/[db_idx][/key]], see `-h help'", NULL);
+        zwarnnam(nam, "you must pass `-f' with {host}[:port][/[db_idx][/key]], see `-h'", NULL);
         return 1;
     }
     if (OPT_ISSET(ops,'r')) {
@@ -211,7 +211,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
     }
 
     if (strcmp(OPT_ARG(ops, 'd'), backtype) != 0) {
-        zwarnnam(nam, "unsupported backend type `%s', see `-h help'", OPT_ARG(ops, 'd'));
+        zwarnnam(nam, "unsupported backend type `%s', see `-h'", OPT_ARG(ops, 'd'));
         return 1;
     }
 
@@ -223,6 +223,11 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 
     resource_name_in = OPT_ARG(ops, 'f');
     pmname = *args;
+
+    if (!pmname) {
+        zwarnnam(nam, "you must pass non-option argument - the target parameter to create, see -h", backtype);
+        return 1;
+    }
 
     parse_host_string(resource_name_in, resource_name, 192, &host, &port, &db_index, &key);
 
