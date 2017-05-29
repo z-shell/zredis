@@ -2829,7 +2829,7 @@ static void zrtie_usage() {
     fflush(stdout);
 }
 /* }}} */
-/* FUNCTION: zrzset_usage */
+/* FUNCTION: zrzset_usage {{{ */
 static void zrzset_usage() {
     fprintf(stdout, YELLOW "Usage:" RESET " zrzset {tied-param-name}\n");
     fprintf(stdout, YELLOW "Output:" RESET " $reply array, to hold elements of the sorted set\n");
