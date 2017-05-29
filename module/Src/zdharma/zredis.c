@@ -2735,11 +2735,19 @@ static int connect(char *nam, redisContext **rc, const char *host, int port,
 
     if(*rc == NULL || (*rc)->err != 0) {
         if(rc) {
-            zwarnnam(nam, "error opening database %s:%d/%d (%s)", host, port, db_index, (*rc)->errstr);
+            if(nam && nam[0] != '\0') {
+              zwarnnam(nam, "error opening database %s:%d/%d (%s)", host, port, db_index, (*rc)->errstr);
+            } else {
+              zwarn("error opening database %s:%d/%d (%s)", host, port, db_index, (*rc)->errstr);
+            }
             redisFree(*rc);
             *rc = NULL;
         } else {
-            zwarnnam(nam, "error opening database %s (insufficient memory)", resource_name_in);
+            if(nam && nam[0] != '\0') {
+                zwarnnam(nam, "error opening database %s (insufficient memory)", resource_name_in);
+            } else {
+                zwarn("error opening database %s (insufficient memory)", resource_name_in);
+            }
         }
         return 0;
     }
@@ -2749,10 +2757,18 @@ static int connect(char *nam, redisContext **rc, const char *host, int port,
         reply = redisCommand(*rc, "SELECT %d", db_index);
         if (reply == NULL || reply->type == REDIS_REPLY_ERROR) {
             if (reply) {
-                zwarnnam(nam, "error selecting database #%d (host: %s:%d, message: %s)", db_index, host, port, reply->str);
+                if(nam && nam[0] != '\0') {
+                    zwarnnam(nam, "error selecting database #%d (host: %s:%d, message: %s)", db_index, host, port, reply->str);
+                } else {
+                    zwarn("error selecting database #%d (host: %s:%d, message: %s)", db_index, host, port, reply->str);
+                }
                 freeReplyObject(reply);
             } else {
-                zwarnnam(nam, "IO error selecting database #%d (host: %s:%d)", db_index, host, port);
+                if(nam && nam[0] != '\0') {
+                    zwarnnam(nam, "IO error selecting database #%d (host: %s:%d)", db_index, host, port);
+                } else {
+                    zwarn("IO error selecting database #%d (host: %s:%d)", db_index, host, port);
+                }
             }
             redisFree(*rc);
             *rc = NULL;
