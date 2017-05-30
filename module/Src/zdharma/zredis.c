@@ -2249,7 +2249,7 @@ hset_scan_keys(HashTable ht, ScanFunc func, int flags)
         if (!rc)
             return;
 
-      reply = redisCommand(rc, "HSCAN %b %llu", main_key, (size_t) main_key_len, cursor);
+        reply = redisCommand(rc, "HSCAN %b %llu", main_key, (size_t) main_key_len, cursor);
 
 
         /* Disconnect detection */
@@ -2268,50 +2268,50 @@ hset_scan_keys(HashTable ht, ScanFunc func, int flags)
                 break;
         }
 
-      if (reply == NULL || reply->type != REDIS_REPLY_ARRAY || reply->elements != 2) {
-          if (reply && reply->type == REDIS_REPLY_ERROR) {
-              zwarn("Aborting, problem occured during HSCAN: %s", reply->str);
-          } else {
-              zwarn("Problem occured during HSCAN, no error message available, aborting");
-          }
-          if (reply)
-              freeReplyObject(reply);
-          break;
-      }
+        if (reply == NULL || reply->type != REDIS_REPLY_ARRAY || reply->elements != 2) {
+            if (reply && reply->type == REDIS_REPLY_ERROR) {
+                zwarn("Aborting, problem occured during HSCAN: %s", reply->str);
+            } else {
+                zwarn("Problem occured during HSCAN, no error message available, aborting");
+            }
+            if (reply)
+                freeReplyObject(reply);
+            break;
+        }
 
-      /* Get new cursor */
-      if (reply->element[0]->type == REDIS_REPLY_STRING) {
-          cursor = strtoull(reply->element[0]->str, NULL, 10);
-      } else {
-          zwarn("Error 2 occured during HSCAN");
-          break;
-      }
+        /* Get new cursor */
+        if (reply->element[0]->type == REDIS_REPLY_STRING) {
+            cursor = strtoull(reply->element[0]->str, NULL, 10);
+        } else {
+            zwarn("Error 2 occured during HSCAN");
+            break;
+        }
 
-      reply2 = reply->element[1];
-      if (reply2 == NULL || reply2->type != REDIS_REPLY_ARRAY) {
-          zwarn("Error 3 occured during HSCAN");
-          break;
-      }
+        reply2 = reply->element[1];
+        if (reply2 == NULL || reply2->type != REDIS_REPLY_ARRAY) {
+            zwarn("Error 3 occured during HSCAN");
+            break;
+        }
 
-      for (size_t j = 0; j < reply2->elements; j+= 2) {
-          redisReply *entry = reply2->element[j];
-          if (entry == NULL || entry->type != REDIS_REPLY_STRING) {
-              continue;
-          }
+        for (size_t j = 0; j < reply2->elements; j+= 2) {
+            redisReply *entry = reply2->element[j];
+            if (entry == NULL || entry->type != REDIS_REPLY_STRING) {
+                continue;
+            }
 
-          key = entry->str;
-          key_len = entry->len;
+            key = entry->str;
+            key_len = entry->len;
 
-          /* This returns database-interfacing Param,
-          * it will return u.str or first fetch data
-          * if not PM_UPTODATE (newly created) */
-          char *zkey = metafy(key, key_len, META_DUP);
-          HashNode hn = redis_hset_get_node(ht, zkey);
-          zsfree(zkey);
+            /* This returns database-interfacing Param,
+             * it will return u.str or first fetch data
+             * if not PM_UPTODATE (newly created) */
+            char *zkey = metafy(key, key_len, META_DUP);
+            HashNode hn = redis_hset_get_node(ht, zkey);
+            zsfree(zkey);
 
-          func(hn, flags);
-      }
-      freeReplyObject(reply);
+            func(hn, flags);
+        }
+        freeReplyObject(reply);
     } while (cursor != 0);
 }
 /* }}} */
