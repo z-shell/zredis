@@ -681,45 +681,45 @@ redis_getfn(Param pm)
     rc = gsu_ext->rc;
 
     if (rc) {
-      reply = redisCommand(rc, "EXISTS %b", key, (size_t) key_len);
-      if (reply && reply->type == REDIS_REPLY_INTEGER && reply->integer == 1) {
-          freeReplyObject(reply);
+        reply = redisCommand(rc, "EXISTS %b", key, (size_t) key_len);
+        if (reply && reply->type == REDIS_REPLY_INTEGER && reply->integer == 1) {
+            freeReplyObject(reply);
 
-          reply = redisCommand(rc, "GET %b", key, (size_t) key_len);
-          if (reply && reply->type == REDIS_REPLY_STRING) {
-              /* We have data – store it, return it */
-              pm->node.flags |= PM_UPTODATE;
+            reply = redisCommand(rc, "GET %b", key, (size_t) key_len);
+            if (reply && reply->type == REDIS_REPLY_STRING) {
+                /* We have data – store it, return it */
+                pm->node.flags |= PM_UPTODATE;
 
-              /* Ensure there's no leak */
-              if (pm->u.str) {
-                  zsfree(pm->u.str);
-              }
+                /* Ensure there's no leak */
+                if (pm->u.str) {
+                    zsfree(pm->u.str);
+                }
 
-              /* Metafy returned data. All fits - metafy
-              * can obtain data length to avoid using \0 */
-              pm->u.str = metafy(reply->str, reply->len, META_DUP);
-              freeReplyObject(reply);
+                /* Metafy returned data. All fits - metafy
+                 * can obtain data length to avoid using \0 */
+                pm->u.str = metafy(reply->str, reply->len, META_DUP);
+                freeReplyObject(reply);
 
-              /* Free key, restoring its original length */
-              set_length(umkey, key_len);
-              zsfree(umkey);
+                /* Free key, restoring its original length */
+                set_length(umkey, key_len);
+                zsfree(umkey);
 
-              /* Can return pointer, correctly saved inside hash */
-              return pm->u.str;
-          } else if (reply) {
-              freeReplyObject(reply);
-          }
-      } else if (reply) {
-          freeReplyObject(reply);
-      }
+                /* Can return pointer, correctly saved inside hash */
+                return pm->u.str;
+            } else if (reply) {
+                freeReplyObject(reply);
+            }
+        } else if (reply) {
+            freeReplyObject(reply);
+        }
 
-      if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-          retry = 1;
-          if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
-              goto retry;
-      } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-          zwarn("Aborting (no connection)");
-      }
+        if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+            retry = 1;
+            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
+                goto retry;
+        } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+            zwarn("Aborting (no connection)");
+        }
     }
 
     /* Free key, restoring its original length */
