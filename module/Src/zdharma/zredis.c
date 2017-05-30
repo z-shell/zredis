@@ -2853,6 +2853,24 @@ static void zrzset_usage() {
 }
 /* }}} */
 /* FUNCTION: myfreeparamnode {{{ */
+/* FUNCTION: reconnect {{{ */
+static int reconnect(redisContext **rc, const char *hostspec_in) {
+    char hostspec[192];
+    char *host="127.0.0.1", *key="";
+    int port = 6379, db_index = 0;
+
+    parse_host_string(hostspec_in, hostspec, 192, &host, &port, &db_index, &key);
+
+    redisFree(*rc);
+    if(!connect("", rc, host, port, db_index, hostspec_in)) {
+        zwarn("Not connected, retrying... Failed, aborting");
+        return 1;
+    } else {
+        zwarn("Not connected, retrying... Success");
+        return 0;
+    }
+}
+/* }}} */
 static void
 myfreeparamnode(HashNode hn)
 {
