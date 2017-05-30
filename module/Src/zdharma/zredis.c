@@ -717,6 +717,8 @@ redis_getfn(Param pm)
           retry = 1;
           if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
               goto retry;
+      } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+          zwarn("Aborting");
       }
     }
 
@@ -796,6 +798,8 @@ redis_setfn(Param pm, char *val)
             retry = 1;
             if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
                 goto retry;
+        } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+            zwarn("Aborting");
         }
     }
 }
@@ -983,6 +987,9 @@ redis_hash_setfn(Param pm, HashTable ht)
             goto retry;
         else
             return;
+    } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+        zwarn("Aborting");
+        return;
     }
 
     no_database_action = 1;
@@ -1044,6 +1051,9 @@ redis_hash_setfn(Param pm, HashTable ht)
                 goto retry2;
             else
                 return;
+        } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+            zwarn("Aborting");
+            return;
         }
     }
 }
@@ -1158,6 +1168,8 @@ redis_str_getfn(Param pm)
         retry = 1;
         if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
             goto retry;
+    } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+        zwarn("Aborting");
     }
 
     return "";
@@ -1222,6 +1234,8 @@ redis_str_setfn(Param pm, char *val)
             retry = 1;
             if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
                 goto retry;
+        } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+            zwarn("Aborting");
         }
     }
 }
@@ -1518,6 +1532,8 @@ redis_zset_getfn(Param pm)
           retry = 1;
           if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
               goto retry;
+      } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+          zwarn("Aborting");
       }
     }
 
@@ -1603,6 +1619,8 @@ redis_zset_setfn(Param pm, char *val)
             retry = 1;
             if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
                 goto retry;
+        } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+            zwarn("Aborting");
         }
     }
 }
@@ -1764,6 +1782,9 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
             goto retry;
         else
             return;
+    } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+        zwarn("Aborting");
+        return;
     }
 
     no_database_action = 1;
@@ -1827,6 +1848,9 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
                 goto retry2;
             else
                 return;
+        } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+            zwarn("Aborting");
+            return;
         }
     }
 }
@@ -2043,6 +2067,8 @@ redis_hset_getfn(Param pm)
           retry = 1;
           if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
               goto retry;
+      } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+          zwarn("Aborting");
       }
     }
 
@@ -2129,6 +2155,8 @@ redis_hset_setfn(Param pm, char *val)
             retry = 1;
             if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
                 goto retry;
+        } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+            zwarn("Aborting");
         }
     }
 }
@@ -2315,6 +2343,9 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
             goto retry;
         else
             return;
+    } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+        zwarn("Aborting");
+        return;
     }
 
     no_database_action = 1;
@@ -2378,6 +2409,9 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
                 goto retry2;
             else
                 return;
+        } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+            zwarn("Aborting");
+            return;
         }
     }
 }
