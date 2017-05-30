@@ -850,13 +850,38 @@ scan_keys(HashTable ht, ScanFunc func, int flags)
     size_t key_len;
     redisContext *rc;
     redisReply *reply;
+    struct gsu_scalar_ext *gsu_ext;
 
-    rc = ((struct gsu_scalar_ext *)ht->tmpdata)->rc;
+    gsu_ext = (struct gsu_scalar_ext *)ht->tmpdata;
+
+    int retry = 0;
+ retry:
+    rc = gsu_ext->rc;
+
+    if (!rc)
+        return;
 
     /* Iterate keys adding them to hash, so
      * we have Param to use in `func` */
     reply = redisCommand(rc, "KEYS *");
-    if (reply == NULL || reply->type != REDIS_REPLY_ARRAY) {
+
+    /* Disconnect detection */
+    if (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+        if (reply)
+            freeReplyObject(reply);
+        if (retry) {
+            zwarn("Aborting");
+            return;
+        }
+        retry = 1;
+        if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
+            goto retry;
+        else
+            return;
+    }
+
+    if (!reply || reply->type != REDIS_REPLY_ARRAY) {
+        zwarn("Incorrect reply from redis command KEYS, aborting");
         if (reply)
             freeReplyObject(reply);
         return;
