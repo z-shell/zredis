@@ -676,6 +676,8 @@ redis_getfn(Param pm)
     key = umkey;
     key_len = umlen;
 
+    int retry = 0;
+ retry:
     rc = gsu_ext->rc;
 
     reply = redisCommand(rc, "EXISTS %b", key, (size_t) key_len);
@@ -710,6 +712,12 @@ redis_getfn(Param pm)
         freeReplyObject(reply);
     }
 
+    if (!retry && rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+        retry = 1;
+        if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
+            goto retry;
+    }
+
     /* Free key, restoring its original length */
     set_length(umkey, key_len);
     zsfree(umkey);
@@ -726,6 +734,9 @@ redis_setfn(Param pm, char *val)
     size_t key_len, content_len;
     redisContext *rc;
     redisReply *reply;
+    struct gsu_scalar_ext *gsu_ext;
+
+    gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
 
     /* Set is done on parameter and on database. */
 
@@ -741,8 +752,11 @@ redis_setfn(Param pm, char *val)
         pm->node.flags |= PM_UPTODATE;
     }
 
+    int retry = 0;
+ retry:
+
     /* Database */
-    rc = ((struct gsu_scalar_ext *)pm->gsu.s)->rc;
+    rc = gsu_ext->rc;
 
     /* Can be NULL, when calling unset after untie */
     if (rc && no_database_action == 0) {
@@ -775,6 +789,12 @@ redis_setfn(Param pm, char *val)
         /* Free key */
         set_length(umkey, key_len);
         zsfree(umkey);
+
+        if (!retry && rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+            retry = 1;
+            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
+                goto retry;
+        }
     }
 }
 /* }}} */
