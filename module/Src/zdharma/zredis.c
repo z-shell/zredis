@@ -2050,6 +2050,9 @@ redis_hset_setfn(Param pm, char *val)
 
     /* Database */
     gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
+
+    int retry = 0;
+ retry:
     rc = gsu_ext->rc;
 
     /* Can be NULL, when calling unset after untie */
@@ -2090,6 +2093,12 @@ redis_hset_setfn(Param pm, char *val)
         /* Free key */
         set_length(umkey, key_len);
         zsfree(umkey);
+
+        if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+            retry = 1;
+            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
+                goto retry;
+        }
     }
 }
 /* }}} */
