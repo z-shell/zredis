@@ -2885,10 +2885,10 @@ static int reconnect(redisContext **rc, const char *hostspec_in) {
     redisFree(*rc);
     if(!connect("", rc, host, port, db_index, hostspec_in)) {
         zwarn("Not connected, retrying... Failed, aborting");
-        return 1;
+        return 0;
     } else {
         zwarn("Not connected, retrying... Success");
-        return 0;
+        return 1;
     }
 }
 /* }}} */
