@@ -712,7 +712,7 @@ redis_getfn(Param pm)
         freeReplyObject(reply);
     }
 
-    if (!retry && rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+    if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
         retry = 1;
         if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
             goto retry;
@@ -790,7 +790,7 @@ redis_setfn(Param pm, char *val)
         set_length(umkey, key_len);
         zsfree(umkey);
 
-        if (!retry && rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+        if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             retry = 1;
             if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
                 goto retry;
