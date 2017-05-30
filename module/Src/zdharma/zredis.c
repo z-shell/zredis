@@ -1671,9 +1671,11 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
         return;
 
     gsu_ext = (struct gsu_scalar_ext *) pm->u.hash->tmpdata;
+
+    int retry = 0;
+ retry:
     rc = gsu_ext->rc;
     if (!rc) {
-        /* TODO: RECONNECT */
         return;
     }
 
@@ -1683,12 +1685,21 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
     /* PRUNE */
     reply = redisCommand(rc, "ZREMRANGEBYSCORE %b -inf +inf", main_key, (size_t) main_key_len);
     if (reply == NULL || reply->type != REDIS_REPLY_INTEGER) {
-        zwarn("Error 4 occured, database not updated");
+        zwarn("Error 4 occured, database not updated (no purge of zset)");
         if (reply)
             freeReplyObject(reply);
-        return;
+        goto do_retry;
     }
     freeReplyObject(reply);
+
+ do_retry:
+    if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+        retry = 1;
+        if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
+            goto retry;
+        else
+            return;
+    }
 
     no_database_action = 1;
     emptyhashtable(pm->u.hash);
@@ -1700,7 +1711,11 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
      /* Put new strings into database, having
       * their interfacing-Params created */
 
-    for (i = 0; i < ht->hsize; i++)
+    retry = 0;
+ retry2:
+    rc = gsu_ext->rc;
+
+    for (i = 0; i < ht->hsize; i++) {
         for (hn = ht->nodes[i]; hn; hn = hn->next) {
             struct value v;
 
@@ -1739,6 +1754,16 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
 
             unqueue_signals();
         }
+
+        /* Disconnect detection */
+        if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
+            retry = 1;
+            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
+                goto retry2;
+            else
+                return;
+        }
+    }
 }
 /* }}} */
 /* FUNCTION: redis_hash_zset_unsetfn {{{ */
