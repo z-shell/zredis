@@ -76,6 +76,7 @@ static int is_tied(Param pm);
 static void zrtie_usage();
 static void zrzset_usage();
 static void myfreeparamnode(HashNode hn);
+static int reconnect(redisContext **rc, const char *hostspec);
 
 static char *backtype = "db/redis";
 static char *my_nullarray = NULL;
