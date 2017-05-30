@@ -718,7 +718,7 @@ redis_getfn(Param pm)
           if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
               goto retry;
       } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-          zwarn("Aborting");
+          zwarn("Aborting (no connection)");
       }
     }
 
@@ -799,7 +799,7 @@ redis_setfn(Param pm, char *val)
             if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
                 goto retry;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-            zwarn("Aborting");
+            zwarn("Aborting (no connection)");
         }
     }
 }
@@ -874,7 +874,7 @@ scan_keys(HashTable ht, ScanFunc func, int flags)
         if (reply)
             freeReplyObject(reply);
         if (retry) {
-            zwarn("Aborting");
+            zwarn("Aborting (no connection)");
             return;
         }
         retry = 1;
@@ -988,7 +988,7 @@ redis_hash_setfn(Param pm, HashTable ht)
         else
             return;
     } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-        zwarn("Aborting");
+        zwarn("Aborting (no connection)");
         return;
     }
 
@@ -1052,7 +1052,7 @@ redis_hash_setfn(Param pm, HashTable ht)
             else
                 return;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-            zwarn("Aborting");
+            zwarn("Aborting (no connection)");
             return;
         }
     }
@@ -1169,7 +1169,7 @@ redis_str_getfn(Param pm)
         if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
             goto retry;
     } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-        zwarn("Aborting");
+        zwarn("Aborting (no connection)");
     }
 
     return "";
@@ -1235,7 +1235,7 @@ redis_str_setfn(Param pm, char *val)
             if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
                 goto retry;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-            zwarn("Aborting");
+            zwarn("Aborting (no connection)");
         }
     }
 }
@@ -1533,7 +1533,7 @@ redis_zset_getfn(Param pm)
           if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
               goto retry;
       } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-          zwarn("Aborting");
+          zwarn("Aborting (no connection)");
       }
     }
 
@@ -1620,7 +1620,7 @@ redis_zset_setfn(Param pm, char *val)
             if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
                 goto retry;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-            zwarn("Aborting");
+            zwarn("Aborting (no connection)");
         }
     }
 }
@@ -1805,7 +1805,7 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
         else
             return;
     } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-        zwarn("Aborting");
+        zwarn("Aborting (no connection)");
         return;
     }
 
@@ -1871,7 +1871,7 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
             else
                 return;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-            zwarn("Aborting");
+            zwarn("Aborting (no connection)");
             return;
         }
     }
@@ -2090,7 +2090,7 @@ redis_hset_getfn(Param pm)
           if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
               goto retry;
       } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-          zwarn("Aborting");
+          zwarn("Aborting (no connection)");
       }
     }
 
@@ -2178,7 +2178,7 @@ redis_hset_setfn(Param pm, char *val)
             if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
                 goto retry;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-            zwarn("Aborting");
+            zwarn("Aborting (no connection)");
         }
     }
 }
@@ -2390,7 +2390,7 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
         else
             return;
     } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-        zwarn("Aborting");
+        zwarn("Aborting (no connection)");
         return;
     }
 
@@ -2456,7 +2456,7 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
             else
                 return;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
-            zwarn("Aborting");
+            zwarn("Aborting (no connection)");
             return;
         }
     }
