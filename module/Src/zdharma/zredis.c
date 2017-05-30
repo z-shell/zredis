@@ -3017,7 +3017,6 @@ static void zrzset_usage() {
     fflush(stdout);
 }
 /* }}} */
-/* FUNCTION: myfreeparamnode {{{ */
 /* FUNCTION: reconnect {{{ */
 static int reconnect(redisContext **rc, const char *hostspec_in) {
     char hostspec[192];
@@ -3027,6 +3026,7 @@ static int reconnect(redisContext **rc, const char *hostspec_in) {
     parse_host_string(hostspec_in, hostspec, 192, &host, &port, &db_index, &key);
 
     redisFree(*rc);
+    *rc = NULL;
     if(!connect("", rc, host, port, db_index, hostspec_in)) {
         zwarn("Not connected, retrying... Failed, aborting");
         return 0;
@@ -3036,6 +3036,7 @@ static int reconnect(redisContext **rc, const char *hostspec_in) {
     }
 }
 /* }}} */
+/* FUNCTION: myfreeparamnode {{{ */
 static void
 myfreeparamnode(HashNode hn)
 {
