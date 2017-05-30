@@ -1679,18 +1679,40 @@ zset_scan_keys(HashTable ht, ScanFunc func, int flags)
     struct gsu_scalar_ext *gsu_ext;
 
     gsu_ext = (struct gsu_scalar_ext *) ht->tmpdata;
-    rc = gsu_ext->rc;
     main_key = gsu_ext->key;
     main_key_len = gsu_ext->key_len;
 
     /* Iterate keys adding them to hash, so we have Param to use in `func` */
     do {
+        int retry = 0;
+    retry:
+        rc = gsu_ext->rc;
+
+        if (!rc)
+            return;
+
       reply = redisCommand(rc, "ZSCAN %b %llu", main_key, (size_t) main_key_len, cursor);
+
+        /* Disconnect detection */
+        if (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+            if (reply)
+                freeReplyObject(reply);
+            if (retry) {
+                zwarn("Aborting (not connected)");
+                break;
+            }
+            retry = 1;
+            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
+                goto retry;
+            else
+                break;
+        }
+
       if (reply == NULL || reply->type != REDIS_REPLY_ARRAY || reply->elements != 2) {
           if (reply && reply->type == REDIS_REPLY_ERROR) {
-              zwarn("Problem occured during ZSCAN: %s", reply->str);
+              zwarn("Aborting, problem occured during ZSCAN: %s", reply->str);
           } else {
-              zwarn("Problem occured during ZSCAN, no error message available");
+              zwarn("Problem occured during ZSCAN, no error message available, aborting");
           }
           if (reply)
               freeReplyObject(reply);
