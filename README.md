@@ -5,6 +5,32 @@
 
 # Zredis
 
+Module interfacing with `redis` database via `variables` mapped to `keys` or whole `database`.
+
+```zsh
+% redis-cli -n 3 hmset HASHSET field1 value1 fld2 val2
+% zrtie -d db/redis -f "127.0.0.1/3/HASHSET" hset
+% echo ${(kv)hset}
+field1 value1 fld2 val2
+% echo ${(k)hset}
+field1 fld2
+% echo ${(v)hset}
+value1 val2
+% redis-cli -n 3 rpush LIST empty
+% zrtie -d db/redis -f "127.0.0.1/3/LIST" list
+% echo ${(t)list}
+array-special
+% list=( ${(k)hset} )
+% echo $list
+field1 fld2
+% redis-cli -n 3 lrange LIST 0 -1
+1) "field1"
+2) "fld2"
+% for (( i=1; i <= 2000; i ++ )); do; hset[$i]=$i; done
+% echo ${#hset}
+2002
+```
+
 ## Zredis Zstyles
 
 The values being set are the defaults. Change the values before loading `zredis` plugin.
