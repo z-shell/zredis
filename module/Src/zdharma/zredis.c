@@ -693,6 +693,7 @@ redis_getfn(Param pm)
                 /* Ensure there's no leak */
                 if (pm->u.str) {
                     zsfree(pm->u.str);
+                    pm->u.str = NULL;
                 }
 
                 /* Metafy returned data. All fits - metafy
@@ -1152,6 +1153,7 @@ redis_str_getfn(Param pm)
             /* Ensure there's no leak */
             if (pm->u.str) {
                 zsfree(pm->u.str);
+                pm->u.str = NULL;
             }
 
             /* Metafy returned data. All fits - metafy
@@ -1515,6 +1517,7 @@ redis_zset_getfn(Param pm)
             /* Ensure there's no leak */
             if (pm->u.str) {
                 zsfree(pm->u.str);
+                pm->u.str = NULL;
             }
 
             /* Metafy returned data. All fits - metafy
@@ -2076,6 +2079,7 @@ redis_hset_getfn(Param pm)
             /* Ensure there's no leak */
             if (pm->u.str) {
                 zsfree(pm->u.str);
+                pm->u.str = NULL;
             }
 
             /* Metafy returned data. All fits - metafy
