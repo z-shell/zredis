@@ -2721,7 +2721,6 @@ redis_arrlist_setfn(Param pm, char **val)
     }
 
     if (val) {
-        uniqarray(val);
         alen = arrlen(val);
         pm->u.arr = val;
         pm->node.flags |= PM_UPTODATE;
