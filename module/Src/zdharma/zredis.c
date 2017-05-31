@@ -1421,9 +1421,32 @@ redis_arrset_setfn(Param pm, char **val)
     key_len = gsu_ext->key_len;
 
     if (rc) {
+
+        int retry = 0;
+    retry:
+        rc = gsu_ext->rc;
+
+        if (!rc)
+            return;
+
         reply = redisCommand(rc, "DEL %b", key, (size_t) key_len);
-        if (reply)
+        if (reply) {
             freeReplyObject(reply);
+            reply = NULL;
+        }
+
+        /* Disconnect detection */
+        if (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+            if (retry) {
+                zwarn("Aborting (no connection)");
+                return;
+            }
+            retry = 1;
+            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
+                goto retry;
+            else
+                return;
+        }
 
         if (val) {
             for (j=0; j<alen; j ++) {
@@ -1435,12 +1458,28 @@ redis_arrset_setfn(Param pm, char **val)
                 content = umval;
                 content_len = umlen;
                 reply = redisCommand(rc, "SADD %b %b", key, (size_t) key_len, content, (size_t) content_len);
-                if (reply)
+                if (reply) {
                     freeReplyObject(reply);
+                    reply = NULL;
+                }
+                if (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+                    break;
+                }
 
                 /* Free */
                 set_length(umval, umlen);
                 zsfree(umval);
+            }
+
+            /* Disconnect detection */
+            if (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+                if (retry) {
+                    zwarn("Aborting (no connection)");
+                    return;
+                }
+                retry = 1;
+                if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
+                    goto retry;
             }
         }
     }
