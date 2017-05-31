@@ -71,7 +71,7 @@ static void parse_host_string(const char *input, char *buffer, int size,
                                 char **host, int *port, int *db_index, char **key);
 static int connect(char *nam, redisContext **rc, const char *host, int port, int db_index,
                     const char *resource_name_in);
-static int type(redisContext *rc, char *key, size_t key_len);
+static int type(redisContext **rc, const char *redis_host_port, char *key, size_t key_len);
 static int is_tied(Param pm);
 static void zrtie_usage();
 static void zrzset_usage();
@@ -290,7 +290,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
         tied_param->u.hash->tmpdata = (void *)rc_carrier;
         tied_param->gsu.h = &redis_hash_gsu;
     } else {
-        int tpe = type(rc, key, (size_t) strlen(key));
+        int tpe = type(&rc, resource_name_in, key, (size_t) strlen(key));
         if (tpe == RD_TYPE_STRING) {
             if (!(tied_param = createparam(pmname, pmflags | PM_SPECIAL))) {
                 zwarnnam(nam, "cannot create the requested scalar parameter: %s", pmname);
@@ -902,9 +902,11 @@ scan_keys(HashTable ht, ScanFunc func, int flags)
         key_len = entry->len;
 
         /* Only scan string keys, ignore the rest (hashes, sets, etc.) */
-        if (RD_TYPE_STRING != type(rc, key, (size_t) key_len)) {
+        if (RD_TYPE_STRING != type(&gsu_ext->rc, gsu_ext->redis_host_port, key, (size_t) key_len)) {
+            rc = gsu_ext->rc;
             continue;
         }
+        rc = gsu_ext->rc;
 
         /* This returns database-interfacing Param,
          * it will return u.str or first fetch data
@@ -966,9 +968,11 @@ redis_hash_setfn(Param pm, HashTable ht)
         key_len = entry->len;
 
         /* Only scan string keys, ignore the rest (hashes, sets, etc.) */
-        if (RD_TYPE_STRING != type(rc, key, (size_t) key_len)) {
+        if (RD_TYPE_STRING != type(&gsu_ext->rc, gsu_ext->redis_host_port, key, (size_t) key_len)) {
+            rc = gsu_ext->rc;
             continue;
         }
+        rc = gsu_ext->rc;
 
         queue_signals();
 
@@ -3194,14 +3198,43 @@ static int connect(char *nam, redisContext **rc, const char *host, int port,
 }
 /* }}} */
 /* FUNCTION: type {{{ */
-static int type(redisContext *rc, char *key, size_t key_len) {
+static int type(redisContext **rc, const char *redis_host_port, char *key, size_t key_len) {
     redisReply *reply = NULL;
-    reply = redisCommand(rc, "TYPE %b", key, (size_t) key_len);
-    if (reply == NULL || reply->type != REDIS_REPLY_STATUS) {
-        if (reply)
-            freeReplyObject(reply);
+
+    int retry = 0;
+ retry:
+    if (!*rc) {
         return RD_TYPE_UNKNOWN;
     }
+
+    reply = redisCommand(*rc, "TYPE %b", key, (size_t) key_len);
+    if (reply == NULL || reply->type != REDIS_REPLY_STATUS) {
+        if (reply) {
+            freeReplyObject(reply);
+            reply = NULL;
+        }
+        if ((*rc)->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+            goto do_retry;
+        } else {
+            return RD_TYPE_UNKNOWN;
+        }
+    }
+
+ do_retry:
+    /* Disconnect detection */
+    if ((*rc)->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+        if (retry) {
+            zwarn("Aborting (no connection)");
+            return RD_TYPE_UNKNOWN;
+        }
+        retry = 1;
+        if(reconnect(rc, redis_host_port))
+            goto retry;
+        else
+            return RD_TYPE_UNKNOWN;
+    }
+
+
     if (0 == strncmp("string", reply->str, reply->len)) {
         freeReplyObject(reply);
         return RD_TYPE_STRING;
