@@ -1304,13 +1304,20 @@ redis_arrset_getfn(Param pm)
         return pm->u.arr ? pm->u.arr : &my_nullarray;
     }
 
-    rc = gsu_ext->rc;
     key = gsu_ext->key;
     key_len = gsu_ext->key_len;
+
+    int retry = 0;
+ retry:
+    rc = gsu_ext->rc;
+
+    if (!rc)
+        return &my_nullarray;
 
     reply = redisCommand(rc, "EXISTS %b", key, (size_t) key_len);
     if (reply && reply->type == REDIS_REPLY_INTEGER && reply->integer == 1) {
         freeReplyObject(reply);
+        reply = NULL;
 
         reply = redisCommand(rc, "SMEMBERS %b", key, (size_t) key_len);
         if (reply && reply->type == REDIS_REPLY_ARRAY) {
@@ -1348,14 +1355,32 @@ redis_arrset_getfn(Param pm)
             pm->u.arr[reply->elements] = NULL;
 
             freeReplyObject(reply);
+            reply = NULL;
 
             /* Can return pointer, correctly saved inside Param */
             return pm->u.arr;
         } else if (reply) {
             freeReplyObject(reply);
+            reply = NULL;
         }
     } else if (reply) {
         freeReplyObject(reply);
+        reply = NULL;
+    }
+
+    /* Disconnect detection */
+    if (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+        if (reply) {
+            freeReplyObject(reply);
+            reply = NULL;
+        }
+        if (retry) {
+            zwarn("Aborting (no connection)");
+            return &my_nullarray;
+        }
+        retry = 1;
+        if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port))
+            goto retry;
     }
 
     /* Array with 0 elements */
