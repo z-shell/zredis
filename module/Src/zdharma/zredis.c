@@ -3077,8 +3077,8 @@ static int connect(char *nam, redisContext **rc, const char *host, int port,
             } else {
               zwarn("error opening database %s:%d/%d (%s)", host, port, db_index, (*rc)->errstr);
             }
-            redisFree(*rc);
-            *rc = NULL;
+            // redisFree(*rc);
+            // *rc = NULL;
         } else {
             if(nam && nam[0] != '\0') {
                 zwarnnam(nam, "error opening database %s (insufficient memory)", resource_name_in);
