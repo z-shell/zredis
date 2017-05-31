@@ -973,8 +973,12 @@ redis_hash_setfn(Param pm, HashTable ht)
 
         /* DEL */
         reply2 = redisCommand(rc, "DEL %b", key, (size_t) key_len);
-        if (reply2)
+        if (reply2) {
             freeReplyObject(reply2);
+            reply2 = NULL;
+        }
+        if (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))
+            break;
 
         unqueue_signals();
     }
@@ -1851,8 +1855,12 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
             reply = redisCommand(rc, "ZADD %b %b %b", main_key, (size_t) main_key_len,
                                  content, (size_t) content_len,
                                  key, (size_t) key_len);
-            if (reply)
+            if (reply) {
                 freeReplyObject(reply);
+                reply = NULL;
+            }
+            if (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))
+                break;
 
             /* Free, restoring original length */
             set_length(umval, content_len);
@@ -2376,12 +2384,17 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
             continue;
         }
         freeReplyObject(reply2);
+        reply2 = NULL;
+        if (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))
+            break;
     }
 
  do_retry:
 
-    if (reply)
+    if (reply) {
         freeReplyObject(reply);
+        reply = NULL;
+    }
 
     if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
         retry = 1;
