@@ -3122,7 +3122,7 @@ static void parse_host_string(const char *input, char *resource_name, int size,
         if ((key_start = strchr(processed, '/'))) {
             /* With key-following track */
             *key_start = '\0';
-            if (processed[1] != '\0')
+            if (processed[0] != '\0')
                 *db_index = atoi(processed);
             processed = key_start + 1;
         } else {
