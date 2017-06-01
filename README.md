@@ -30,6 +30,47 @@ field1 fld2
 % echo ${#hset}
 2002
 ```
+## Rationale
+
+Building commands for `redis-cli` quickly becomes inadequate. For example, if copying
+of one hash to another one is needed, what `redis-cli` invocations are needed? With
+`zredis`, this task is simple:
+
+```zsh
+% zrtie -r -d db/redis -f "127.0.0.1/3/HASHSET1" hset1 # -r - read-only
+% zrtie -d db/redis -f "127.0.0.1/3/HASHSET2" hset2
+% echo ${(kv)hset2}
+other data
+% echo ${(kv)hset1}
+fld2 val2 field1 value1
+% hset2=( "${(kv)hset1[@]}" )
+% echo ${(kv)hset2}
+fld2 val2 field1 value1
+```
+
+The `"${(kv)hset1[@]}"` construct guarantees that empty elements (keys or values) will
+be preserved, thanks to quoting and `@` operator. `(kv)` means keys and values, alternating.
+ 
+Or, for example, if one needs a large sorted set (`zset`), how to accomplish this with
+`redis-cli`? With `zredis`, this is as always simple:
+
+```zsh
+% redis-cli -n 3 zadd NEWZSET 1.0 a
+% zrtie -d db/redis -f "127.0.0.1/3/NEWZSET" zset
+% echo ${(kv)zset}
+a 1
+% for i in {a..z} {A..Z}; do
+> zset[$i]=$count;
+> done
+% echo ${(kv)zset}
+a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t 20 u 21 v 22 w 23 x 24 y 25 z 26 A 27 B 28 C 29 D 30 E 31 F 32 G 33 H 34 I 35 J 36 K 37 L 38 M 39 N 40 O 41 P 42 Q 43 R 44 S 45 T 46 U 47 V 48 W 49 X 50 Y 51 Z 52
+% zrzset -h
+Usage: zrzset {tied-param-name}
+Output: $reply array, to hold elements of the sorted set
+% zrzset zset
+% echo $reply
+a b c d e f g h i j k l m n o p q r s t u v w x y z A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+```
 
 ## Zredis Zstyles
 
