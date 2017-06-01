@@ -75,6 +75,7 @@ static int type(redisContext **rc, const char *redis_host_port, const char *pass
 static int is_tied(Param pm);
 static void zrtie_usage();
 static void zrzset_usage();
+static void zruntie_usage();
 static void myfreeparamnode(HashNode hn);
 static int reconnect(redisContext **rc, const char *hostspec, const char *password);
 static int auth(redisContext **rc, const char *password);
@@ -167,7 +168,7 @@ static const struct gsu_array_ext arrlist_gsu_ext =
 /* ARRAY: builtin {{{ */
 static struct builtin bintab[] = {
     BUILTIN("zrtie", 0, bin_zrtie, 0, -1, 0, "d:f:rpha:A:", NULL),
-    BUILTIN("zruntie", 0, bin_zruntie, 1, -1, 0, "u", NULL),
+    BUILTIN("zruntie", 0, bin_zruntie, 0, -1, 0, "uh", NULL),
     BUILTIN("zredishost", 0, bin_zredishost, 1, -1, 0, "", NULL),
     BUILTIN("zredisclear", 0, bin_zredisclear, 1, 2, 0, "", NULL),
     BUILTIN("zrzset", 0, bin_zrzset, 0, 1, 0, "h", NULL),
@@ -472,6 +473,16 @@ bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
     Param pm;
     char *pmname;
     int ret = 0;
+
+    if (OPT_ISSET(ops,'h')) {
+        zruntie_usage();
+        return 0;
+    }
+
+    if (!*args) {
+        zwarnnam(nam, "At least one variable name is needed, see -h");
+        return 1;
+    }
 
     for (pmname = *args; *args++; pmname = *args) {
         /* Get param */
@@ -3393,6 +3404,16 @@ static void zrtie_usage() {
 static void zrzset_usage() {
     fprintf(stdout, YELLOW "Usage:" RESET " zrzset {tied-param-name}\n");
     fprintf(stdout, YELLOW "Output:" RESET " $reply array, to hold elements of the sorted set\n");
+    fflush(stdout);
+}
+/* }}} */
+/* FUNCTION: zruntie_usage {{{ */
+static void zruntie_usage() {
+    fprintf(stdout, YELLOW "Usage:" RESET " zruntie [-u] {tied-variable-name} [tied-variable-name] ...\n");
+    fprintf(stdout, YELLOW "Options:" RESET "\n");
+    fprintf(stdout, GREEN " -u" RESET ": Allow to untie read-only parameter\n");
+    fprintf(stdout, YELLOW "Description:" RESET " detaches variable from database and removes the variable;\n");
+    fprintf(stdout, YELLOW "            " RESET " database is not cleared\n");
     fflush(stdout);
 }
 /* }}} */
