@@ -3425,7 +3425,7 @@ static void zruntie_usage() {
 /* }}} */
 /* FUNCTION: zredishost_usage {{{ */
 static void zredishost_usage() {
-    fprintf(stdout, YELLOW "Usage:" RESET "zredishost {tied-variable-name}\n");
+    fprintf(stdout, YELLOW "Usage:" RESET " zredishost {tied-variable-name}\n");
     fprintf(stdout, YELLOW "Description:" RESET " stores host-spec of given variable to $REPLY\n");
     fflush(stdout);
 }
