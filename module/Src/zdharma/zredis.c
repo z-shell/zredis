@@ -77,6 +77,7 @@ static void zrtie_usage();
 static void zrzset_usage();
 static void zruntie_usage();
 static void zredishost_usage();
+static void zredisclear_usage();
 static void myfreeparamnode(HashNode hn);
 static int reconnect(redisContext **rc, const char *hostspec, const char *password);
 static int auth(redisContext **rc, const char *password);
@@ -171,7 +172,7 @@ static struct builtin bintab[] = {
     BUILTIN("zrtie", 0, bin_zrtie, 0, -1, 0, "d:f:rpha:A:", NULL),
     BUILTIN("zruntie", 0, bin_zruntie, 0, -1, 0, "uh", NULL),
     BUILTIN("zredishost", 0, bin_zredishost, 0, -1, 0, "h", NULL),
-    BUILTIN("zredisclear", 0, bin_zredisclear, 1, 2, 0, "", NULL),
+    BUILTIN("zredisclear", 0, bin_zredisclear, 0, 2, 0, "h", NULL),
     BUILTIN("zrzset", 0, bin_zrzset, 0, 1, 0, "h", NULL),
 };
 /* }}} */
@@ -640,6 +641,11 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
 
     pmname = *args++;
     key = *args;
+
+    if (OPT_ISSET(ops,'h')) {
+        zredisclear_usage();
+        return 0;
+    }
 
     if (!pmname) {
         zwarnnam(nam, "parameter name (whose cache is to be cleared) is required, see -h");
@@ -3427,6 +3433,15 @@ static void zruntie_usage() {
 static void zredishost_usage() {
     fprintf(stdout, YELLOW "Usage:" RESET " zredishost {tied-variable-name}\n");
     fprintf(stdout, YELLOW "Description:" RESET " stores host-spec of given variable to $REPLY\n");
+    fflush(stdout);
+}
+/* }}} */
+/* FUNCTION: zredisclear_usage {{{ */
+static void zredisclear_usage() {
+    fprintf(stdout, YELLOW "Usage:" RESET " zredisclear {tied-variable-name} [key name]\n");
+    fprintf(stdout, YELLOW "Description:" RESET " clears cache of given hash/key or of given plain\n");
+    fprintf(stdout, YELLOW "            " RESET " variable: set (array), list (array), string (scalar);\n");
+    fprintf(stdout, YELLOW "            " RESET " pass `-p' option to zrtie to disable cache for variable\n");
     fflush(stdout);
 }
 /* }}} */
