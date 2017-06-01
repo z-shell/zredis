@@ -131,7 +131,7 @@ value2 value3 value1
 
 ### Redis sorted set -> Zsh hash
 
-This variant maps `zset` as hash - keys are set elements, values are ranks.
+This variant maps `zset` as hash - keys are set elements, values are ranks:
 
 ```zsh
 % redis-cli -n 4 zadd NEWZSET 1.0 a
@@ -147,7 +147,7 @@ b a
 
 ### Redis list -> Zsh array
 
-There is no analogue of `zrzset` call because `Zsh` array already has correct order.
+There is no analogue of `zrzset` call because `Zsh` array already has correct order:
 
 ```zsh
 % redis-cli -n 4 rpush LIST value1 value2 value3
@@ -167,7 +167,7 @@ value1 value2 value3
 
 ### Redis string key -> Zsh string
 
-Single keys in main Redis storage are bound to `Zsh` string variables
+Single keys in main Redis storage are bound to `Zsh` string variables:
 
 ```zsh
 % redis-cli -n 4 KEYS "*"
