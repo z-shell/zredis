@@ -166,7 +166,7 @@ static const struct gsu_array_ext arrlist_gsu_ext =
 /* }}} */
 /* ARRAY: builtin {{{ */
 static struct builtin bintab[] = {
-    BUILTIN("zrtie", 0, bin_zrtie, 0, -1, 0, "d:f:rpha:", NULL),
+    BUILTIN("zrtie", 0, bin_zrtie, 0, -1, 0, "d:f:rpha:A:", NULL),
     BUILTIN("zruntie", 0, bin_zruntie, 1, -1, 0, "u", NULL),
     BUILTIN("zredishost", 0, bin_zredishost, 1, -1, 0, "", NULL),
     BUILTIN("zredisclear", 0, bin_zredisclear, 1, 2, 0, "", NULL),
@@ -262,8 +262,31 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 
     /* Connect */
 
+    char buf[1025];
     if (OPT_ISSET(ops,'a')) {
         password = OPT_ARG(ops, 'a');
+    } else if (OPT_ISSET(ops, 'A')) {
+        const char *pfile_path = OPT_ARG(ops,'A');
+        FILE *pfile = fopen(pfile_path, "r");
+        if (pfile) {
+            int size = fread(buf, 1, 1024, pfile);
+            fclose(pfile);
+            if (size > 0) {
+                if (size > 1024)
+                    size = 1024;
+                while( buf[size-1] == '\r' || buf[size-1] == '\n' ) {
+                    --size;
+                }
+                buf[size] = '\0';
+                password = buf;
+            } else {
+                zwarnnam(nam, "Couldn't read password file: `%s', aborting", pfile_path);
+                return 1;
+            }
+        } else {
+            zwarnnam(nam, "Couldn't open password file: `%s', aborting", pfile_path);
+            return 1;
+        }
     }
 
     if(!connect(nam, &rc, password, host, port, db_index, resource_name_in)) {
