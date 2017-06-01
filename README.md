@@ -5,7 +5,7 @@
 
 # Zredis
 
-Module interfacing with `redis` database via `variables` mapped to `keys` or whole `database`.
+Module interfacing with `redis` database via `Zshell` `variables` mapped to `keys` or whole `database`.
 
 ```zsh
 % redis-cli -n 3 hmset HASHSET field1 value1 fld2 val2
