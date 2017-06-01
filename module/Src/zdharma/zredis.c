@@ -3353,13 +3353,14 @@ static int is_tied(Param pm) {
 /* }}} */
 /* FUNCTION: zrtie_usage {{{ */
 static void zrtie_usage() {
-    fprintf(stdout, YELLOW "Usage:" RESET " zrtie -d db/redis [-p] [-r] " MAGENTA "-f {host-spec}"
+    fprintf(stdout, YELLOW "Usage:" RESET " zrtie -d db/redis [-p] [-r] [-a password] " MAGENTA "-f {host-spec}"
             RESET " " RED "{parameter_name}" RESET "\n");
     fprintf(stdout, YELLOW "Options:" RESET "\n");
     fprintf(stdout, GREEN " -d" RESET ": select database type, can change in future, currently only \"db/redis\"\n");
     fprintf(stdout, GREEN " -p" RESET ": passthrough - always do a fresh query to database, don't use cache\n");
     fprintf(stdout, GREEN " -r" RESET ": create read-only parameter\n" );
     fprintf(stdout, GREEN " -f" RESET ": database address in format {host}[:port][/[db_idx][/key]]\n");
+    fprintf(stdout, GREEN " -a" RESET ": database password to be used with AUTH (redis command)\n");
     fprintf(stdout, "The " RED "{parameter_name}" RESET " - choose name for the created database-bound parameter\n");
     fflush(stdout);
 }
