@@ -187,7 +187,7 @@ valueB
 "valueB"
 ```
 
-## Installation
+# Installation
 
 **The plugin is "standalone"**, which means that only sourcing it is needed. So to
 install, unpack `zredis` somewhere and add
@@ -204,9 +204,9 @@ other too, and also install with `Oh My Zsh` (by copying directory to
 
 ### [Zplugin](https://github.com/zdharma/zplugin)
 
-Add `zplugin load zdharma/zredis` to your `.zshrc` file. Zplugin will handle
+Add `zplugin light zdharma/zredis` to your `.zshrc` file. Zplugin will handle
 cloning the plugin for you automatically the next time you start zsh. To update
-issue `zplugin update zdharma/zredis` (`update-all` can also be used).
+issue `zplugin update zdharma/zredis`.
 
 ### Antigen
 
@@ -224,7 +224,7 @@ cloning the plugin for you automatically the next time you start zsh.
 Add `zgen load zdharma/zredis` to your .zshrc file in the same place you're doing
 your other `zgen load` calls in.
 
-## Zredis Zstyles
+# Zredis Zstyles
 
 The values being set are the defaults. Change the values before loading `zredis` plugin.
 
