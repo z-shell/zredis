@@ -76,6 +76,7 @@ static int is_tied(Param pm);
 static void zrtie_usage();
 static void zrzset_usage();
 static void zruntie_usage();
+static void zredishost_usage();
 static void myfreeparamnode(HashNode hn);
 static int reconnect(redisContext **rc, const char *hostspec, const char *password);
 static int auth(redisContext **rc, const char *password);
@@ -169,7 +170,7 @@ static const struct gsu_array_ext arrlist_gsu_ext =
 static struct builtin bintab[] = {
     BUILTIN("zrtie", 0, bin_zrtie, 0, -1, 0, "d:f:rpha:A:", NULL),
     BUILTIN("zruntie", 0, bin_zruntie, 0, -1, 0, "uh", NULL),
-    BUILTIN("zredishost", 0, bin_zredishost, 1, -1, 0, "", NULL),
+    BUILTIN("zredishost", 0, bin_zredishost, 0, -1, 0, "h", NULL),
     BUILTIN("zredisclear", 0, bin_zredisclear, 1, 2, 0, "", NULL),
     BUILTIN("zrzset", 0, bin_zrzset, 0, 1, 0, "h", NULL),
 };
@@ -583,10 +584,15 @@ bin_zredishost(char *nam, char **args, Options ops, UNUSED(int func))
     Param pm;
     char *pmname;
 
+    if (OPT_ISSET(ops, 'h')) {
+        zredishost_usage();
+        return 0;
+    }
+
     pmname = *args;
 
     if (!pmname) {
-        zwarnnam(nam, "parameter name (whose path is to be written to $REPLY) is required");
+        zwarnnam(nam, "parameter name (whose host-spec is to be written to $REPLY) is required, see -h");
         return 1;
     }
 
@@ -3414,6 +3420,13 @@ static void zruntie_usage() {
     fprintf(stdout, GREEN " -u" RESET ": Allow to untie read-only parameter\n");
     fprintf(stdout, YELLOW "Description:" RESET " detaches variable from database and removes the variable;\n");
     fprintf(stdout, YELLOW "            " RESET " database is not cleared\n");
+    fflush(stdout);
+}
+/* }}} */
+/* FUNCTION: zredishost_usage {{{ */
+static void zredishost_usage() {
+    fprintf(stdout, YELLOW "Usage:" RESET "zredishost {tied-variable-name}\n");
+    fprintf(stdout, YELLOW "Description:" RESET " stores host-spec of given variable to $REPLY\n");
     fflush(stdout);
 }
 /* }}} */
