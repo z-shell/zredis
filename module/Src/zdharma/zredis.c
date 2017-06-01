@@ -3239,8 +3239,8 @@ static int connect(char *nam, redisContext **rc, const char* password, const cha
                     zwarn("IO error selecting database #%d (host: %s:%d)", db_index, host, port);
                 }
             }
-            redisFree(*rc);
-            *rc = NULL;
+            // redisFree(*rc);
+            // *rc = NULL;
             return 0;
         }
         freeReplyObject(reply);
