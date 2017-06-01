@@ -72,6 +72,63 @@ Output: $reply array, to hold elements of the sorted set
 a b c d e f g h i j k l m n o p q r s t u v w x y z A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
 ```
 
+## Mapping of redis types to Zsh data structures
+### Database string keys -> Zsh hash
+
+Redis can store strings at given keys, using `SET` command. `Zredis` maps those to hash array:
+
+```zsh
+% redis-cli -n 4 SET key1 value1
+% redis-cli -n 4 SET key2 value2
+% zrtie -d db/redis -f "127.0.0.1/4" redis
+% echo $zredis_tied
+redis
+% echo ${(kv)redis}
+key1 value1 key2 value2
+```
+
+### Redis hash -> Zsh hash
+
+By appending `/NAME` to redis `host-spec`, one can select single key of type `HASH`
+and map it to `Zsh` hash:
+
+```zsh
+% redis-cli -n 4 hmset HASH key1 value1 key2 value2
+% zrtie -d db/redis -f "127.0.0.1/4/HASH" hset
+% echo $zredis_tied
+hset
+% echo ${(kv)hset}
+key1 value1 key2 value2
+% echo $hset[key2]
+value2
+% unset 'hset[key2]'
+% echo ${(kv)hset}
+key1 value1
+```
+
+### Redis set -> Zsh array
+
+Can clear single elements by assigning `()` to array element. Can overwrite
+whole set by assigning via `=( ... )` to set, and delete set from database
+by use of `unset`.
+
+```zsh
+% redis-cli -n 4 sadd SET value1 value2 value3 ''
+% zrtie -d db/redis -f "127.0.0.1/4/SET" myset
+% echo ${myset[@]}
+value2 value3 value1
+% echo -E ${(qq)myset[@]}  # Quote with '', use to see empty elements
+'value2' 'value3' '' 'value1'
+% myset=( 1 2 3 )
+% myset[2]=()
+% redis-cli -n 4 smembers SET
+1) "1"
+3) "3"
+% unset myset
+% redis-cli -n 4 smembers SET
+(empty list or set)
+```
+
 ## Zredis Zstyles
 
 The values being set are the defaults. Change the values before loading `zredis` plugin.
