@@ -59,7 +59,9 @@ Or, for example, if one needs a large sorted set (`zset`), how to accomplish thi
 % zrtie -d db/redis -f "127.0.0.1/3/NEWZSET" zset
 % echo ${(kv)zset}
 a 1
+% count=0
 % for i in {a..z} {A..Z}; do
+> (( count ++ ))
 > zset[$i]=$count;
 > done
 % echo ${(kv)zset}
