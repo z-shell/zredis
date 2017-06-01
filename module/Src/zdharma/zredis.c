@@ -642,7 +642,7 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
     key = *args;
 
     if (!pmname) {
-        zwarnnam(nam, "parameter name (whose path is to be written to $REPLY) is required");
+        zwarnnam(nam, "parameter name (whose cache is to be cleared) is required, see -h");
         return 1;
     }
 
