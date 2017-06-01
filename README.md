@@ -110,7 +110,7 @@ key1 value1
 
 Can clear single elements by assigning `()` to array element. Can overwrite
 whole set by assigning via `=( ... )` to set, and delete set from database
-by use of `unset`.
+by use of `unset`. Use `zruntie` to only detach variable from database.
 
 ```zsh
 % redis-cli -n 4 sadd SET value1 value2 value3 ''
@@ -127,6 +127,64 @@ value2 value3 value1
 % unset myset
 % redis-cli -n 4 smembers SET
 (empty list or set)
+```
+
+### Redis sorted set -> Zsh hash
+
+This variant maps `zset` as hash - keys are set elements, values are ranks.
+
+```zsh
+% redis-cli -n 4 zadd NEWZSET 1.0 a
+% zrtie -d db/redis -f "127.0.0.1/4/NEWZSET" zset
+% echo ${(kv)zset}
+a 1
+% zset[a]=2.5
+% zset[b]=1.5
+% zrzset zset
+% echo $reply
+b a
+```
+
+### Redis list -> Zsh array
+
+There is no analogue of `zrzset` call because `Zsh` array already has correct order.
+
+```zsh
+% redis-cli -n 4 rpush LIST value1 value2 value3
+% zrtie -d db/redis -f "127.0.0.1/4/LIST" mylist
+% echo $mylist
+value1 value2 value3
+% mylist=( 1 2 3 )
+% mylist[2]=()
+% redis-cli -n 4 lrange LIST 0 -1
+1) "1"
+3) "3"
+% zruntie mylist
+% redis-cli -n 4 lrange LIST 0 -1
+1) "1"
+3) "3"
+```
+
+### Redis string key -> Zsh string
+
+Single keys in main Redis storage are bound to `Zsh` string variables
+
+```zsh
+% redis-cli -n 4 KEYS "*"
+1) "key1"
+2) "SET"
+3) "LIST"
+4) "HASH"
+5) "NEWZSET"
+6) "key2"
+% zrtie -d db/redis -f "127.0.0.1/4/key1" key1
+% echo $key1
+value1
+% key1=valueB
+% echo $key1
+valueB
+% redis-cli -n 4 get key1
+"valueB"
 ```
 
 ## Zredis Zstyles
