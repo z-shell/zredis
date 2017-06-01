@@ -92,8 +92,8 @@ key1 value1 key2 value2
 
 ### Redis hash -> Zsh hash
 
-By appending `/NAME` to redis `host-spec`, one can select single key of type `HASH`
-and map it to `Zsh` hash:
+By appending `/NAME` to the `host-spec` (`-f` option), one can select single
+key of type `HASH` and map it to `Zsh` hash:
 
 ```zsh
 % redis-cli -n 4 hmset HASH key1 value1 key2 value2
@@ -113,7 +113,8 @@ key1 value1
 
 Can clear single elements by assigning `()` to array element. Can overwrite
 whole set by assigning via `=( ... )` to set, and delete set from database
-by use of `unset`. Use `zruntie` to only detach variable from database.
+by use of `unset`. Use `zruntie` to only detach variable from database without
+deleting any data.
 
 ```zsh
 % redis-cli -n 4 sadd SET value1 value2 value3 ''
@@ -134,7 +135,8 @@ value2 value3 value1
 
 ### Redis sorted set -> Zsh hash
 
-This variant maps `zset` as hash - keys are set elements, values are ranks:
+This variant maps `zset` as hash - keys are set elements, values are ranks.
+`zrzset` call outputs elements sorted according to the rank:
 
 ```zsh
 % redis-cli -n 4 zadd NEWZSET 1.0 a
