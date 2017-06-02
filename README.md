@@ -8,7 +8,7 @@
 
 Module interfacing with `redis` database via `Zshell` `variables` mapped to `keys` or whole `database`.
 
-```zsh
+```SystemVerilog
 % redis-cli -n 3 hmset HASHSET field1 value1 fld2 val2
 % zrtie -d db/redis -f "127.0.0.1/3/HASHSET" hset
 % echo ${(kv)hset}
@@ -37,7 +37,7 @@ Building commands for `redis-cli` quickly becomes inadequate. For example, if co
 of one hash to another one is needed, what `redis-cli` invocations are needed? With
 `zredis`, this task is simple:
 
-```zsh
+```SystemVerilog
 % zrtie -r -d db/redis -f "127.0.0.1/3/HASHSET1" hset1 # -r - read-only
 % zrtie -d db/redis -f "127.0.0.1/3/HASHSET2" hset2
 % echo ${(kv)hset2}
@@ -55,7 +55,7 @@ be preserved, thanks to quoting and `@` operator. `(kv)` means keys and values, 
 Or, for example, if one needs a large sorted set (`zset`), how to accomplish this with
 `redis-cli`? With `zredis`, this is as always simple:
 
-```zsh
+```SystemVerilog
 % redis-cli -n 3 zadd NEWZSET 1.0 a
 % zrtie -d db/redis -f "127.0.0.1/3/NEWZSET" zset
 % echo ${(kv)zset}
@@ -80,7 +80,7 @@ a b c d e f g h i j k l m n o p q r s t u v w x y z A B C D E F G H I J K L M N 
 
 Redis can store strings at given keys, using `SET` command. `Zredis` maps those to hash array:
 
-```zsh
+```SystemVerilog
 % redis-cli -n 4 SET key1 value1
 % redis-cli -n 4 SET key2 value2
 % zrtie -d db/redis -f "127.0.0.1/4" redis
@@ -95,7 +95,7 @@ key1 value1 key2 value2
 By appending `/NAME` to the `host-spec` (`-f` option), one can select single
 key of type `HASH` and map it to `Zsh` hash:
 
-```zsh
+```SystemVerilog
 % redis-cli -n 4 hmset HASH key1 value1 key2 value2
 % zrtie -d db/redis -f "127.0.0.1/4/HASH" hset
 % echo $zredis_tied
@@ -116,7 +116,7 @@ whole set by assigning via `=( ... )` to set, and delete set from database
 by use of `unset`. Use `zruntie` to only detach variable from database without
 deleting any data.
 
-```zsh
+```SystemVerilog
 % redis-cli -n 4 sadd SET value1 value2 value3 ''
 % zrtie -d db/redis -f "127.0.0.1/4/SET" myset
 % echo ${myset[@]}
@@ -138,7 +138,7 @@ value2 value3 value1
 This variant maps `zset` as hash - keys are set elements, values are ranks.
 `zrzset` call outputs elements sorted according to the rank:
 
-```zsh
+```SystemVerilog
 % redis-cli -n 4 zadd NEWZSET 1.0 a
 % zrtie -d db/redis -f "127.0.0.1/4/NEWZSET" zset
 % echo ${(kv)zset}
@@ -154,7 +154,7 @@ b a
 
 There is no analogue of `zrzset` call because `Zsh` array already has correct order:
 
-```zsh
+```SystemVerilog
 % redis-cli -n 4 rpush LIST value1 value2 value3
 % zrtie -d db/redis -f "127.0.0.1/4/LIST" mylist
 % echo $mylist
@@ -174,7 +174,7 @@ value1 value2 value3
 
 Single keys in main Redis storage are bound to `Zsh` string variables:
 
-```zsh
+```SystemVerilog
 % redis-cli -n 4 KEYS "*"
 1) "key1"
 2) "SET"
@@ -197,7 +197,7 @@ valueB
 **The plugin is "standalone"**, which means that only sourcing it is needed. So to
 install, unpack `zredis` somewhere and add
 
-```zsh
+```SystemVerilog
 source {where-zredis-is}/zredis.plugin.zsh
 ```
 
