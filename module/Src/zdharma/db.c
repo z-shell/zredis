@@ -51,8 +51,8 @@ static void myfreeparamnode(HashNode hn);
 static char *unmetafy_zalloc(const char *to_copy, int *new_len);
 static void set_length(char *buf, int size);
 static int find_in_array(const char *pmname, const char *needle);
-static void zrtie_usage();
-static void zruntie_usage();
+static void ztie_usage();
+static void zuntie_usage();
 
 static char *my_nullarray = NULL;
 /* }}} */
@@ -70,7 +70,7 @@ static struct builtin bintab[] = {
     { name, PM_ARRAY | PM_READONLY, (void *) var, NULL,  NULL, NULL, NULL }
 /* }}} */
 
-/* FUNCTION: bin_zrtie {{{ */
+/* FUNCTION: bin_ztie {{{ */
 /**/
 static int
 bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
@@ -82,7 +82,7 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
     /* Check options */
 
     if (OPT_ISSET(ops,'h')) {
-        zrtie_usage();
+        ztie_usage();
         return 0;
     }
 
@@ -196,7 +196,7 @@ bin_zuntie(char *nam, char **args, Options ops, UNUSED(int func))
     int ret = 0;
 
     if (OPT_ISSET(ops,'h')) {
-        zruntie_usage();
+        zuntie_usage();
         return 0;
     }
 
@@ -475,28 +475,28 @@ static int find_in_array(const char *pmname, const char *needle) {
 
 /***************** USAGE *****************/
 
-/* FUNCTION: zrtie_usage {{{ */
-static void zrtie_usage() {
-    fprintf(stdout, YELLOW "Usage:" RESET " zrtie -d db/redis [-p] [-r] [-a password] " MAGENTA "-f {host-spec}"
-            RESET " " RED "{parameter_name}" RESET "\n");
+/* FUNCTION: ztie_usage {{{ */
+static void ztie_usage() {
+    fprintf(stdout, YELLOW "Usage:" RESET " ztie -d db/... [-z] [-r] [-p password] [-P password_file] "
+            MAGENTA "-f/-a {db_address}" RESET " " RED "{parameter_name}" RESET "\n");
     fprintf(stdout, YELLOW "Options:" RESET "\n");
-    fprintf(stdout, GREEN " -d" RESET ": select database type, can change in future, currently only \"db/redis\"\n");
-    fprintf(stdout, GREEN " -p" RESET ": passthrough - always do a fresh query to database, don't use cache\n");
-    fprintf(stdout, GREEN " -r" RESET ": create read-only parameter\n" );
-    fprintf(stdout, GREEN " -f" RESET ": database-address in format {host}[:port][/[db_idx][/key]]\n");
-    fprintf(stdout, GREEN " -a" RESET ": database-password to be used with AUTH (redis command)\n");
-    fprintf(stdout, GREEN " -A" RESET ": file with database-password to be used with AUTH (redis command)\n");
+    fprintf(stdout, GREEN " -d" RESET ":       select database type: \"db/gdbm\", \"db/redis\"\n");
+    fprintf(stdout, GREEN " -z" RESET ":       zero-cache for read operations (always access database)\n");
+    fprintf(stdout, GREEN " -r" RESET ":       create read-only parameter\n" );
+    fprintf(stdout, GREEN " -f or -a" RESET ": database-address in format {host}[:port][/[db_idx][/key]] or a file path\n");
+    fprintf(stdout, GREEN " -p" RESET ":       database-password to be used for authentication\n");
+    fprintf(stdout, GREEN " -P" RESET ":       path to file with database-password\n");
     fprintf(stdout, "The " RED "{parameter_name}" RESET " - choose name for the created database-bound parameter\n");
     fflush(stdout);
 }
 /* }}} */
-/* FUNCTION: zruntie_usage {{{ */
-static void zruntie_usage() {
-    fprintf(stdout, YELLOW "Usage:" RESET " zruntie [-u] {tied-variable-name} [tied-variable-name] ...\n");
+/* FUNCTION: zuntie_usage {{{ */
+static void zuntie_usage() {
+    fprintf(stdout, YELLOW "Usage:" RESET " zuntie [-u] {tied-variable-name} [tied-variable-name] ...\n");
     fprintf(stdout, YELLOW "Options:" RESET "\n");
     fprintf(stdout, GREEN " -u" RESET ": Allow to untie read-only parameter\n");
-    fprintf(stdout, YELLOW "Description:" RESET " detaches variable from database and removes the variable;\n");
-    fprintf(stdout, YELLOW "            " RESET " database is not cleared\n");
+    fprintf(stdout, YELLOW "Description:" RESET " detaches variable from its database and removes the variable;\n");
+    fprintf(stdout, YELLOW "            " RESET " database is not cleared (unlike when unset)\n");
     fflush(stdout);
 }
 /* }}} */
