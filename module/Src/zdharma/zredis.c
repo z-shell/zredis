@@ -232,7 +232,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
     pmname = *args;
 
     if (!pmname) {
-        zwarnnam(nam, "you must pass non-option argument - the target parameter to create, see -h", backtype);
+        zwarnnam(nam, "you must pass non-option argument - the target parameter to create, see -h");
         return 1;
     }
 
