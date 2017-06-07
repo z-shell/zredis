@@ -930,72 +930,85 @@ scan_keys(HashTable ht, ScanFunc func, int flags)
 {
     char *key;
     size_t key_len;
+    unsigned long long cursor = 0;
     redisContext *rc;
-    redisReply *reply;
+    redisReply *reply, *reply2;
     struct gsu_scalar_ext *gsu_ext;
 
     gsu_ext = (struct gsu_scalar_ext *)ht->tmpdata;
 
-    int retry = 0;
- retry:
-    rc = gsu_ext->rc;
-
-    if (!rc)
-        return;
-
-    /* Iterate keys adding them to hash, so
-     * we have Param to use in `func` */
-    reply = redisCommand(rc, "KEYS *");
-
-    /* Disconnect detection */
-    if (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
-        if (reply)
-            freeReplyObject(reply);
-        if (retry) {
-            zwarn("Aborting (no connection)");
-            return;
-        }
-        retry = 1;
-        if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
-            goto retry;
-        else
-            return;
-    }
-
-    if (!reply || reply->type != REDIS_REPLY_ARRAY) {
-        zwarn("Incorrect reply from redis command KEYS, aborting");
-        if (reply)
-            freeReplyObject(reply);
-        return;
-    }
-
-    for (size_t j = 0; j < reply->elements; j++) {
-        redisReply *entry = reply->element[j];
-        if (entry == NULL || entry->type != REDIS_REPLY_STRING) {
-            continue;
-        }
-
-        key = entry->str;
-        key_len = entry->len;
-
-        /* Only scan string keys, ignore the rest (hashes, sets, etc.) */
-        if (RD_TYPE_STRING != type(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password, key, (size_t) key_len)) {
-            rc = gsu_ext->rc;
-            continue;
-        }
+    do {
+        int retry = 0;
+    retry:
         rc = gsu_ext->rc;
 
-        /* This returns database-interfacing Param,
-         * it will return u.str or first fetch data
-         * if not PM_UPTODATE (newly created) */
-        char *zkey = metafy(key, key_len, META_DUP);
-        HashNode hn = redis_get_node(ht, zkey);
-        zsfree(zkey);
+        if (!rc)
+            return;
 
-        func(hn, flags);
-    }
+        /* Iterate keys adding them to hash, so
+         * we have Param to use in `func` */
+        reply = redisCommand(rc, "SCAN %llu", cursor);
 
-    freeReplyObject(reply);
+        /* Disconnect detection */
+        if (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+            if (reply) {
+                freeReplyObject(reply);
+            }
+            if (retry) {
+                zwarn("Aborting (no connection)");
+                return;
+            }
+            retry = 1;
+            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+                goto retry;
+            else
+                return;
+        }
+
+        if (!reply || reply->type != REDIS_REPLY_ARRAY) {
+            zwarn("Incorrect reply from redis command SCAN, aborting");
+            if (reply)
+                freeReplyObject(reply);
+            return;
+        }
+
+        /* Get new cursor */
+        if (reply->element[0]->type == REDIS_REPLY_STRING) {
+            cursor = strtoull(reply->element[0]->str, NULL, 10);
+        } else {
+            zwarn("Error 14 occured during SCAN");
+            break;
+        }
+
+        reply2 = reply->element[1];
+        for (size_t j = 0; j < reply2->elements; j++) {
+            redisReply *entry = reply2->element[j];
+            if (entry == NULL || entry->type != REDIS_REPLY_STRING) {
+                continue;
+            }
+
+            key = entry->str;
+            key_len = entry->len;
+
+            /* Only scan string keys, ignore the rest (hashes, sets, etc.) */
+            if (RD_TYPE_STRING != type(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password, key, (size_t) key_len)) {
+                rc = gsu_ext->rc;
+                continue;
+            }
+            rc = gsu_ext->rc;
+
+            /* This returns database-interfacing Param,
+             * it will return u.str or first fetch data
+             * if not PM_UPTODATE (newly created) */
+            char *zkey = metafy(key, key_len, META_DUP);
+            HashNode hn = redis_get_node(ht, zkey);
+            zsfree(zkey);
+
+            func(hn, flags);
+        }
+
+        freeReplyObject(reply);
+    } while (cursor != 0 );
 }
 /* }}} */
 /* FUNCTION: redis_hash_setfn {{{ */
