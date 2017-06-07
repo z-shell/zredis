@@ -3503,5 +3503,5 @@ myfreeparamnode(HashNode hn)
 /* }}} */
 
 #else
-# error no hiredis
+# error no hiredis library after it was correctly detected (by configure script)
 #endif /* have hiredis */
