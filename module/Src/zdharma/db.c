@@ -166,7 +166,7 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
 
     /* Password file */
     if (OPT_ISSET(ops,'P')) {
-        store_in_hash(spec_param, "password", OPT_ARG(ops,'P'));
+        store_in_hash(spec_param, "password-file", OPT_ARG(ops,'P'));
     }
 
     /* Password load request */
@@ -177,7 +177,7 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
     }
 
     /* Parameter name */
-    store_in_hash(spec_param, "parameter_name", pmname);
+    store_in_hash(spec_param, "parameter-name", pmname);
 
     if (backend_cmd) {
         execstring(backend_cmd, 1, 0, "ztie");
@@ -223,7 +223,7 @@ bin_zuntie(char *nam, char **args, Options ops, UNUSED(int func))
             }
             backend_cmd = "zruntie";
         } else {
-            zwarnnam("Didn't recognize `%s' as a tied parameter", pmname);
+            zwarnnam(nam, "Didn't recognize `%s' as a tied parameter", pmname);
             continue;
         }
 
@@ -459,8 +459,8 @@ static int find_in_array(const char *pmname, const char *needle) {
     if (!(pm = (Param) paramtab->getnode(paramtab, pmname))) {
         return 0; /* false */
     }
-    if (pm->node.flags & PM_SPECIAL && pm->node.flags & PM_ARRAY) {
-        if(!(arr = pm->u.arr)) {
+    if (pm->node.flags & PM_ARRAY) {
+        if(!(arr = pm->gsu.a->getfn(pm))) {
             return 0; /* false */
         }
         while (*arr) {
