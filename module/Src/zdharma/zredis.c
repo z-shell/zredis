@@ -3501,6 +3501,25 @@ myfreeparamnode(HashNode hn)
     zfree(pm, sizeof(struct param));
 }
 /* }}} */
+/* FUNCTION: get_from_hash {{{ */
+char *get_from_hash(Param pm, const char *key) {
+    HashTable ht = pm->u.hash;
+    if (!ht) {
+        return NULL;
+    }
+
+    /* Get hash element */
+    HashNode hn = gethashnode2(ht, key);
+    Param val_pm = (Param) hn;
+
+    if (!val_pm) {
+        return NULL;
+    }
+
+    /* Fill hash element */
+    return val_pm->gsu.s->getfn(val_pm);
+}
+/* }}} */
 
 #else
 # error no hiredis library after it was correctly detected (by configure script)
