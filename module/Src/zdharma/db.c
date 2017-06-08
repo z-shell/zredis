@@ -42,10 +42,13 @@ mod_export void (*backend_custom3_entry_ptr)();
 #define PM_UPTODATE     (1<<19) /* Parameter has up-to-date data (e.g. loaded from DB) */
 #endif
 
+/* Backend commands */
 #define DB_TIE 1
 #define DB_UNTIE 2
 #define DB_IS_TIED 3
 
+/* Backend identifiers, when result of comparsion
+   with "db/..." isn't immediately used */
 #define BACKEND_GDBM 1
 #define BACKEND_REDIS 2
 #define BACKEND_CUSTOM1 10
@@ -134,7 +137,7 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
         return 1;
     }
 
-    /* Get needed builtin */
+    /* Get needed backend */
     if (0 == strcmp(OPT_ARG(ops, 'd'), "db/gdbm") ) {
         backend_type = BACKEND_GDBM;
     } else if (0 == strcmp(OPT_ARG(ops, 'd'), "db/redis")) {

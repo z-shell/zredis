@@ -27,6 +27,7 @@
 #define PM_UPTODATE     (1<<19) /* Parameter has up-to-date data (e.g. loaded from DB) */
 #endif
 
+/* Backend commands */
 #define DB_TIE 1
 #define DB_UNTIE 2
 #define DB_IS_TIED 3
