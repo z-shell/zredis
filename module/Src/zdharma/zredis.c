@@ -189,6 +189,7 @@ static struct paramdef patab[] = {
 /* }}} */
 
 /* FUNCTION: bin_zrtie {{{ */
+
 /**/
 static int
 bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
@@ -468,6 +469,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
 }
 /* }}} */
 /* FUNCTION: bin_zruntie {{{ */
+
 /**/
 static int
 bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
@@ -578,6 +580,7 @@ bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
 }
 /* }}} */
 /* FUNCTION: bin_zredishost {{{ */
+
 /**/
 static int
 bin_zredishost(char *nam, char **args, Options ops, UNUSED(int func))
@@ -632,6 +635,7 @@ bin_zredishost(char *nam, char **args, Options ops, UNUSED(int func))
 }
 /* }}} */
 /* FUNCTION: bin_zredisclear {{{ */
+
 /**/
 static int
 bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
@@ -808,6 +812,7 @@ redis_getfn(Param pm)
 }
 /* }}} */
 /* FUNCTION: redis_setfn {{{ */
+
 /**/
 static void
 redis_setfn(Param pm, char *val)
@@ -883,6 +888,7 @@ redis_setfn(Param pm, char *val)
 }
 /* }}} */
 /* FUNCTION: redis_unsetfn {{{ */
+
 /**/
 static void
 redis_unsetfn(Param pm, UNUSED(int um))
@@ -895,6 +901,7 @@ redis_unsetfn(Param pm, UNUSED(int um))
 /***************** HASH ******************/
 
 /* FUNCTION: redis_get_node {{{ */
+
 /**/
 static HashNode
 redis_get_node(HashTable ht, const char *name)
@@ -924,6 +931,7 @@ redis_get_node(HashTable ht, const char *name)
 }
 /* }}} */
 /* FUNCTION: scan_keys {{{ */
+
 /**/
 static void
 scan_keys(HashTable ht, ScanFunc func, int flags)
@@ -1158,6 +1166,7 @@ redis_hash_setfn(Param pm, HashTable ht)
 }
 /* }}} */
 /* FUNCTION: redis_hash_unsetfn {{{ */
+
 /**/
 static void
 redis_hash_unsetfn(Param pm, UNUSED(int exp))
@@ -1185,6 +1194,7 @@ redis_hash_unsetfn(Param pm, UNUSED(int exp))
 }
 /* }}} */
 /* FUNCTION: redis_hash_untie {{{ */
+
 /**/
 static void
 redis_hash_untie(Param pm)
@@ -1214,6 +1224,7 @@ redis_hash_untie(Param pm)
 /**************** STRING *****************/
 
 /* FUNCTION: redis_str_getfn {{{ */
+
 /**/
 static char *
 redis_str_getfn(Param pm)
@@ -1278,6 +1289,7 @@ redis_str_getfn(Param pm)
 }
 /* }}} */
 /* FUNCTION: redis_str_setfn {{{ */
+
 /**/
 static void
 redis_str_setfn(Param pm, char *val)
@@ -1343,6 +1355,7 @@ redis_str_setfn(Param pm, char *val)
 }
 /* }}} */
 /* FUNCTION: redis_str_unsetfn {{{ */
+
 /**/
 static void
 redis_str_unsetfn(Param pm, UNUSED(int um))
@@ -1357,6 +1370,7 @@ redis_str_unsetfn(Param pm, UNUSED(int um))
 }
 /* }}} */
 /* FUNCTION: redis_str_untie {{{ */
+
 /**/
 static void
 redis_str_untie(Param pm)
@@ -1486,8 +1500,9 @@ redis_arrset_getfn(Param pm)
 }
 /* }}} */
 /* FUNCTION: redis_arrset_setfn {{{ */
+
 /**/
-mod_export void
+void
 redis_arrset_setfn(Param pm, char **val)
 {
     char *key, *content;
@@ -1587,8 +1602,9 @@ redis_arrset_setfn(Param pm, char **val)
 }
 /* }}} */
 /* FUNCTION: redis_arrset_unsetfn {{{ */
+
 /**/
-mod_export void
+void
 redis_arrset_unsetfn(Param pm, UNUSED(int exp))
 {
     /* Will clear the database */
@@ -1601,6 +1617,7 @@ redis_arrset_unsetfn(Param pm, UNUSED(int exp))
 }
 /* }}} */
 /* FUNCTION: redis_arrset_untie {{{ */
+
 /**/
 static void
 redis_arrset_untie(Param pm)
@@ -1716,6 +1733,7 @@ redis_zset_getfn(Param pm)
 }
 /* }}} */
 /* FUNCTION: redis_zset_setfn {{{ */
+
 /**/
 static void
 redis_zset_setfn(Param pm, char *val)
@@ -1797,6 +1815,7 @@ redis_zset_setfn(Param pm, char *val)
 }
 /* }}} */
 /* FUNCTION: redis_zset_unsetfn {{{ */
+
 /**/
 static void
 redis_zset_unsetfn(Param pm, UNUSED(int um))
@@ -1809,6 +1828,7 @@ redis_zset_unsetfn(Param pm, UNUSED(int um))
 /*************** ZSET HASH ***************/
 
 /* FUNCTION: redis_zset_get_node {{{ */
+
 /**/
 static HashNode
 redis_zset_get_node(HashTable ht, const char *name)
@@ -1838,6 +1858,7 @@ redis_zset_get_node(HashTable ht, const char *name)
 }
 /* }}} */
 /* FUNCTION: zset_scan_keys {{{ */
+
 /**/
 static void
 zset_scan_keys(HashTable ht, ScanFunc func, int flags)
@@ -2053,6 +2074,7 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
 }
 /* }}} */
 /* FUNCTION: redis_hash_zset_unsetfn {{{ */
+
 /**/
 static void
 redis_hash_zset_unsetfn(Param pm, UNUSED(int exp))
@@ -2081,6 +2103,7 @@ redis_hash_zset_unsetfn(Param pm, UNUSED(int exp))
 }
 /* }}} */
 /* FUNCTION: redis_hash_zset_untie {{{ */
+
 /**/
 static void
 redis_hash_zset_untie(Param pm)
@@ -2110,6 +2133,7 @@ redis_hash_zset_untie(Param pm)
 /*************** ZSET UTIL ***************/
 
 /* FUNCTION: bin_zrzset {{{ */
+
 /**/
 static int
 bin_zrzset(char *nam, char **args, Options ops, UNUSED(int func))
@@ -2281,6 +2305,7 @@ redis_hset_getfn(Param pm)
 }
 /* }}} */
 /* FUNCTION: redis_hset_setfn {{{ */
+
 /**/
 static void
 redis_hset_setfn(Param pm, char *val)
@@ -2362,6 +2387,7 @@ redis_hset_setfn(Param pm, char *val)
 }
 /* }}} */
 /* FUNCTION: redis_hset_unsetfn {{{ */
+
 /**/
 static void
 redis_hset_unsetfn(Param pm, UNUSED(int um))
@@ -2374,6 +2400,7 @@ redis_hset_unsetfn(Param pm, UNUSED(int um))
 /*************** HSET HASH ***************/
 
 /* FUNCTION: redis_hset_get_node {{{ */
+
 /**/
 static HashNode
 redis_hset_get_node(HashTable ht, const char *name)
@@ -2403,6 +2430,7 @@ redis_hset_get_node(HashTable ht, const char *name)
 }
 /* }}} */
 /* FUNCTION: hset_scan_keys {{{ */
+
 /**/
 static void
 hset_scan_keys(HashTable ht, ScanFunc func, int flags)
@@ -2646,6 +2674,7 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
 }
 /* }}} */
 /* FUNCTION: redis_hash_hset_unsetfn {{{ */
+
 /**/
 static void
 redis_hash_hset_unsetfn(Param pm, UNUSED(int exp))
@@ -2674,6 +2703,7 @@ redis_hash_hset_unsetfn(Param pm, UNUSED(int exp))
 }
 /* }}} */
 /* FUNCTION: redis_hash_hset_untie {{{ */
+
 /**/
 static void
 redis_hash_hset_untie(Param pm)
@@ -2805,8 +2835,9 @@ redis_arrlist_getfn(Param pm)
 }
 /* }}} */
 /* FUNCTION: redis_arrlist_setfn {{{ */
+
 /**/
-mod_export void
+void
 redis_arrlist_setfn(Param pm, char **val)
 {
     char *key, *content;
@@ -2904,8 +2935,9 @@ redis_arrlist_setfn(Param pm, char **val)
 }
 /* }}} */
 /* FUNCTION: redis_arrlist_unsetfn {{{ */
+
 /**/
-mod_export void
+void
 redis_arrlist_unsetfn(Param pm, UNUSED(int exp))
 {
     /* Will clear the database */
@@ -2918,6 +2950,7 @@ redis_arrlist_unsetfn(Param pm, UNUSED(int exp))
 }
 /* }}} */
 /* FUNCTION: redis_arrlist_untie {{{ */
+
 /**/
 static void
 redis_arrlist_untie(Param pm)
@@ -2955,6 +2988,7 @@ static struct features module_features = {
 /* }}} */
 
 /* FUNCTION: setup_ {{{ */
+
 /**/
 int
 setup_(UNUSED(Module m))
@@ -2963,6 +2997,7 @@ setup_(UNUSED(Module m))
 }
 /* }}} */
 /* FUNCTION: features_ {{{ */
+
 /**/
 int
 features_(Module m, char ***features)
@@ -2972,6 +3007,7 @@ features_(Module m, char ***features)
 }
 /* }}} */
 /* FUNCTION: enables_ {{{ */
+
 /**/
 int
 enables_(Module m, int **enables)
@@ -2980,6 +3016,7 @@ enables_(Module m, int **enables)
 }
 /* }}} */
 /* FUNCTION: boot_ {{{ */
+
 /**/
 int
 boot_(UNUSED(Module m))
@@ -2989,6 +3026,7 @@ boot_(UNUSED(Module m))
 }
 /* }}} */
 /* FUNCTION: cleanup_ {{{ */
+
 /**/
 int
 cleanup_(Module m)
@@ -2998,6 +3036,7 @@ cleanup_(Module m)
 }
 /* }}} */
 /* FUNCTION: finish_ {{{ */
+
 /**/
 int
 finish_(UNUSED(Module m))
@@ -3009,7 +3048,8 @@ finish_(UNUSED(Module m))
 /**************** UTILITY ****************/
 
 /* FUNCTION: createhash {{{ */
-static Param createhash(char *name, int flags, int which)
+static Param
+createhash(char *name, int flags, int which)
 {
     Param pm;
     HashTable ht;
@@ -3057,7 +3097,8 @@ static Param createhash(char *name, int flags, int which)
  * Adds parameter name to `zredis_tied`
  */
 
-static int append_tied_name(const char *name)
+static int
+append_tied_name(const char *name)
 {
     int old_len = arrlen(zredis_tied);
     char **new_zredis_tied = zshcalloc((old_len+2) * sizeof(char *));
@@ -3085,7 +3126,8 @@ static int append_tied_name(const char *name)
  * Removes parameter name from `zredis_tied`
  */
 
-static int remove_tied_name(const char *name)
+static int
+remove_tied_name(const char *name)
 {
     int old_len = arrlen(zredis_tied);
 
@@ -3140,7 +3182,9 @@ static int remove_tied_name(const char *name)
  *
  * No zsfree()-confusing string will be produced.
  */
-static char *unmetafy_zalloc(const char *to_copy, int *new_len)
+
+static char *
+unmetafy_zalloc(const char *to_copy, int *new_len)
 {
     char *work, *to_return;
     int my_new_len = 0;
@@ -3164,12 +3208,14 @@ static char *unmetafy_zalloc(const char *to_copy, int *new_len)
 }
 /* }}} */
 /* FUNCTION: set_length {{{ */
-/*
- * For zsh-allocator, rest of Zsh seems to use
+
+/* For zsh-allocator, rest of Zsh seems to use
  * free() instead of zsfree(), and such length
  * restoration causes slowdown, but all is this
  * way strict - correct */
-static void set_length(char *buf, int size) {
+
+static void
+set_length(char *buf, int size) {
     buf[size]='\0';
     while (-- size >= 0) {
         buf[size]=' ';
@@ -3177,8 +3223,9 @@ static void set_length(char *buf, int size) {
 }
 /* }}} */
 /* FUNCTION: parse_host_string {{{ */
-static void parse_host_string(const char *input, char *resource_name, int size,
-                                char **host, int *port, int *db_index, char **key)
+
+static void
+parse_host_string(const char *input, char *resource_name, int size, char **host, int *port, int *db_index, char **key)
 {
     strncpy(resource_name, input, size-1);
     resource_name[size-1] = '\0';
@@ -3243,8 +3290,8 @@ static void parse_host_string(const char *input, char *resource_name, int size,
 }
 /* }}} */
 /* FUNCTION: connect {{{ */
-static int connect(char *nam, redisContext **rc, const char* password, const char *host, int port,
-                   int db_index, const char *resource_name_in)
+static int
+connect(char *nam, redisContext **rc, const char* password, const char *host, int port, int db_index, const char *resource_name_in)
 {
     redisReply *reply;
 
@@ -3309,7 +3356,10 @@ static int connect(char *nam, redisContext **rc, const char* password, const cha
 }
 /* }}} */
 /* FUNCTION: type {{{ */
-static int type(redisContext **rc, const char *redis_host_port, const char *password, char *key, size_t key_len) {
+
+static int
+type(redisContext **rc, const char *redis_host_port, const char *password, char *key, size_t key_len)
+{
     redisReply *reply = NULL;
 
     int retry = 0;
@@ -3371,7 +3421,10 @@ static int type(redisContext **rc, const char *redis_host_port, const char *pass
 }
 /* }}} */
 /* FUNCTION: auth {{{ */
-static int auth(redisContext **rc, const char *password) {
+
+static int
+auth(redisContext **rc, const char *password)
+{
     redisReply *reply;
 
     if (!password || password[0] == '\0')
@@ -3392,7 +3445,10 @@ static int auth(redisContext **rc, const char *password) {
 }
 /* }}} */
 /* FUNCTION: is_tied {{{ */
-static int is_tied(Param pm) {
+
+static int
+is_tied(Param pm)
+{
     if (pm->gsu.h == &redis_hash_gsu) {
         return 1;
     } else if (pm->gsu.s->getfn == &redis_str_getfn) {
@@ -3411,7 +3467,10 @@ static int is_tied(Param pm) {
 }
 /* }}} */
 /* FUNCTION: zrtie_usage {{{ */
-static void zrtie_usage() {
+
+static void
+zrtie_usage()
+{
     fprintf(stdout, YELLOW "Usage:" RESET " zrtie -d db/redis [-p] [-r] [-a password] " MAGENTA "-f {host-spec}"
             RESET " " RED "{parameter_name}" RESET "\n");
     fprintf(stdout, YELLOW "Options:" RESET "\n");
@@ -3426,14 +3485,20 @@ static void zrtie_usage() {
 }
 /* }}} */
 /* FUNCTION: zrzset_usage {{{ */
-static void zrzset_usage() {
+
+static void
+zrzset_usage()
+{
     fprintf(stdout, YELLOW "Usage:" RESET " zrzset {tied-param-name}\n");
     fprintf(stdout, YELLOW "Output:" RESET " $reply array, to hold elements of the sorted set\n");
     fflush(stdout);
 }
 /* }}} */
 /* FUNCTION: zruntie_usage {{{ */
-static void zruntie_usage() {
+
+static void
+zruntie_usage()
+{
     fprintf(stdout, YELLOW "Usage:" RESET " zruntie [-u] {tied-variable-name} [tied-variable-name] ...\n");
     fprintf(stdout, YELLOW "Options:" RESET "\n");
     fprintf(stdout, GREEN " -u" RESET ": Allow to untie read-only parameter\n");
@@ -3443,14 +3508,20 @@ static void zruntie_usage() {
 }
 /* }}} */
 /* FUNCTION: zredishost_usage {{{ */
-static void zredishost_usage() {
+
+static void
+zredishost_usage()
+{
     fprintf(stdout, YELLOW "Usage:" RESET " zredishost {tied-variable-name}\n");
     fprintf(stdout, YELLOW "Description:" RESET " stores host-spec of given variable to $REPLY\n");
     fflush(stdout);
 }
 /* }}} */
 /* FUNCTION: zredisclear_usage {{{ */
-static void zredisclear_usage() {
+
+static void
+zredisclear_usage()
+{
     fprintf(stdout, YELLOW "Usage:" RESET " zredisclear {tied-variable-name} [key name]\n");
     fprintf(stdout, YELLOW "Description:" RESET " clears cache of given hash/key or of given plain\n");
     fprintf(stdout, YELLOW "            " RESET " variable: set (array), list (array), string (scalar);\n");
@@ -3459,7 +3530,10 @@ static void zredisclear_usage() {
 }
 /* }}} */
 /* FUNCTION: reconnect {{{ */
-static int reconnect(redisContext **rc, const char *hostspec_in, const char *password) {
+
+static int
+reconnect(redisContext **rc, const char *hostspec_in, const char *password)
+{
     char hostspec[192];
     char *host="127.0.0.1", *key="";
     int port = 6379, db_index = 0;
@@ -3478,6 +3552,7 @@ static int reconnect(redisContext **rc, const char *hostspec_in, const char *pas
 }
 /* }}} */
 /* FUNCTION: myfreeparamnode {{{ */
+
 static void
 myfreeparamnode(HashNode hn)
 {
@@ -3502,7 +3577,10 @@ myfreeparamnode(HashNode hn)
 }
 /* }}} */
 /* FUNCTION: get_from_hash {{{ */
-char *get_from_hash(Param pm, const char *key) {
+
+char *
+get_from_hash(Param pm, const char *key)
+{
     HashTable ht = pm->u.hash;
     if (!ht) {
         return NULL;
