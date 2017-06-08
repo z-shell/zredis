@@ -18,10 +18,38 @@
 #include "db.mdh"
 #include "db.pro"
 
+/* For casts, as below mod_export variables are void-no-arguments */
+typedef int (*DbBackendEntryPoint)(VA_ALIST1(int cmd));
+
+/**/
+mod_export void (*backend_gdbm_entry_ptr)();
+
+/**/
+mod_export void (*backend_redis_entry_ptr)();
+
+/**/
+mod_export void (*backend_custom1_entry_ptr)();
+
+/**/
+mod_export void (*backend_custom2_entry_ptr)();
+
+/**/
+mod_export void (*backend_custom3_entry_ptr)();
+
 /* MACROS {{{ */
 #ifndef PM_UPTODATE
 #define PM_UPTODATE     (1<<19) /* Parameter has up-to-date data (e.g. loaded from DB) */
 #endif
+
+#define DB_TIE 1
+#define DB_UNTIE 2
+#define DB_IS_TIED 3
+
+#define BACKEND_GDBM 1
+#define BACKEND_REDIS 2
+#define BACKEND_CUSTOM1 10
+#define BACKEND_CUSTOM2 11
+#define BACKEND_CUSTOM3 12
 
 #define RESET         "\033[m"
 #define BOLD          "\033[1m"
@@ -45,16 +73,11 @@
 #define BG_CYAN       "\033[46m"
 /* }}} */
 /* DECLARATIONS {{{ */
-static Param createhash(char *name, int flags);
-static int store_in_hash(Param pm, const char *key, char *value);
-static void myfreeparamnode(HashNode hn);
 static char *unmetafy_zalloc(const char *to_copy, int *new_len);
 static void set_length(char *buf, int size);
 static int find_in_array(const char *pmname, const char *needle);
 static void ztie_usage();
 static void zuntie_usage();
-
-static char *my_nullarray = NULL;
 /* }}} */
 /* ARRAY: builtin {{{ */
 static struct builtin bintab[] = {
@@ -77,8 +100,8 @@ static int
 bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
 {
     Param spec_param;
-    HashNode hn;
-    char *pmname, *backend_cmd = NULL;
+    char *pmname;
+    int backend_type = 0;
 
     /* Check options */
 
@@ -112,17 +135,15 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
 
     /* Get needed builtin */
     if (0 == strcmp(OPT_ARG(ops, 'd'), "db/gdbm") ) {
-        if (!(hn = builtintab->getnode(builtintab, "zgtie"))) {
-            zwarnnam(nam, "Backend module for %s not loaded", OPT_ARG(ops, 'd'));
-            return 1;
-        }
-        backend_cmd = "zgtie";
+        backend_type = BACKEND_GDBM;
     } else if (0 == strcmp(OPT_ARG(ops, 'd'), "db/redis")) {
-        if (!(hn = builtintab->getnode(builtintab, "zrtie"))) {
-            zwarnnam(nam, "Backend module for %s not loaded", OPT_ARG(ops, 'd'));
-            return 1;
-        }
-        backend_cmd = "zrtie";
+        backend_type = BACKEND_REDIS;
+    } else if (0 == strcmp(OPT_ARG(ops, 'd'), "db/custom1")) {
+        backend_type = BACKEND_CUSTOM1;
+    } else if (0 == strcmp(OPT_ARG(ops, 'd'), "db/custom2")) {
+        backend_type = BACKEND_CUSTOM2;
+    } else if (0 == strcmp(OPT_ARG(ops, 'd'), "db/custom3")) {
+        backend_type = BACKEND_CUSTOM3;
     } else {
         zwarnnam(nam, "Unknown backend: %s", OPT_ARG(ops, 'd'));
         return 1;
@@ -133,56 +154,83 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
             return 1;
     }
 
-    /* Create hash */
-    if (!(spec_param = createhash("ZSH_DATABASE_SPEC", PM_REMOVABLE))) {
-        zwarnnam(nam, "Cannot create helper hash ZSH_DATABASE_SPEC");
-        return 1;
-    }
+    /* Prepare arguments for backend */
+
+    char *address = NULL, *pass = NULL, *pfile = NULL;
+    int rdonly = 0, zcache = 0, pprompt = 0;
 
     /* Address */
     if (OPT_ISSET(ops,'f')) {
-        store_in_hash(spec_param, "address", OPT_ARG(ops,'f'));
+        address = OPT_ARG(ops,'f');
     } else {
-        store_in_hash(spec_param, "address", OPT_ARG(ops,'a'));
+        address = OPT_ARG(ops,'a');
     }
 
     /* Read-only */
     if (OPT_ISSET(ops,'r')) {
-        store_in_hash(spec_param, "read-only", "1");
+        rdonly = 1;
     } else {
-        store_in_hash(spec_param, "read-only", "0");
+        rdonly = 0;
     }
 
     /* Zero-cache */
     if (OPT_ISSET(ops,'z')) {
-        store_in_hash(spec_param, "zero-cache", "1");
+        zcache = 1;
     } else {
-        store_in_hash(spec_param, "zero-cache", "0");
+        zcache = 0;
     }
 
     /* Password */
     if (OPT_ISSET(ops,'p')) {
-        store_in_hash(spec_param, "password", OPT_ARG(ops,'p'));
+        pass = OPT_ARG(ops,'p');
     }
 
     /* Password file */
     if (OPT_ISSET(ops,'P')) {
-        store_in_hash(spec_param, "password-file", OPT_ARG(ops,'P'));
+        pfile = OPT_ARG(ops,'P');
     }
 
     /* Password load request */
     if (OPT_ISSET(ops,'l')) {
-        store_in_hash(spec_param, "ask_pwd", "1");
+        pprompt = 1;
     } else {
-        store_in_hash(spec_param, "ask_pwd", "0");
+        pprompt = 0;
     }
 
-    /* Parameter name */
-    store_in_hash(spec_param, "parameter-name", pmname);
+    DbBackendEntryPoint be = NULL;
 
-    if (backend_cmd) {
-        execstring(backend_cmd, 1, 0, "ztie");
+    if (backend_type == BACKEND_GDBM ) {
+        be = (DbBackendEntryPoint) backend_gdbm_entry_ptr;
+        if (!be) {
+            zwarnnam(nam, "Backend for GDBM not loaded (e.g. module zsh/db/gdbm)");
+            return 1;
+        }
+    } else if (backend_type == BACKEND_REDIS ) {
+        be = (DbBackendEntryPoint) backend_redis_entry_ptr;
+        if (!be) {
+            zwarnnam(nam, "Backend for redis not loaded (e.g. module zsh/db/redis)");
+            return 1;
+        }
+    } else if (backend_type == BACKEND_CUSTOM1 ) {
+        be = (DbBackendEntryPoint) backend_custom1_entry_ptr;
+        if (!be) {
+            zwarnnam(nam, "Database backend not loaded (a custom1 module)");
+            return 1;
+        }
+    } else if (backend_type == BACKEND_CUSTOM2 ) {
+        be = (DbBackendEntryPoint) backend_custom2_entry_ptr;
+        if (!be) {
+            zwarnnam(nam, "Database backend not loaded (a custom2 module)");
+            return 1;
+        }
+    } else if (backend_type == BACKEND_CUSTOM3 ) {
+        be = (DbBackendEntryPoint) backend_custom3_entry_ptr;
+        if (!be) {
+            zwarnnam(nam, "Database backend not loaded (a custom3 module)");
+            return 1;
+        }
     }
+    return be(DB_TIE, address, rdonly, zcache, pass, pfile, pprompt, pmname);
 
     return 0;
 }
@@ -193,9 +241,8 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
 static int
 bin_zuntie(char *nam, char **args, Options ops, UNUSED(int func))
 {
-    HashNode hn;
     char *pmname;
-    int ret = 0;
+    int ret = 0, backend_type = 0;
 
     if (OPT_ISSET(ops,'h')) {
         zuntie_usage();
@@ -207,37 +254,27 @@ bin_zuntie(char *nam, char **args, Options ops, UNUSED(int func))
         return 1;
     }
 
-    const char *backend_cmd;
     for (pmname = *args; *args++; pmname = *args) {
-        if (find_in_array("zgdbm_tied", pmname)) {
-            if (!(hn = builtintab->getnode(builtintab, "zguntie"))) {
-                zwarnnam(nam, "Backend module db/gdbm not loaded");
-                ret = 1;
-                continue;
-            }
+        DbBackendEntryPoint be = NULL;
 
-            backend_cmd = "zguntie";
+        /* TODO: use command DB_IS_TIED to
+           obtain confirmation from backend */
+        if (find_in_array("zgdbm_tied", pmname)) {
+            be = (DbBackendEntryPoint) backend_gdbm_entry_ptr;
         } else if (find_in_array("zredis_tied", pmname)) {
-            if (!(hn = builtintab->getnode(builtintab, "zruntie"))) {
-                zwarnnam(nam, "Backend module db/redis not loaded");
-                ret = 1;
-                continue;
-            }
-            backend_cmd = "zruntie";
+            be = (DbBackendEntryPoint) backend_redis_entry_ptr;
         } else {
             zwarnnam(nam, "Didn't recognize `%s' as a tied parameter", pmname);
             continue;
         }
 
-        char *s;
+        int rountie = 0;
+
         if (OPT_ISSET(ops,'u')) {
-            s = tricat(backend_cmd, " -u ", pmname);
-        } else {
-            s = tricat(backend_cmd, " ", pmname);
+            rountie = 1;
         }
 
-        execstring(s, 1, 0, "zuntie");
-        zsfree(s);
+        ret = be(DB_UNTIE, rountie, pmname) ? 1 : 0;
     }
 
     return ret;
@@ -316,78 +353,6 @@ finish_(UNUSED(Module m))
 
 /*************** UTILITIES ***************/
 
-/* FUNCTION: createhash {{{ */
-
-static Param
-createhash(char *name, int flags)
-{
-    Param pm;
-    HashTable ht;
-
-    pm = createparam(name, flags | PM_SPECIAL | PM_HASHED);
-    if (!pm) {
-        return NULL;
-    }
-
-    if (pm->old)
-        pm->level = locallevel;
-
-    /* This creates standard hash. */
-    ht = pm->u.hash = newparamtable(32, name);
-    if (!pm->u.hash) {
-        paramtab->removenode(paramtab, name);
-        paramtab->freenode(&pm->node);
-        zwarnnam(name, "Out of memory when allocating hash");
-        return NULL;
-    }
-
-    pm->gsu.h = &stdhash_gsu;
-
-    /* Does free Param (no delunset condition) */
-    ht->freenode = myfreeparamnode;
-
-    ht->hash        = hasher;
-    ht->emptytable  = emptyhashtable;
-    ht->addnode     = addhashnode;
-    ht->getnode     = gethashnode2;
-    ht->getnode2    = gethashnode2;
-    ht->removenode  = removehashnode;
-    ht->disablenode = disablehashnode;
-    ht->enablenode  = enablehashnode;
-    ht->cmpnodes    = strcmp;
-    ht->printnode   = printparamnode;
-    // ht->scantab     = scan;
-    ht->scantab     = NULL;
-    ht->filltable   = NULL;
-
-    return pm;
-}
-/* }}} */
-/* FUNCTION: myfreeparamnode {{{ */
-
-static void
-myfreeparamnode(HashNode hn)
-{
-    Param pm = (Param) hn;
- 
-    /* Upstream: The second argument of unsetfn() is used by modules to
-     * differentiate "exp"licit unset from implicit unset, as when
-     * a parameter is going out of scope.  It's not clear which
-     * of these applies here, but passing 1 has always worked.
-     */
-
-    /* if (delunset) */
-    pm->gsu.s->unsetfn(pm, 1);
-
-    zsfree(pm->node.nam);
-    /* If this variable was tied by the user, ename was ztrdup'd */
-    if (pm->node.flags & PM_TIED && pm->ename) {
-        zsfree(pm->ename);
-        pm->ename = NULL;
-    }
-    zfree(pm, sizeof(struct param));
-}
-/* }}} */
 /* FUNCTION: unmetafy_zalloc {{{ */
 
 /*
@@ -437,38 +402,6 @@ set_length(char *buf, int size)
     while (-- size >= 0) {
         buf[size]=' ';
     }
-}
-/* }}} */
-/* FUNCTION: store_in_hash {{{ */
-
-static int
-store_in_hash(Param pm, const char *key, char *value)
-{
-    /* Get hash table */
-    if (!pm || (pm->node.flags & PM_UNSET)) {
-        return 0; /* false */
-    }
-
-    HashTable ht = pm->u.hash;
-    if (!ht) {
-        return 0; /* false */
-    }
-
-    /* Get/create hash element */
-    HashNode hn = gethashnode2(ht, key);
-    Param val_pm = (Param) hn;
-
-    if (!val_pm) {
-        val_pm = (Param) zshcalloc(sizeof (*val_pm));
-        val_pm->node.flags = PM_SCALAR | PM_HASHELEM;
-        val_pm->gsu.s = &stdscalar_gsu;
-        ht->addnode(ht, ztrdup(key), val_pm); // sets pm->node.nam
-    }
-
-    /* Fill hash element */
-    val_pm->gsu.s->setfn(val_pm, ztrdup(value));
-
-    return 1; /* true */
 }
 /* }}} */
 /* FUNCTION: find_in_array {{{ */

@@ -20,11 +20,16 @@
 
 #include "zredis.mdh"
 #include "zredis.pro"
+#include "db.epro"
 
 /* MACROS {{{ */
 #ifndef PM_UPTODATE
 #define PM_UPTODATE     (1<<19) /* Parameter has up-to-date data (e.g. loaded from DB) */
 #endif
+
+#define DB_TIE 1
+#define DB_UNTIE 2
+#define DB_IS_TIED 3
 
 #define RESET         "\033[m"
 #define BOLD          "\033[1m"
@@ -69,20 +74,18 @@ static char *unmetafy_zalloc(const char *to_copy, int *new_len);
 static void set_length(char *buf, int size);
 static void parse_host_string(const char *input, char *buffer, int size,
                                 char **host, int *port, int *db_index, char **key);
-static int connect(char *nam, redisContext **rc, const char* password, const char *host, int port, int db_index,
-                    const char *resource_name_in);
+static int connect(redisContext **rc, const char* password, const char *host, int port, int db_index, const char *address);
 static int type(redisContext **rc, const char *redis_host_port, const char *password, char *key, size_t key_len);
 static int is_tied(Param pm);
-static void zrtie_usage();
 static void zrzset_usage();
-static void zruntie_usage();
 static void zredishost_usage();
 static void zredisclear_usage();
 static void myfreeparamnode(HashNode hn);
 static int reconnect(redisContext **rc, const char *hostspec, const char *password);
 static int auth(redisContext **rc, const char *password);
+static int is_tied_cmd(char *pmname);
 
-static char *backtype = "db/redis";
+
 static char *my_nullarray = NULL;
 static int no_database_action = 0;
 /* }}} */
@@ -169,8 +172,6 @@ static const struct gsu_array_ext arrlist_gsu_ext =
 /* }}} */
 /* ARRAY: builtin {{{ */
 static struct builtin bintab[] = {
-    BUILTIN("zrtie", 0, bin_zrtie, 0, -1, 0, "d:f:rpha:A:", NULL),
-    BUILTIN("zruntie", 0, bin_zruntie, 0, -1, 0, "uh", NULL),
     BUILTIN("zredishost", 0, bin_zredishost, 0, -1, 0, "h", NULL),
     BUILTIN("zredisclear", 0, bin_zredisclear, 0, 2, 0, "h", NULL),
     BUILTIN("zrzset", 0, bin_zrzset, 0, 1, 0, "h", NULL),
@@ -188,65 +189,109 @@ static struct paramdef patab[] = {
 };
 /* }}} */
 
-/* FUNCTION: bin_zrtie {{{ */
+/* FUNCTION: redis_main_entry {{{ */
+static int
+redis_main_entry(VA_ALIST1(int cmd))
+VA_DCL
+{
+    char *address = NULL, *pass = NULL, *pfile = NULL, *pmname = NULL;
+    int rdonly = 0, zcache = 0, pprompt = 0, rountie = 0;
+
+    va_list ap;
+    VA_DEF_ARG(int cmd);
+
+    VA_START(ap, cmd);
+    VA_GET_ARG(ap, cmd, int);
+
+    switch (cmd) {
+    case DB_TIE:
+        /* Order is:
+         * -a/f address, char *
+         * -r read-only, int
+         * -z zero-cache, int
+         * -p password, char *
+         * -P file with password, char *
+         * -l prompt for password, int
+         * parameter name, char *
+         */
+        address = va_arg(ap, char *);
+        rdonly = va_arg(ap, int);
+        zcache = va_arg(ap, int);
+        pass = va_arg(ap, char *);
+        pfile = va_arg(ap, char *);
+        pprompt = va_arg(ap, int);
+        pmname = va_arg(ap, char *);
+        return zrtie_cmd(address, rdonly, zcache, pass, pfile, pprompt, pmname);
+
+    case DB_UNTIE:
+        /* Order is:
+         * -u untie read only parameter, int
+         * parameter name, char *
+         */
+        rountie = va_arg(ap, int);
+        pmname = va_arg(ap, char *);
+        char *argv[2];
+        argv[0] = pmname;
+        argv[1] = NULL;
+        return zruntie_cmd(rountie, argv);
+
+    case DB_IS_TIED:
+        /* Order is:
+         * parameter name, char *
+         */
+        pmname = va_arg(ap, char *);
+        return is_tied_cmd(pmname);
+
+    default:
+#ifdef DEBUG
+        dputs("Bad command %d in redis_main_entry", cmd);
+#endif
+        break;
+    }
+    return 1;
+}
+/* }}} */
+/* FUNCTION: zrtie_cmd {{{ */
 
 /**/
 static int
-bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
+zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pprompt, char *pmname)
 {
     redisContext *rc = NULL;
-    int read_write = 1, pmflags = PM_REMOVABLE;
+    int pmflags = PM_REMOVABLE;
     Param tied_param;
 
-    /* Check options */
-
-    if (OPT_ISSET(ops,'h')) {
-        zrtie_usage();
-        return 0;
-    }
-
-    if (!OPT_ISSET(ops,'d')) {
-        zwarnnam(nam, "you must pass `-d %s', see `-h'", backtype);
+    if (!address) {
+        zwarn("you must pass `-f' or '-a' with {host}[:port][/[db_idx][/key]], see `-h'", NULL);
         return 1;
     }
-    if (!OPT_ISSET(ops,'f')) {
-        zwarnnam(nam, "you must pass `-f' with {host}[:port][/[db_idx][/key]], see `-h'", NULL);
+
+    if (!pmname) {
+        zwarn("you must pass non-option argument - the target parameter to create, see -h");
         return 1;
     }
-    if (OPT_ISSET(ops,'r')) {
-        read_write = 0;
+
+    if (rdonly) {
         pmflags |= PM_READONLY;
-    }
-
-    if (strcmp(OPT_ARG(ops, 'd'), backtype) != 0) {
-        zwarnnam(nam, "unsupported backend type `%s', see `-h'", OPT_ARG(ops, 'd'));
-        return 1;
     }
 
     /* Parse host data */
 
-    char *pmname, *resource_name_in, resource_name[192];
-    char *host="127.0.0.1", *key="", *password = NULL;
+    char resource_name[192];
+    char *host="127.0.0.1", *key="";
     int port = 6379, db_index = 0;
 
-    resource_name_in = OPT_ARG(ops, 'f');
-    pmname = *args;
-
-    if (!pmname) {
-        zwarnnam(nam, "you must pass non-option argument - the target parameter to create, see -h");
-        return 1;
-    }
-
-    parse_host_string(resource_name_in, resource_name, 192, &host, &port, &db_index, &key);
+    parse_host_string(address, resource_name, 192, &host, &port, &db_index, &key);
 
     /* Unset existing parameter */
 
     if ((tied_param = (Param)paramtab->getnode(paramtab, pmname)) && !(tied_param->node.flags & PM_UNSET)) {
         if (is_tied(tied_param)) {
-            zwarnnam(nam, "Refusing to re-tie already tied parameter `%s'", pmname);
-            zwarnnam(nam, "The involved `unset' could clear the database-part handled by `%s'", pmname);
+            zwarn("Refusing to re-tie already tied parameter `%s'", pmname);
+            zwarn("The involved `unset' could clear the database-part handled by `%s'", pmname);
             return 1;
         }
+
         /*
          * Unset any existing parameter. Note there's no implicit
          * "local" here, but if the existing parameter is local
@@ -264,17 +309,14 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
             return 1;
     }
 
-    /* Connect */
+    /* Establish password */
 
     char buf[1025];
-    if (OPT_ISSET(ops,'a')) {
-        password = OPT_ARG(ops, 'a');
-    } else if (OPT_ISSET(ops, 'A')) {
-        const char *pfile_path = OPT_ARG(ops,'A');
-        FILE *pfile = fopen(pfile_path, "r");
-        if (pfile) {
-            int size = fread(buf, 1, 1024, pfile);
-            fclose(pfile);
+    if (!pass && pfile) {
+        FILE *txtFILE = fopen(pfile, "r");
+        if (txtFILE) {
+            int size = fread(buf, 1, 1024, txtFILE);
+            fclose(txtFILE);
             if (size > 0) {
                 if (size > 1024)
                     size = 1024;
@@ -282,18 +324,20 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
                     --size;
                 }
                 buf[size] = '\0';
-                password = buf;
+                pass = buf;
             } else {
-                zwarnnam(nam, "Couldn't read password file: `%s', aborting", pfile_path);
+                zwarn("Couldn't read password file: `%s', aborting", pfile);
                 return 1;
             }
         } else {
-            zwarnnam(nam, "Couldn't open password file: `%s', aborting", pfile_path);
+            zwarn("Couldn't open password file: `%s', aborting", pfile);
             return 1;
         }
     }
 
-    if(!connect(nam, &rc, password, host, port, db_index, resource_name_in)) {
+    /* Connect */
+
+    if(!connect(&rc, pass, host, port, db_index, address)) {
         return 1;
     }
 
@@ -301,7 +345,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
     if (0 == strcmp(key,"")) {
         /* Create hash */
         if (!(tied_param = createhash(pmname, pmflags, 0))) {
-            zwarnnam(nam, "cannot create the requested hash parameter: %s", pmname);
+            zwarn("cannot create the requested hash parameter: %s", pmname);
             redisFree(rc);
             return 1;
         }
@@ -314,24 +358,24 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
         rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
         rc_carrier->std = hashel_gsu_ext.std;
         rc_carrier->use_cache = 1;
-        if (OPT_ISSET(ops,'p'))
+        if (zcache)
             rc_carrier->use_cache = 0;
         rc_carrier->rc = rc;
 
         /* Fill also host:port// and password fields */
-        rc_carrier->redis_host_port = ztrdup(resource_name_in);
-        if (password)
-            rc_carrier->password = ztrdup(password);
+        rc_carrier->redis_host_port = ztrdup(address);
+        if (pass)
+            rc_carrier->password = ztrdup(pass);
         else
             rc_carrier->password = NULL;
 
         tied_param->u.hash->tmpdata = (void *)rc_carrier;
         tied_param->gsu.h = &redis_hash_gsu;
     } else {
-        int tpe = type(&rc, resource_name_in, password, key, (size_t) strlen(key));
+        int tpe = type(&rc, address, pass, key, (size_t) strlen(key));
         if (tpe == RD_TYPE_STRING) {
             if (!(tied_param = createparam(pmname, pmflags | PM_SPECIAL))) {
-                zwarnnam(nam, "cannot create the requested scalar parameter: %s", pmname);
+                zwarn("cannot create the requested scalar parameter: %s", pmname);
                 redisFree(rc);
                 return 1;
             }
@@ -339,23 +383,23 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
             rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
             rc_carrier->std = string_gsu_ext.std;
             rc_carrier->use_cache = 1;
-            if (OPT_ISSET(ops,'p'))
+            if (zcache)
                 rc_carrier->use_cache = 0;
             rc_carrier->rc = rc;
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
 
             /* Fill also host:port// and password fields */
-            rc_carrier->redis_host_port = ztrdup(resource_name_in);
-            if (password)
-                rc_carrier->password = ztrdup(password);
+            rc_carrier->redis_host_port = ztrdup(address);
+            if (pass)
+                rc_carrier->password = ztrdup(pass);
             else
                 rc_carrier->password = NULL;
 
             tied_param->gsu.s = (GsuScalar) rc_carrier;
         } else if (tpe == RD_TYPE_SET) {
             if (!(tied_param = createparam(pmname, pmflags | PM_ARRAY | PM_SPECIAL))) {
-                zwarnnam(nam, "cannot create the requested array (for set) parameter: %s", pmname);
+                zwarn("cannot create the requested array (for set) parameter: %s", pmname);
                 redisFree(rc);
                 return 1;
             }
@@ -363,16 +407,16 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
             rc_carrier = (struct gsu_array_ext *) zalloc(sizeof(struct gsu_array_ext));
             rc_carrier->std = arrset_gsu_ext.std;
             rc_carrier->use_cache = 1;
-            if (OPT_ISSET(ops,'p'))
+            if (zcache)
                 rc_carrier->use_cache = 0;
             rc_carrier->rc = rc;
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
 
             /* Fill also host:port// and password fields */
-            rc_carrier->redis_host_port = ztrdup(resource_name_in);
-            if (password)
-                rc_carrier->password = ztrdup(password);
+            rc_carrier->redis_host_port = ztrdup(address);
+            if (pass)
+                rc_carrier->password = ztrdup(pass);
             else
                 rc_carrier->password = NULL;
 
@@ -380,7 +424,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
         } else if (tpe == RD_TYPE_ZSET) {
             /* Create hash */
             if (!(tied_param = createhash(pmname, pmflags, 1))) {
-                zwarnnam(nam, "cannot create the requested hash (for zset) parameter: %s", pmname);
+                zwarn("cannot create the requested hash (for zset) parameter: %s", pmname);
                 redisFree(rc);
                 return 1;
             }
@@ -389,16 +433,16 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
             rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
             rc_carrier->std = hashel_zset_gsu_ext.std;
             rc_carrier->use_cache = 1;
-            if (OPT_ISSET(ops,'p'))
+            if (zcache)
                 rc_carrier->use_cache = 0;
             rc_carrier->rc = rc;
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
 
             /* Fill also host:port// and password fields */
-            rc_carrier->redis_host_port = ztrdup(resource_name_in);
-            if (password)
-                rc_carrier->password = ztrdup(password);
+            rc_carrier->redis_host_port = ztrdup(address);
+            if (pass)
+                rc_carrier->password = ztrdup(pass);
             else
                 rc_carrier->password = NULL;
 
@@ -407,7 +451,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
         } else if (tpe == RD_TYPE_HASH) {
             /* Create hash */
             if (!(tied_param = createhash(pmname, pmflags, 2))) {
-                zwarnnam(nam, "cannot create the requested hash (for hset) parameter: %s", pmname);
+                zwarn("cannot create the requested hash (for hset) parameter: %s", pmname);
                 redisFree(rc);
                 return 1;
             }
@@ -416,16 +460,16 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
             rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
             rc_carrier->std = hashel_hset_gsu_ext.std;
             rc_carrier->use_cache = 1;
-            if (OPT_ISSET(ops,'p'))
+            if (zcache)
                 rc_carrier->use_cache = 0;
             rc_carrier->rc = rc;
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
 
             /* Fill also host:port// and password fields */
-            rc_carrier->redis_host_port = ztrdup(resource_name_in);
-            if (password)
-                rc_carrier->password = ztrdup(password);
+            rc_carrier->redis_host_port = ztrdup(address);
+            if (pass)
+                rc_carrier->password = ztrdup(pass);
             else
                 rc_carrier->password = NULL;
 
@@ -433,7 +477,7 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
             tied_param->gsu.h = &hash_hset_gsu;
         } else if (tpe == RD_TYPE_LIST) {
             if (!(tied_param = createparam(pmname, pmflags | PM_ARRAY | PM_SPECIAL))) {
-                zwarnnam(nam, "cannot create the requested array (for list) parameter: %s", pmname);
+                zwarn("cannot create the requested array (for list) parameter: %s", pmname);
                 redisFree(rc);
                 return 1;
             }
@@ -441,23 +485,23 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
             rc_carrier = (struct gsu_array_ext *) zalloc(sizeof(struct gsu_array_ext));
             rc_carrier->std = arrlist_gsu_ext.std;
             rc_carrier->use_cache = 1;
-            if (OPT_ISSET(ops,'p'))
+            if (zcache)
                 rc_carrier->use_cache = 0;
             rc_carrier->rc = rc;
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
 
             /* Fill also host:port// and password fields */
-            rc_carrier->redis_host_port = ztrdup(resource_name_in);
-            if (password)
-                rc_carrier->password = ztrdup(password);
+            rc_carrier->redis_host_port = ztrdup(address);
+            if (pass)
+                rc_carrier->password = ztrdup(pass);
             else
                 rc_carrier->password = NULL;
 
             tied_param->gsu.s = (GsuScalar) rc_carrier;
         } else {
             redisFree(rc);
-            zwarnnam(nam, "Unknown key type: %s", type_names[tpe]);
+            zwarn("Unknown key type: %s", type_names[tpe]);
             return 1;
         }
     }
@@ -468,47 +512,43 @@ bin_zrtie(char *nam, char **args, Options ops, UNUSED(int func))
     return 0;
 }
 /* }}} */
-/* FUNCTION: bin_zruntie {{{ */
+/* FUNCTION: zruntie_cmd {{{ */
 
 /**/
 static int
-bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
+zruntie_cmd(int rountie, char **pmnames)
 {
     Param pm;
     char *pmname;
     int ret = 0;
 
-    if (OPT_ISSET(ops,'h')) {
-        zruntie_usage();
-        return 0;
-    }
-
-    if (!*args) {
-        zwarnnam(nam, "At least one variable name is needed, see -h");
+    if (!*pmnames) {
+        zwarn("At least one variable name is needed, see -h");
         return 1;
     }
 
-    for (pmname = *args; *args++; pmname = *args) {
+    for (pmname = *pmnames; *pmnames++; pmname = *pmnames) {
         /* Get param */
         pm = (Param) paramtab->getnode(paramtab, pmname);
         if(!pm) {
-            zwarnnam(nam, "cannot untie `%s', parameter not found", pmname);
+            zwarn("cannot untie `%s', parameter not found", pmname);
             ret = 1;
             continue;
         }
 
         if (pm->gsu.h == &redis_hash_gsu) {
             queue_signals();
-            if (OPT_ISSET(ops,'u'))
+            if (rountie) {
                 pm->node.flags &= ~PM_READONLY;
+            }
             if (unsetparam_pm(pm, 0, 1)) {
                 /* assume already reported */
                 ret = 1;
             }
             unqueue_signals();
         } else if (pm->gsu.s->getfn == &redis_str_getfn) {
-            if (pm->node.flags & PM_READONLY && !OPT_ISSET(ops,'u')) {
-                zwarnnam(nam, "cannot untie `%s', parameter is read only, use -u option", pmname);
+            if (pm->node.flags & PM_READONLY && rountie) {
+                zwarn("cannot untie `%s', parameter is read only, use -u option", pmname);
                 continue;
             }
             pm->node.flags &= ~PM_READONLY;
@@ -523,8 +563,8 @@ bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
             }
             unqueue_signals();
         } else if (pm->gsu.a->getfn == &redis_arrset_getfn) {
-            if (pm->node.flags & PM_READONLY && !OPT_ISSET(ops,'u')) {
-                zwarnnam(nam, "cannot untie array `%s', the set-bound parameter is read only, use -u option", pmname);
+            if (pm->node.flags & PM_READONLY && !rountie) {
+                zwarn("cannot untie array `%s', the set-bound parameter is read only, use -u option", pmname);
                 continue;
             }
             pm->node.flags &= ~PM_READONLY;
@@ -533,31 +573,31 @@ bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
             redis_arrset_untie(pm);
 
             if (unsetparam_pm(pm, 0, 1)) {
-                /* assume already reported */
                 ret = 1;
             }
             unqueue_signals();
         } else if (pm->gsu.h == &hash_zset_gsu) {
             queue_signals();
-            if (OPT_ISSET(ops,'u'))
+            if (rountie) {
                 pm->node.flags &= ~PM_READONLY;
+            }
             if (unsetparam_pm(pm, 0, 1)) {
-                /* assume already reported */
                 ret = 1;
             }
             unqueue_signals();
         } else if (pm->gsu.h == &hash_hset_gsu) {
             queue_signals();
-            if (OPT_ISSET(ops,'u'))
+            if (rountie) {
                 pm->node.flags &= ~PM_READONLY;
+            }
             if (unsetparam_pm(pm, 0, 1)) {
                 /* assume already reported */
                 ret = 1;
             }
             unqueue_signals();
         } else if (pm->gsu.a->getfn == &redis_arrlist_getfn) {
-            if (pm->node.flags & PM_READONLY && !OPT_ISSET(ops,'u')) {
-                zwarnnam(nam, "cannot untie array `%s', the list-bound parameter is read only, use -u option", pmname);
+            if (pm->node.flags & PM_READONLY && !rountie) {
+                zwarn("cannot untie array `%s', the list-bound parameter is read only, use -u option", pmname);
                 continue;
             }
             pm->node.flags &= ~PM_READONLY;
@@ -570,13 +610,25 @@ bin_zruntie(char *nam, char **args, Options ops, UNUSED(int func))
             }
             unqueue_signals();
         } else {
-            zwarnnam(nam, "not a tied redis parameter: `%s'", pmname);
+            zwarn("not a tied redis parameter: `%s'", pmname);
             ret = 1;
             continue;
         }
     }
 
     return ret;
+}
+/* }}} */
+/* FUNCTION: is_tied_cmd {{{ */
+static int
+is_tied_cmd(char *pmname)
+{
+    Param pm = (Param) paramtab->getnode(paramtab, pmname);
+    if(!pm) {
+        return 1; /* false */
+    }
+
+    return 1 - is_tied(pm); /* negation for shell-code */
 }
 /* }}} */
 /* FUNCTION: bin_zredishost {{{ */
@@ -3022,6 +3074,7 @@ int
 boot_(UNUSED(Module m))
 {
     zredis_tied = zshcalloc((1) * sizeof(char *));
+    backend_redis_entry_ptr = (void *)redis_main_entry;
     return 0;
 }
 /* }}} */
@@ -3291,7 +3344,7 @@ parse_host_string(const char *input, char *resource_name, int size, char **host,
 /* }}} */
 /* FUNCTION: connect {{{ */
 static int
-connect(char *nam, redisContext **rc, const char* password, const char *host, int port, int db_index, const char *resource_name_in)
+connect(redisContext **rc, const char* password, const char *host, int port, int db_index, const char *address)
 {
     redisReply *reply;
 
@@ -3301,19 +3354,11 @@ connect(char *nam, redisContext **rc, const char* password, const char *host, in
 
     if(*rc == NULL || (*rc)->err != 0) {
         if(rc) {
-            if(nam && nam[0] != '\0') {
-              zwarnnam(nam, "error opening database %s:%d/%d (%s)", host, port, db_index, (*rc)->errstr);
-            } else {
-              zwarn("error opening database %s:%d/%d (%s)", host, port, db_index, (*rc)->errstr);
-            }
+            zwarn("error opening database %s:%d/%d (%s)", host, port, db_index, (*rc)->errstr);
             // redisFree(*rc);
             // *rc = NULL;
         } else {
-            if(nam && nam[0] != '\0') {
-                zwarnnam(nam, "error opening database %s (insufficient memory)", resource_name_in);
-            } else {
-                zwarn("error opening database %s (insufficient memory)", resource_name_in);
-            }
+            zwarn("error opening database %s (insufficient memory)", address);
         }
         return 0;
     }
@@ -3332,18 +3377,10 @@ connect(char *nam, redisContext **rc, const char* password, const char *host, in
         reply = redisCommand(*rc, "SELECT %d", db_index);
         if (reply == NULL || reply->type == REDIS_REPLY_ERROR) {
             if (reply) {
-                if(nam && nam[0] != '\0') {
-                    zwarnnam(nam, "error selecting database #%d (host: %s:%d, message: %s)", db_index, host, port, reply->str);
-                } else {
-                    zwarn("error selecting database #%d (host: %s:%d, message: %s)", db_index, host, port, reply->str);
-                }
+                zwarn("error selecting database #%d (host: %s:%d, message: %s)", db_index, host, port, reply->str);
                 freeReplyObject(reply);
             } else {
-                if(nam && nam[0] != '\0') {
-                    zwarnnam(nam, "IO error selecting database #%d (host: %s:%d)", db_index, host, port);
-                } else {
-                    zwarn("IO error selecting database #%d (host: %s:%d)", db_index, host, port);
-                }
+                zwarn("IO error selecting database #%d (host: %s:%d)", db_index, host, port);
             }
             // redisFree(*rc);
             // *rc = NULL;
@@ -3466,24 +3503,6 @@ is_tied(Param pm)
     return 0;
 }
 /* }}} */
-/* FUNCTION: zrtie_usage {{{ */
-
-static void
-zrtie_usage()
-{
-    fprintf(stdout, YELLOW "Usage:" RESET " zrtie -d db/redis [-p] [-r] [-a password] " MAGENTA "-f {host-spec}"
-            RESET " " RED "{parameter_name}" RESET "\n");
-    fprintf(stdout, YELLOW "Options:" RESET "\n");
-    fprintf(stdout, GREEN " -d" RESET ": select database type, can change in future, currently only \"db/redis\"\n");
-    fprintf(stdout, GREEN " -p" RESET ": passthrough - always do a fresh query to database, don't use cache\n");
-    fprintf(stdout, GREEN " -r" RESET ": create read-only parameter\n" );
-    fprintf(stdout, GREEN " -f" RESET ": database-address in format {host}[:port][/[db_idx][/key]]\n");
-    fprintf(stdout, GREEN " -a" RESET ": database-password to be used with AUTH (redis command)\n");
-    fprintf(stdout, GREEN " -A" RESET ": file with database-password to be used with AUTH (redis command)\n");
-    fprintf(stdout, "The " RED "{parameter_name}" RESET " - choose name for the created database-bound parameter\n");
-    fflush(stdout);
-}
-/* }}} */
 /* FUNCTION: zrzset_usage {{{ */
 
 static void
@@ -3491,19 +3510,6 @@ zrzset_usage()
 {
     fprintf(stdout, YELLOW "Usage:" RESET " zrzset {tied-param-name}\n");
     fprintf(stdout, YELLOW "Output:" RESET " $reply array, to hold elements of the sorted set\n");
-    fflush(stdout);
-}
-/* }}} */
-/* FUNCTION: zruntie_usage {{{ */
-
-static void
-zruntie_usage()
-{
-    fprintf(stdout, YELLOW "Usage:" RESET " zruntie [-u] {tied-variable-name} [tied-variable-name] ...\n");
-    fprintf(stdout, YELLOW "Options:" RESET "\n");
-    fprintf(stdout, GREEN " -u" RESET ": Allow to untie read-only parameter\n");
-    fprintf(stdout, YELLOW "Description:" RESET " detaches variable from database and removes the variable;\n");
-    fprintf(stdout, YELLOW "            " RESET " database is not cleared\n");
     fflush(stdout);
 }
 /* }}} */
@@ -3542,7 +3548,7 @@ reconnect(redisContext **rc, const char *hostspec_in, const char *password)
 
     redisFree(*rc);
     *rc = NULL;
-    if(!connect("", rc, password, host, port, db_index, hostspec_in)) {
+    if(!connect(rc, password, host, port, db_index, hostspec_in)) {
         zwarn("Not connected, retrying... Failed, aborting");
         return 0;
     } else {
