@@ -3,11 +3,15 @@
 %prep
 
  module_path=( `pwd`/Modules )
- modname="zdharma/zredis"
+ modname1="zdharma/db"
+ modname2="zdharma/zredis"
  db1="127.0.0.1:6379/10/key"
  db2="127.0.0.1/11/key"
- if ! zmodload $modname ; then
-   ZTST_unimplemented="can't load $modname module for testing"
+ if ! zmodload $modname1 ; then
+   ZTST_unimplemented="can't load $modname1 module for testing"
+ fi
+ if ! zmodload $modname2 ; then
+   ZTST_unimplemented="can't load $modname2 module for testing"
  fi
  redis-cli -n 10 flushdb
  redis-cli -n 11 flushdb
@@ -15,13 +19,13 @@
 %test
 
  redis-cli -n 10 set key "" 2>/dev/null 1>&2
- zrtie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 string
  echo $string
  string=testdata
- zruntie string
- zrtie -r -d db/redis -f $db1 string
+ zuntie string
+ ztie -r -d db/redis -f $db1 string
  echo $string
- zruntie -u string
+ zuntie -u string
  echo $zredis_tied ${#zredis_tied}
 0:store key in database 1
 >
@@ -29,67 +33,67 @@
 >0
 
  redis-cli -n 11 set key "" 2>/dev/null 1>&2
- zrtie -d db/redis -f $db2 string
+ ztie -d db/redis -f $db2 string
  echo $string
  string=testdata
- zruntie string
+ zuntie string
  unset string
- zrtie -d db/redis -f $db2 string
+ ztie -d db/redis -f $db2 string
  echo $string
- zruntie string
+ zuntie string
  echo $zredis_tied ${#zredis_tied}
 0:store key in database 2
 >
 >testdata
 >0
 
- zrtie -d db/redis -f $db1 string2
+ ztie -d db/redis -f $db1 string2
  unset 'string2'
- zrtie -d db/redis -f $db1 string 2>&1
+ ztie -d db/redis -f $db1 string 2>&1
  echo $string
  echo $zredis_tied ${#zredis_tied}
 0:remove key from database 1 (different variables)
->(eval):zrtie:3: Unknown key type: invalid
+>(eval):3: Unknown key type: invalid
 >
 >0
 
  redis-cli -n 10 set key "" 2>/dev/null 1>&2
- zrtie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 string
  string=testdata
- zruntie string
- zrtie -d db/redis -f $db1 string
+ zuntie string
+ ztie -d db/redis -f $db1 string
  echo $string
- zruntie string
- zrtie -d db/redis -f $db1 string
+ zuntie string
+ ztie -d db/redis -f $db1 string
  unset 'string'
- zrtie -r -d db/redis -f $db1 string 2>&1
+ ztie -r -d db/redis -f $db1 string 2>&1
  echo $zredis_tied ${#zredis_tied}
 0:store & remove key from database (the same variables)
 >testdata
->(eval):zrtie:10: Unknown key type: invalid
+>(eval):10: Unknown key type: invalid
 >0
 
  redis-cli -n 10 set key "" 2>/dev/null 1>&2
  redis-cli -n 11 set key "" 2>/dev/null 1>&2
- zrtie -d db/redis -f $db1 string
- zrtie -d db/redis -f $db2 string2
+ ztie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db2 string2
  string=testdata
  string2=$string
- zruntie string
- zruntie string2
- zrtie -d db/redis -f $db1 string
- zrtie -d db/redis -f $db2 string2
+ zuntie string
+ zuntie string2
+ ztie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db2 string2
  echo $string
  echo $string2
- zruntie string
- zruntie string2
+ zuntie string
+ zuntie string2
  echo $zredis_tied ${#zredis_tied}
 0:store a key fetching other key
 >testdata
 >testdata
 >0
 
- zrtie -d db/redis -f $db2 string2
+ ztie -d db/redis -f $db2 string2
  val=$string2
  unset string2
  echo $val
@@ -100,29 +104,29 @@
 >
 >0
 
- zrtie -d db/redis -f ${db1%/*}/1000/key string 2>/dev/null; ret=$?
+ ztie -d db/redis -f ${db1%/*}/1000/key string 2>/dev/null; ret=$?
  echo $zredis_tied ${#zredis_tied}
  return $ret
 1:read-only open non-existent database
 >0
 
- zrtie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 string
  echo ${(t)string}
- zruntie string
+ zuntie string
 0:Type of tied parameter
 >scalar-special
 
  typeset -g string
- zrtie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 string
  echo ${(t)string}
- zruntie string
+ zuntie string
 0:Type of tied parameter, with preceding typeset -g
 >scalar-special
 
  local string
- zrtie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 string
  echo ${(t)string}
- zruntie string
+ zuntie string
 0:Type of tied parameter, with local parameter already existing
 >scalar-local-special
 
@@ -130,14 +134,14 @@
  string=from_start
  () {
      local string
-     zrtie -d db/redis -f $db1 string
+     ztie -d db/redis -f $db1 string
      echo ${(t)string}
-     zruntie string
+     zuntie string
  }
  echo $string
- zrtie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 string
  echo "Can connect:" $string
- zruntie string
+ zuntie string
 0:Test of automatic untie (use of local scope) and of scoping
 >scalar-local-special
 >from_start
@@ -145,13 +149,13 @@
 
  redis-cli -n 11 set key "testdata2" 2>/dev/null 1>&2
  echo First $zredis_tied ${#zredis_tied}
- zrtie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 string
  echo $zredis_tied ${#zredis_tied}
- zrtie -d db/redis -f $db2 string2
+ ztie -d db/redis -f $db2 string2
  echo $zredis_tied ${#zredis_tied}
- zruntie string
+ zuntie string
  echo $zredis_tied ${#zredis_tied}
- zruntie string2
+ zuntie string2
  echo $zredis_tied ${#zredis_tied}
 0:zredis_tied parameter
 >First 0
@@ -163,79 +167,79 @@
  unset zredis_tied 2>/dev/null
 1:unset of read-only zredis_tied parameter
 
- zrtie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 string
  string=漢字
  echo $string
- zruntie string
- zrtie -r -d db/redis -f $db1 string
+ zuntie string
+ ztie -r -d db/redis -f $db1 string
  echo $string
- zruntie -u string
+ zuntie -u string
 0:Unicode test
 >漢字
 >漢字
 
  val="ab"$'\0'"ef"
- zrtie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 string
  string=$val
  [[ $string = "ab"$'\0'"ef" ]] && echo correct
- zruntie string
- zrtie -d db/redis -f $db1 string
+ zuntie string
+ ztie -d db/redis -f $db1 string
  [[ $string = "ab"$'\0'"ef" ]] && echo correct
- zruntie string
+ zuntie string
 0:Metafication of $'\0'
 >correct
 >correct
 
- zrtie -d db/redis -f $db1 string
- zrtie -d db/redis -f $db2 string2
+ ztie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db2 string2
  string="漢字"
  echo $string
- zruntie string
- zrtie -d db/redis -f $db1 string
+ zuntie string
+ ztie -d db/redis -f $db1 string
  echo $string
- zruntie string
+ zuntie string
  key="ab"$'\0'"ef"
  string2=$key
- zruntie string2
- zrtie -d db/redis -f $db2 string2
+ zuntie string2
+ ztie -d db/redis -f $db2 string2
  [[ "$string2" = "$key" ]] && echo correct
- zruntie string2
+ zuntie string2
 0:Unicode & metafication test
 >漢字
 >漢字
 >correct
 
- zrtie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 string
  zredishost string
  [[ $REPLY = "127.0.0.1:6379/10/key" ]] && echo correct
- zruntie string
- zrtie -d db/redis -f $db2 string
+ zuntie string
+ ztie -d db/redis -f $db2 string
  zredishost string
  [[ $REPLY = "127.0.0.1/11/key" ]] && echo correct
- zruntie string
+ zuntie string
 0:zredishost builtin
 >correct
 >correct
 
- zrtie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 string
  string=value1
  fun() { while read line; do echo $line; done }
  eval "string=value2" | fun
  echo $string
  zredisclear string
  echo $string
- zruntie string
+ zuntie string
 0:Test store in forked Zsh
 >value1
 >value2
 
- zrtie -p -d db/redis -f $db1 string
+ ztie -z -d db/redis -f $db1 string
  string=value1
  echo $string
  fun() { while read line; do echo $line; done }
  eval "string=value2" | fun
  echo $string
-0:Test store in forked Zsh, with -p passthrough
+0:Test store in forked Zsh, with -z passthrough
 >value1
 >value2
 
