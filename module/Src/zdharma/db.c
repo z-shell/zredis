@@ -18,7 +18,8 @@
 #include "db.mdh"
 #include "db.pro"
 
-/* For casts, as below mod_export variables are void-no-arguments */
+/* For casts, as below mod_export variables are void-no-arguments
+ * (this is for the epro/mdh/etc parser to work) */
 typedef int (*DbBackendEntryPoint)(VA_ALIST1(int cmd));
 
 /**/
