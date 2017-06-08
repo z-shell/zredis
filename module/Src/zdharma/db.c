@@ -71,6 +71,7 @@ static struct builtin bintab[] = {
 /* }}} */
 
 /* FUNCTION: bin_ztie {{{ */
+
 /**/
 static int
 bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
@@ -187,6 +188,7 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
 }
 /* }}} */
 /* FUNCTION: bin_zuntie {{{ */
+
 /**/
 static int
 bin_zuntie(char *nam, char **args, Options ops, UNUSED(int func))
@@ -256,6 +258,7 @@ static struct features module_features = {
 /* }}} */
 
 /* FUNCTION: setup_ {{{ */
+
 /**/
 int
 setup_(UNUSED(Module m))
@@ -264,6 +267,7 @@ setup_(UNUSED(Module m))
 }
 /* }}} */
 /* FUNCTION: features_ {{{ */
+
 /**/
 int
 features_(Module m, char ***features)
@@ -273,6 +277,7 @@ features_(Module m, char ***features)
 }
 /* }}} */
 /* FUNCTION: enables_ {{{ */
+
 /**/
 int
 enables_(Module m, int **enables)
@@ -281,6 +286,7 @@ enables_(Module m, int **enables)
 }
 /* }}} */
 /* FUNCTION: boot_ {{{ */
+
 /**/
 int
 boot_(UNUSED(Module m))
@@ -289,6 +295,7 @@ boot_(UNUSED(Module m))
 }
 /* }}} */
 /* FUNCTION: cleanup_ {{{ */
+
 /**/
 int
 cleanup_(Module m)
@@ -298,6 +305,7 @@ cleanup_(Module m)
 }
 /* }}} */
 /* FUNCTION: finish_ {{{ */
+
 /**/
 int
 finish_(UNUSED(Module m))
@@ -309,7 +317,9 @@ finish_(UNUSED(Module m))
 /*************** UTILITIES ***************/
 
 /* FUNCTION: createhash {{{ */
-static Param createhash(char *name, int flags)
+
+static Param
+createhash(char *name, int flags)
 {
     Param pm;
     HashTable ht;
@@ -354,6 +364,7 @@ static Param createhash(char *name, int flags)
 }
 /* }}} */
 /* FUNCTION: myfreeparamnode {{{ */
+
 static void
 myfreeparamnode(HashNode hn)
 {
@@ -387,7 +398,9 @@ myfreeparamnode(HashNode hn)
  *
  * No zsfree()-confusing string will be produced.
  */
-static char *unmetafy_zalloc(const char *to_copy, int *new_len)
+
+static char *
+unmetafy_zalloc(const char *to_copy, int *new_len)
 {
     char *work, *to_return;
     int my_new_len = 0;
@@ -411,12 +424,15 @@ static char *unmetafy_zalloc(const char *to_copy, int *new_len)
 }
 /* }}} */
 /* FUNCTION: set_length {{{ */
-/*
- * For zsh-allocator, rest of Zsh seems to use
+
+/* For zsh-allocator, rest of Zsh seems to use
  * free() instead of zsfree(), and such length
  * restoration causes slowdown, but all is this
  * way strict - correct */
-static void set_length(char *buf, int size) {
+
+static void
+set_length(char *buf, int size)
+{
     buf[size]='\0';
     while (-- size >= 0) {
         buf[size]=' ';
@@ -424,7 +440,10 @@ static void set_length(char *buf, int size) {
 }
 /* }}} */
 /* FUNCTION: store_in_hash {{{ */
-static int store_in_hash(Param pm, const char *key, char *value) {
+
+static int
+store_in_hash(Param pm, const char *key, char *value)
+{
     /* Get hash table */
     if (!pm || (pm->node.flags & PM_UNSET)) {
         return 0; /* false */
@@ -453,7 +472,10 @@ static int store_in_hash(Param pm, const char *key, char *value) {
 }
 /* }}} */
 /* FUNCTION: find_in_array {{{ */
-static int find_in_array(const char *pmname, const char *needle) {
+
+static int
+find_in_array(const char *pmname, const char *needle)
+{
     Param pm;
     char **arr;
     if (!(pm = (Param) paramtab->getnode(paramtab, pmname))) {
@@ -476,7 +498,10 @@ static int find_in_array(const char *pmname, const char *needle) {
 /***************** USAGE *****************/
 
 /* FUNCTION: ztie_usage {{{ */
-static void ztie_usage() {
+
+static void
+ztie_usage()
+{
     fprintf(stdout, YELLOW "Usage:" RESET " ztie -d db/... [-z] [-r] [-p password] [-P password_file] "
             MAGENTA "-f/-a {db_address}" RESET " " RED "{parameter_name}" RESET "\n");
     fprintf(stdout, YELLOW "Options:" RESET "\n");
@@ -491,7 +516,10 @@ static void ztie_usage() {
 }
 /* }}} */
 /* FUNCTION: zuntie_usage {{{ */
-static void zuntie_usage() {
+
+static void
+zuntie_usage()
+{
     fprintf(stdout, YELLOW "Usage:" RESET " zuntie [-u] {tied-variable-name} [tied-variable-name] ...\n");
     fprintf(stdout, YELLOW "Options:" RESET "\n");
     fprintf(stdout, GREEN " -u" RESET ": Allow to untie read-only parameter\n");
