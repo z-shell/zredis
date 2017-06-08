@@ -548,7 +548,7 @@ zruntie_cmd(int rountie, char **pmnames)
             }
             unqueue_signals();
         } else if (pm->gsu.s->getfn == &redis_str_getfn) {
-            if (pm->node.flags & PM_READONLY && rountie) {
+            if (pm->node.flags & PM_READONLY && !rountie) {
                 zwarn("cannot untie `%s', parameter is read only, use -u option", pmname);
                 continue;
             }
