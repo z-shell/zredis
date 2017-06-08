@@ -10,7 +10,7 @@ Module interfacing with `redis` database via `Zshell` `variables` mapped to `key
 
 ```SystemVerilog
 % redis-cli -n 3 hmset HASHSET field1 value1 fld2 val2
-% zrtie -d db/redis -f "127.0.0.1/3/HASHSET" hset
+% ztie -d db/redis -f "127.0.0.1/3/HASHSET" hset
 % echo ${(kv)hset}
 field1 value1 fld2 val2
 % echo ${(k)hset}
@@ -18,7 +18,7 @@ field1 fld2
 % echo ${(v)hset}
 value1 val2
 % redis-cli -n 3 rpush LIST empty
-% zrtie -d db/redis -f "127.0.0.1/3/LIST" list
+% ztie -d db/redis -f "127.0.0.1/3/LIST" list
 % echo ${(t)list}
 array-special
 % list=( ${(k)hset} )
@@ -38,8 +38,8 @@ of one hash to another one is needed, what `redis-cli` invocations are needed? W
 `zredis`, this task is simple:
 
 ```SystemVerilog
-% zrtie -r -d db/redis -f "127.0.0.1/3/HASHSET1" hset1 # -r - read-only
-% zrtie -d db/redis -f "127.0.0.1/3/HASHSET2" hset2
+% ztie -r -d db/redis -f "127.0.0.1/3/HASHSET1" hset1 # -r - read-only
+% ztie -d db/redis -f "127.0.0.1/3/HASHSET2" hset2
 % echo ${(kv)hset2}
 other data
 % echo ${(kv)hset1}
@@ -57,7 +57,7 @@ Or, for example, if one needs a large sorted set (`zset`), how to accomplish thi
 
 ```SystemVerilog
 % redis-cli -n 3 zadd NEWZSET 1.0 a
-% zrtie -d db/redis -f "127.0.0.1/3/NEWZSET" zset
+% ztie -d db/redis -f "127.0.0.1/3/NEWZSET" zset
 % echo ${(kv)zset}
 a 1
 % count=0
@@ -83,7 +83,7 @@ Redis can store strings at given keys, using `SET` command. `Zredis` maps those 
 ```SystemVerilog
 % redis-cli -n 4 SET key1 value1
 % redis-cli -n 4 SET key2 value2
-% zrtie -d db/redis -f "127.0.0.1/4" redis
+% ztie -d db/redis -f "127.0.0.1/4" redis
 % echo $zredis_tied
 redis
 % echo ${(kv)redis}
@@ -97,7 +97,7 @@ key of type `HASH` and map it to `Zsh` hash:
 
 ```SystemVerilog
 % redis-cli -n 4 hmset HASH key1 value1 key2 value2
-% zrtie -d db/redis -f "127.0.0.1/4/HASH" hset
+% ztie -d db/redis -f "127.0.0.1/4/HASH" hset
 % echo $zredis_tied
 hset
 % echo ${(kv)hset}
@@ -113,12 +113,12 @@ key1 value1
 
 Can clear single elements by assigning `()` to array element. Can overwrite
 whole set by assigning via `=( ... )` to set, and delete set from database
-by use of `unset`. Use `zruntie` to only detach variable from database without
+by use of `unset`. Use `zuntie` to only detach variable from database without
 deleting any data.
 
 ```SystemVerilog
 % redis-cli -n 4 sadd SET value1 value2 value3 ''
-% zrtie -d db/redis -f "127.0.0.1/4/SET" myset
+% ztie -d db/redis -f "127.0.0.1/4/SET" myset
 % echo ${myset[@]}
 value2 value3 value1
 % echo -E ${(qq)myset[@]}  # Quote with '', use to see empty elements
@@ -140,7 +140,7 @@ This variant maps `zset` as hash - keys are set elements, values are ranks.
 
 ```SystemVerilog
 % redis-cli -n 4 zadd NEWZSET 1.0 a
-% zrtie -d db/redis -f "127.0.0.1/4/NEWZSET" zset
+% ztie -d db/redis -f "127.0.0.1/4/NEWZSET" zset
 % echo ${(kv)zset}
 a 1
 % zset[a]=2.5
@@ -156,7 +156,7 @@ There is no analogue of `zrzset` call because `Zsh` array already has correct or
 
 ```SystemVerilog
 % redis-cli -n 4 rpush LIST value1 value2 value3
-% zrtie -d db/redis -f "127.0.0.1/4/LIST" mylist
+% ztie -d db/redis -f "127.0.0.1/4/LIST" mylist
 % echo $mylist
 value1 value2 value3
 % mylist=( 1 2 3 )
@@ -164,7 +164,7 @@ value1 value2 value3
 % redis-cli -n 4 lrange LIST 0 -1
 1) "1"
 3) "3"
-% zruntie mylist
+% zuntie mylist
 % redis-cli -n 4 lrange LIST 0 -1
 1) "1"
 3) "3"
@@ -182,7 +182,7 @@ Single keys in main Redis storage are bound to `Zsh` string variables:
 4) "HASH"
 5) "NEWZSET"
 6) "key2"
-% zrtie -d db/redis -f "127.0.0.1/4/key1" key1
+% ztie -d db/redis -f "127.0.0.1/4/key1" key1
 % echo $key1
 value1
 % key1=valueB
