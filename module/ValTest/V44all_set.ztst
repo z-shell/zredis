@@ -53,7 +53,7 @@
  echo $aset
  echo $zredis_tied ${#zredis_tied}
 0:remove key from database 1 (different variables)
->(eval):ztie:3: Unknown key type: invalid
+>(eval):3: Unknown key type: invalid
 >
 >0
 
@@ -70,7 +70,7 @@
  echo $zredis_tied ${#zredis_tied}
 0:store & remove key from database (the same variables)
 >testdata
->(eval):ztie:10: Unknown key type: invalid
+>(eval):10: Unknown key type: invalid
 >0
 
  redis-cli -n 10 sadd myset first second 2>/dev/null 1>&2
@@ -102,7 +102,7 @@
  echo $zredis_tied ${#zredis_tied}
 0:unset key that was fetched
 >first second
->(eval):ztie:5: Unknown key type: invalid
+>(eval):5: Unknown key type: invalid
 >0
 
  ztie -d db/redis -f ${db1%/*}/1000/myset aset 2>/dev/null; ret=$?
