@@ -57,7 +57,7 @@ elif [[ ! -f "${ZREDIS_REPO_DIR}/module/COMPILED_AT" || ( "${ZREDIS_REPO_DIR}/mo
     [[ -e ${ZREDIS_REPO_DIR}/module/RECOMPILE_REQUEST ]] && local recompile_request_ts="$(<${ZREDIS_REPO_DIR}/module/RECOMPILE_REQUEST)"
 
     if [[ "${recompile_request_ts:-1}" -gt "${compiled_at_ts:-0}" ]]; then
-        builtin echo "${fg_bold[red]}zredis: single recompiletion requested by plugin's update${reset_color}"
+        builtin echo "${fg_bold[red]}zredis: single recompilation requested by plugin's update${reset_color}"
         zredis_compile
     fi
 fi
