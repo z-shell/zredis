@@ -364,6 +364,17 @@
 >value1
 >value2
 
+ ztie -z -d db/redis -f $db1 dbase
+ dbase[testkey]=value1
+ echo $dbase[testkey]
+ fun() { while read line; do echo $line; done }
+ eval "dbase[testkey]=value2" | fun
+ echo $dbase[testkey]
+ zuntie dbase
+0:Test store in forked Zsh, with -z passthrough
+>value1
+>value2
+
  ztie -d db/redis -f $db1 dbase
  echo $dbase[a] $dbase[b] $dbase[c]
  unset dbase
