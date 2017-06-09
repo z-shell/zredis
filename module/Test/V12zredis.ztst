@@ -174,7 +174,7 @@
  ztie -d db/redis -f ${db1%/*}/1000 dbase 2>/dev/null; ret=$?
  echo $zredis_tied ${#zredis_tied}
  return $ret
-1:read-only open non-existent database
+1:open non-existent database
 >0
 
  ztie -d db/redis -f $db1 dbase
