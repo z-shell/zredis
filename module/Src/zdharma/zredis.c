@@ -3046,6 +3046,7 @@ static struct features module_features = {
 int
 setup_(UNUSED(Module m))
 {
+    zsh_db_register_backend("db/redis", redis_main_entry);
     return 0;
 }
 /* }}} */
@@ -3075,7 +3076,6 @@ int
 boot_(UNUSED(Module m))
 {
     zredis_tied = zshcalloc((1) * sizeof(char *));
-    backend_redis_entry_ptr = (void *)redis_main_entry;
     return 0;
 }
 /* }}} */
@@ -3085,6 +3085,8 @@ boot_(UNUSED(Module m))
 int
 cleanup_(Module m)
 {
+    zsh_db_unregister_backend("db/redis");
+
     /* This frees `zredis_tied` */
     return setfeatureenables(m, &module_features, NULL);
 }
