@@ -259,7 +259,7 @@ zgtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
 
   tied_param->gsu.h = &gdbm_hash_gsu;
 
-  /* Allocate parameter sub-gsu, fill dbf field. 
+  /* Allocate parameter sub-gsu, fill dbf field.
    * dbf allocation is 1 to 1 accompanied by
    * gsu_scalar_ext allocation. */
 
@@ -846,7 +846,7 @@ static void
 myfreeparamnode(HashNode hn)
 {
   Param pm = (Param) hn;
- 
+
   /* Upstream: The second argument of unsetfn() is used by modules to
    * differentiate "exp"licit unset from implicit unset, as when
    * a parameter is going out of scope.  It's not clear which
