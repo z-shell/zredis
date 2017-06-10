@@ -1,0 +1,12 @@
+name=zdharma/zgdbm
+link='if test "x$ac_cv_lib_gdbm_gdbm_open" = xyes && test "x$ac_cv_header_gdbm_h" = xyes; then
+  echo dynamic
+else
+  echo no
+fi
+'
+load=no
+
+autofeatures="b:ztie b:zuntie b:zgdbmpath b:zgdbmclear p:zgdbm_tied"
+
+objects="zgdbm.o"

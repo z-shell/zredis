@@ -229,6 +229,12 @@
 /* Define to 1 if you have the `ftruncate' function. */
 #undef HAVE_FTRUNCATE
 
+/* Define to 1 if you have the <gdbm.h> header file. */
+#undef HAVE_GDBM_H
+
+/* Define to 1 if you have the `gdbm_open' function. */
+#undef HAVE_GDBM_OPEN
+
 /* Define to 1 if you have the `getcchar' function. */
 #undef HAVE_GETCCHAR
 
@@ -342,6 +348,9 @@
 
 /* Define to 1 if you have the `dl' library (-ldl). */
 #undef HAVE_LIBDL
+
+/* Define to 1 if you have the `gdbm' library (-lgdbm). */
+#undef HAVE_LIBGDBM
 
 /* Define to 1 if you have the `hiredis' library (-lhiredis). */
 #undef HAVE_LIBHIREDIS

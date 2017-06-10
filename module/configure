@@ -777,6 +777,7 @@ enable_max_function_depth
 enable_readnullcmd
 enable_cap
 enable_redis
+enable_gdbm
 enable_largefile
 with_term_lib
 with_tcsetpgrp
@@ -1457,7 +1458,10 @@ Optional Features:
                           pager used when READNULLCMD is not set
   --enable-cap            enable the search for POSIX capabilities (may
                           require additional headers to be added by hand)
-  --disable-redis         turn off search for hiredis library
+  --disable-redis         turn off redis database support (search for hiredis
+                          library)
+  --enable-gdbm           turn on gdbm database support (search for gdbm
+                          library)
   --disable-largefile     omit support for large files
   --enable-multibyte      support multibyte characters
   --enable-unicode9       compile with unicode9 character widths
@@ -3028,6 +3032,14 @@ if test "${enable_redis+set}" = set; then :
   enableval=$enable_redis; redis="$enableval"
 else
   redis=yes
+fi
+
+
+# Check whether --enable-gdbm was given.
+if test "${enable_gdbm+set}" = set; then :
+  enableval=$enable_gdbm; gdbm="$enableval"
+else
+  gdbm=no
 fi
 
 
@@ -7104,6 +7116,66 @@ fi
 
 fi
 
+if test x$gdbm != xno; then
+  for ac_header in gdbm.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "gdbm.h" "ac_cv_header_gdbm_h" "$ac_includes_default"
+if test "x$ac_cv_header_gdbm_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_GDBM_H 1
+_ACEOF
+
+fi
+
+done
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gdbm_open in -lgdbm" >&5
+$as_echo_n "checking for gdbm_open in -lgdbm... " >&6; }
+if ${ac_cv_lib_gdbm_gdbm_open+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lgdbm  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char gdbm_open ();
+int
+main ()
+{
+return gdbm_open ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_gdbm_gdbm_open=yes
+else
+  ac_cv_lib_gdbm_gdbm_open=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_gdbm_gdbm_open" >&5
+$as_echo "$ac_cv_lib_gdbm_gdbm_open" >&6; }
+if test "x$ac_cv_lib_gdbm_gdbm_open" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBGDBM 1
+_ACEOF
+
+  LIBS="-lgdbm $LIBS"
+
+fi
+
+fi
+
 for ac_header in sys/xattr.h
 do :
   ac_fn_c_check_header_mongrel "$LINENO" "sys/xattr.h" "ac_cv_header_sys_xattr_h" "$ac_includes_default"
@@ -8291,7 +8363,7 @@ for ac_func in strftime strptime mktime timelocal \
 	       grantpt unlockpt ptsname \
 	       htons ntohs \
 	       regcomp regexec regerror regfree \
-	       redisConnect getxattr \
+	       redisConnect gdbm_open getxattr \
 	       realpath canonicalize_file_name \
 	       symlink getcwd \
 	       cygwin_conv_path \

@@ -443,8 +443,12 @@ AC_HELP_STRING([--enable-cap],
 [enable the search for POSIX capabilities (may require additional headers to be added by hand)]))
 
 AC_ARG_ENABLE(redis,
-AC_HELP_STRING([--disable-redis], [turn off search for hiredis library]),
+AC_HELP_STRING([--disable-redis], [turn off redis database support (search for hiredis library)]),
 [redis="$enableval"], [redis=yes])
+
+AC_ARG_ENABLE(gdbm,
+AC_HELP_STRING([--enable-gdbm], [turn on gdbm database support (search for gdbm library)]),
+[gdbm="$enableval"], [gdbm=no])
 
 dnl ------------------
 dnl CHECK THE COMPILER
@@ -958,6 +962,11 @@ if test x$redis != xno; then
   AC_CHECK_LIB(hiredis, redisConnect)
 fi
 
+if test x$gdbm != xno; then
+  AC_CHECK_HEADERS(gdbm.h)
+  AC_CHECK_LIB(gdbm, gdbm_open)
+fi
+
 AC_CHECK_HEADERS(sys/xattr.h)
 
 dnl --------------
@@ -1297,7 +1306,7 @@ AC_CHECK_FUNCS(strftime strptime mktime timelocal \
 	       grantpt unlockpt ptsname \
 	       htons ntohs \
 	       regcomp regexec regerror regfree \
-	       redisConnect getxattr \
+	       redisConnect gdbm_open getxattr \
 	       realpath canonicalize_file_name \
 	       symlink getcwd \
 	       cygwin_conv_path \
