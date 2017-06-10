@@ -210,14 +210,14 @@
 >correct
 
  ztie -d db/redis -f $db1 string
- zredishost string
+ ztaddress string
  [[ $REPLY = "127.0.0.1:6379/10/key" ]] && echo correct
  zuntie string
  ztie -d db/redis -f $db2 string
- zredishost string
+ ztaddress string
  [[ $REPLY = "127.0.0.1/11/key" ]] && echo correct
  zuntie string
-0:zredishost builtin
+0:ztaddress builtin
 >correct
 >correct
 
@@ -226,7 +226,7 @@
  fun() { while read line; do echo $line; done }
  eval "string=value2" | fun
  echo $string
- zredisclear string
+ ztclear string
  echo $string
  zuntie string
 0:Test store in forked Zsh

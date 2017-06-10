@@ -211,14 +211,14 @@
 >correct
 
  ztie -d db/redis -f $db1 aset
- zredishost aset
+ ztaddress aset
  [[ $REPLY = "127.0.0.1:6379/10/myset" ]] && echo correct
  zuntie aset
  ztie -d db/redis -f $db2 aset
- zredishost aset
+ ztaddress aset
  [[ $REPLY = "127.0.0.1/11/myset" ]] && echo correct
  zuntie aset
-0:zredishost builtin
+0:ztaddress builtin
 >correct
 >correct
 
@@ -227,7 +227,7 @@
  fun() { while read line; do echo $line; done }
  eval "aset=( value2 )" | fun
  echo $aset
- zredisclear aset
+ ztclear aset
  echo $aset
  zuntie aset
 0:Test store in forked Zsh

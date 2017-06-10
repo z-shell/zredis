@@ -341,14 +341,14 @@
 >漢字
 
  ztie -d db/redis -f $db1 dbase
- zredishost dbase
+ ztaddress dbase
  [[ $REPLY = "127.0.0.1:6379/10/myzset" ]] && echo correct
  zuntie dbase
  ztie -d db/redis -f $db2 dbase
- zredishost dbase
+ ztaddress dbase
  [[ $REPLY = "127.0.0.1/11/myzset" ]] && echo correct
  zuntie dbase
-0:zredishost builtin
+0:ztaddress builtin
 >correct
 >correct
 
@@ -357,7 +357,7 @@
  fun() { while read line; do echo $line; done }
  eval "dbase[testkey]=2" | fun
  echo $dbase[testkey]
- zredisclear dbase testkey
+ ztclear dbase testkey
  echo $dbase[testkey]
  zuntie dbase
 0:Test store in forked Zsh

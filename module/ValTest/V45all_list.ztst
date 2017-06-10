@@ -211,14 +211,14 @@
 >correct
 
  ztie -d db/redis -f $db1 alist
- zredishost alist
+ ztaddress alist
  [[ $REPLY = "127.0.0.1:6379/10/mylist" ]] && echo correct
  zuntie alist
  ztie -d db/redis -f $db2 alist
- zredishost alist
+ ztaddress alist
  [[ $REPLY = "127.0.0.1/11/mylist" ]] && echo correct
  zuntie alist
-0:zredishost builtin
+0:ztaddress builtin
 >correct
 >correct
 
@@ -227,7 +227,7 @@
  fun() { while read line; do echo $line; done }
  eval "alist=( value2 )" | fun
  echo $alist
- zredisclear alist
+ ztclear alist
  echo $alist
  zuntie alist
 0:Test store in forked Zsh
