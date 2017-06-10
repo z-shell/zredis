@@ -638,7 +638,7 @@ is_tied_cmd(char *pmname)
     return 1 - is_tied(pm); /* negation for shell-code */
 }
 /* }}} */
-/* FUNCTION: bin_zredishost {{{ */
+/* FUNCTION: zredishost_cmd {{{ */
 
 /**/
 static int

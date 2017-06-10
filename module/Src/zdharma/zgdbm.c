@@ -307,7 +307,7 @@ zguntie_cmd(int rountie, char **args)
   return ret;
 }
 /* }}} */
-/* FUNCTION: bin_zgdbmpath {{{ */
+/* FUNCTION: zgdbmpath_cmd{{{ */
 
 /**/
 static int
