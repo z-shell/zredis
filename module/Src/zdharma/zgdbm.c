@@ -109,15 +109,14 @@ static const struct gsu_hash gdbm_hash_gsu =
 
 static struct builtin bintab[] = {};
 
-#define ROARRPARAMDEF(name, var)                                        \
+#define ROARRPARAMDEF(name, var) \
     { name, PM_ARRAY | PM_READONLY, (void *) var, NULL,  NULL, NULL, NULL }
 
 /* Holds names of all tied parameters */
 char **zgdbm_tied;
 
-static struct paramdef patab[] = {
-                                  ROARRPARAMDEF( "zgdbm_tied", &zgdbm_tied ),
-};
+static struct paramdef patab[] =
+    { ROARRPARAMDEF( "zgdbm_tied", &zgdbm_tied ), };
 /* }}} */
 
 /* FUNCTION: gdbm_main_entry {{{ */
