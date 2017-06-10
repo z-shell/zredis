@@ -27,6 +27,7 @@
 #define DB_TIE 1
 #define DB_UNTIE 2
 #define DB_IS_TIED 3
+#define DB_GET_ADDRESS 4
 
 #define RESET         "\033[m"
 #define BOLD          "\033[1m"
@@ -53,8 +54,11 @@
 static char *unmetafy_zalloc(const char *to_copy, int *new_len);
 static void set_length(char *buf, int size);
 static int find_in_array(const char *pmname, const char *needle);
+
 static void ztie_usage();
 static void zuntie_usage();
+static void ztaddress_usage();
+
 static HashTable createhashtable(char *name);
 static void freebackendnode(HashNode hn);
 static void backend_scan_fun(HashNode hn, int unused);
@@ -83,6 +87,7 @@ static struct builtin bintab[] = {
                                    * P - password from file, z - zero read-cache */
                                   BUILTIN("ztie", 0, bin_ztie, 0, -1, 0, "hrlzf:d:a:p:P:", NULL),
                                   BUILTIN("zuntie", 0, bin_zuntie, 0, -1, 0, "uh", NULL),
+                                  BUILTIN("ztaddress", 0, bin_ztaddress, 0, -1, 0, "h", NULL),
 };
 /* }}} */
 /* ARRAY: other {{{ */
@@ -200,7 +205,7 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
     DbBackendEntryPoint be = NULL;
 
     if(!(node = (BackendNode) gethashnode2(backends_hash, OPT_ARG(ops, 'd')))) {
-        zwarnnam(nam, "Backend module for %s not loaded (or loaded after the main `db' module)", OPT_ARG(ops, 'd'));
+        zwarnnam(nam, "Backend module for %s not loaded (or loaded before the main `db' module)", OPT_ARG(ops, 'd'));
         return 1;
     }
 
@@ -255,7 +260,52 @@ bin_zuntie(char *nam, char **args, Options ops, UNUSED(int func))
     return ret;
 }
 /* }}} */
+/* FUNCTION: bin_ztaddress {{{ */
 
+/**/
+static int
+bin_ztaddress(char *nam, char **args, Options ops, UNUSED(int func))
+{
+    char *pmname;
+    int ret = 0;
+
+    if (OPT_ISSET(ops,'h')) {
+        ztaddress_usage();
+        return 0;
+    }
+
+    if (!*args) {
+        zwarnnam(nam, "One parameter name is needed, see -h");
+        return 1;
+    }
+
+    pmname = *args;
+    In_ParamName = *args;
+    Out_FoundBe = NULL;
+
+    scanhashtable(backends_hash, 0, 0, 0, backend_scan_fun, 0);
+
+    if (!Out_FoundBe) {
+        zwarnnam(nam, "Didn't recognize `%s' as a tied parameter", pmname);
+        return 1;
+    }
+
+    ret = Out_FoundBe(DB_GET_ADDRESS, pmname) ? 1 : ret;
+
+    return ret;
+}
+/* }}} */
+
+/* FUNCTION: ztaddress_usage {{{ */
+
+static void
+ztaddress_usage()
+{
+    fprintf(stdout, YELLOW "Usage:" RESET " ztaddress {tied-parameter-name}\n");
+    fprintf(stdout, YELLOW "Description:" RESET " stores address used by given parameter to $REPLY\n");
+    fflush(stdout);
+}
+/* }}} */
 
 /*************** MAIN CODE ***************/
 

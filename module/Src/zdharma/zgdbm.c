@@ -44,6 +44,7 @@
 #define DB_TIE 1
 #define DB_UNTIE 2
 #define DB_IS_TIED 3
+#define DB_GET_ADDRESS 4
 /* }}} */
 /* DECLARATIONS {{{ */
 static Param createhash( char *name, int flags );
@@ -99,7 +100,6 @@ static const struct gsu_hash gdbm_hash_gsu =
   { hashgetfn, gdbmhashsetfn, gdbmhashunsetfn };
 
 static struct builtin bintab[] = {
-                                  BUILTIN("zgdbmpath", 0, bin_zgdbmpath, 1, -1, 0, "", NULL),
                                   BUILTIN("zgdbmclear", 0, bin_zgdbmclear, 2, -1, 0, "", NULL),
 };
 
@@ -166,6 +166,13 @@ gdbm_main_entry(VA_ALIST1(int cmd))
      */
     pmname = va_arg(ap, char *);
     return is_tied_cmd(pmname);
+
+  case DB_GET_ADDRESS:
+    /* Order is:
+     * Parameter name, char *
+     */
+    pmname = va_arg(ap, char*);
+    return zgdbmpath_cmd(pmname);
 
   default:
 #ifdef DEBUG
@@ -304,26 +311,23 @@ zguntie_cmd(int rountie, char **args)
 
 /**/
 static int
-bin_zgdbmpath(char *nam, char **args, Options ops, UNUSED(int func))
+zgdbmpath_cmd(char *pmname)
 {
   Param pm;
-  char *pmname;
-
-  pmname = *args;
 
   if (!pmname) {
-    zwarnnam(nam, "parameter name (whose path is to be written to $REPLY) is required");
+    zwarn("parameter name (whose path is to be written to $REPLY) not given");
     return 1;
   }
 
   pm = (Param) paramtab->getnode(paramtab, pmname);
   if(!pm) {
-    zwarnnam(nam, "no such parameter: %s", pmname);
+    zwarn("no such parameter: %s", pmname);
     return 1;
   }
 
   if (pm->gsu.h != &gdbm_hash_gsu) {
-    zwarnnam(nam, "not a tied gdbm parameter: %s", pmname);
+    zwarn("not a tied gdbm parameter: %s", pmname);
     return 1;
   }
 

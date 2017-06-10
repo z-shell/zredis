@@ -31,6 +31,7 @@
 #define DB_TIE 1
 #define DB_UNTIE 2
 #define DB_IS_TIED 3
+#define DB_GET_ADDRESS 4
 
 #define RESET         "\033[m"
 #define BOLD          "\033[1m"
@@ -79,7 +80,6 @@ static int connect(redisContext **rc, const char* password, const char *host, in
 static int type(redisContext **rc, const char *redis_host_port, const char *password, char *key, size_t key_len);
 static int is_tied(Param pm);
 static void zrzset_usage();
-static void zredishost_usage();
 static void zredisclear_usage();
 static void myfreeparamnode(HashNode hn);
 static int reconnect(redisContext **rc, const char *hostspec, const char *password);
@@ -173,7 +173,6 @@ static const struct gsu_array_ext arrlist_gsu_ext =
 /* }}} */
 /* ARRAY: builtin {{{ */
 static struct builtin bintab[] = {
-    BUILTIN("zredishost", 0, bin_zredishost, 0, -1, 0, "h", NULL),
     BUILTIN("zredisclear", 0, bin_zredisclear, 0, 2, 0, "h", NULL),
     BUILTIN("zrzset", 0, bin_zrzset, 0, 1, 0, "h", NULL),
 };
@@ -242,6 +241,13 @@ VA_DCL
          */
         pmname = va_arg(ap, char *);
         return is_tied_cmd(pmname);
+
+    case DB_GET_ADDRESS:
+        /* Order is:
+         * parameter name, char *
+         */
+        pmname = va_arg(ap, char *);
+        return zredishost_cmd(pmname);
 
     default:
 #ifdef DEBUG
@@ -636,26 +642,18 @@ is_tied_cmd(char *pmname)
 
 /**/
 static int
-bin_zredishost(char *nam, char **args, Options ops, UNUSED(int func))
+zredishost_cmd(char *pmname)
 {
     Param pm;
-    char *pmname;
-
-    if (OPT_ISSET(ops, 'h')) {
-        zredishost_usage();
-        return 0;
-    }
-
-    pmname = *args;
 
     if (!pmname) {
-        zwarnnam(nam, "parameter name (whose host-spec is to be written to $REPLY) is required, see -h");
+        zwarn("parameter name (whose host-spec is to be written to $REPLY) is not given, see -h");
         return 1;
     }
 
     pm = (Param) paramtab->getnode(paramtab, pmname);
     if(!pm) {
-        zwarnnam(nam, "no such parameter: %s", pmname);
+        zwarn("no such parameter: %s", pmname);
         return 1;
     }
 
@@ -675,7 +673,7 @@ bin_zredishost(char *nam, char **args, Options ops, UNUSED(int func))
     } else if(pm->gsu.a->getfn == &redis_arrlist_getfn) {
         hostspec = ((struct gsu_array_ext *)pm->gsu.a)->redis_host_port;
     } else {
-        zwarnnam(nam, "not a tied zredis parameter: `%s', REPLY unchanged", pmname);
+        zwarn("not a tied zredis parameter: `%s', REPLY unchanged", pmname);
         return 1;
     }
 
@@ -3513,16 +3511,6 @@ zrzset_usage()
 {
     fprintf(stdout, YELLOW "Usage:" RESET " zrzset {tied-param-name}\n");
     fprintf(stdout, YELLOW "Output:" RESET " $reply array, to hold elements of the sorted set\n");
-    fflush(stdout);
-}
-/* }}} */
-/* FUNCTION: zredishost_usage {{{ */
-
-static void
-zredishost_usage()
-{
-    fprintf(stdout, YELLOW "Usage:" RESET " zredishost {tied-variable-name}\n");
-    fprintf(stdout, YELLOW "Description:" RESET " stores host-spec of given variable to $REPLY\n");
     fflush(stdout);
 }
 /* }}} */
