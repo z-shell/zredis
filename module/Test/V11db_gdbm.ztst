@@ -3,17 +3,21 @@
 %prep
 
  module_path=( `pwd`/Modules )
- modname="zdharma/zgdbm"
- #modname="zsh/db/gdbm"
+ modname1="zdharma/db"
+ modname2="zdharma/zgdbm"
+ #modname2="zsh/db/gdbm"
  dbfile=db.gdbm
- if ! zmodload $modname ; then
-   ZTST_unimplemented="can't load $modname module for testing"
+ if ! zmodload $modname1 ; then
+   ZTST_unimplemented="can't load $modname1 module for testing"
+ fi
+ if ! zmodload $modname2 ; then
+   ZTST_unimplemented="can't load $modname2 module for testing"
  fi
  rm -f db.gdbm
 
 %test
 
- (zmodload -u $modname && zmodload $modname)
+ (zmodload -u $modname2 && zmodload $modname2)
 0:unload and reload the module without crashing
 
  ztie -d db/gdbm -f $dbfile dbase
@@ -304,14 +308,14 @@
 >漢字
 
  ztie -d db/gdbm -f $dbfile dbase
- zgdbmpath dbase
+ ztaddress dbase
  [[ $REPLY = */Test/db.gdbm ]] && echo correct
  zuntie dbase
  ztie -r -d db/gdbm -f $dbfile dbase
- zgdbmpath dbase
+ ztaddress dbase
  [[ $REPLY = */Test/db.gdbm ]] && echo correct
  zuntie -u dbase
-0:zgdbmpath builtin
+0:ztaddress builtin
 >correct
 >correct
 
@@ -320,7 +324,7 @@
  fun() { while read line; do echo $line; done }
  eval "dbase[testkey]=value2" | fun
  echo $dbase[testkey]
- zgdbmclear dbase testkey
+ ztclear dbase testkey
  echo $dbase[testkey]
 0:Test store in forked Zsh
 >value1
