@@ -53,7 +53,6 @@
 /* DECLARATIONS {{{ */
 static char *unmetafy_zalloc(const char *to_copy, int *new_len);
 static void set_length(char *buf, int size);
-static int find_in_array(const char *pmname, const char *needle);
 
 static void ztie_usage();
 static void zuntie_usage();
@@ -437,29 +436,6 @@ set_length(char *buf, int size)
     while (-- size >= 0) {
         buf[size]=' ';
     }
-}
-/* }}} */
-/* FUNCTION: find_in_array {{{ */
-
-static int
-find_in_array(const char *pmname, const char *needle)
-{
-    Param pm;
-    char **arr;
-    if (!(pm = (Param) paramtab->getnode(paramtab, pmname))) {
-        return 0; /* false */
-    }
-    if (pm->node.flags & PM_ARRAY) {
-        if(!(arr = pm->gsu.a->getfn(pm))) {
-            return 0; /* false */
-        }
-        while (*arr) {
-            if(0 == strcmp(*arr++, needle)) {
-                return 1; /* true */
-            }
-        }
-    }
-    return 0; /* false */
 }
 /* }}} */
 /* FUNCTION: createhash {{{ */
