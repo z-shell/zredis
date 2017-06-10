@@ -7,7 +7,7 @@ emulate zsh
 # protect from catastrophic failure of an individual test.
 # We could probably do that with subshells instead.
 
-[[ -f "test_type" ]] && local tpe=$(<test_type)
+[[ -f "test_type" ]] && local tpe=$(<test_type) || local tpe="2"
 local cmd="valgrind"
 (( ${+commands[colour-valgrind]} )) && cmd="colour-valgrind"
 
