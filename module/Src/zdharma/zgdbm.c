@@ -450,6 +450,8 @@ gdbmgetfn(Param pm)
     /* Metafy returned data. All fits - metafy
      * can obtain data length to avoid using \0 */
     pm->u.str = metafy(content.dptr, content.dsize, META_DUP);
+    /* gdbm allocates with malloc */
+    free(content.dptr);
 
     /* Free key, restoring its original length */
     set_length(umkey, umlen);
@@ -575,7 +577,7 @@ getgdbmnode(HashTable ht, const char *name)
 static void
 scangdbmkeys(HashTable ht, ScanFunc func, int flags)
 {
-  datum key;
+  datum key, prev_key;
   GDBM_FILE dbf = ((struct gsu_scalar_ext *)ht->tmpdata)->dbf;
 
   /* Iterate keys adding them to hash, so
@@ -594,7 +596,9 @@ scangdbmkeys(HashTable ht, ScanFunc func, int flags)
 
     /* Iterate - no problem as interfacing Param
      * will do at most only fetches, not stores */
+    prev_key = key;
     key = gdbm_nextkey(dbf, key);
+    free(prev_key.dptr);
   }
 
 }
