@@ -670,7 +670,7 @@ gdbmhashsetfn(Param pm, HashTable ht)
       /* Store */
       content.dptr = umval;
       content.dsize = umlen;
-      (void)gdbm_store(dbf, key, content, GDBM_REPLACE);	
+      (void)gdbm_store(dbf, key, content, GDBM_REPLACE);
 
       /* Free - unmetafy_zalloc allocates exact required
        * space, however unmetafied string can have zeros
