@@ -528,6 +528,10 @@ backend_scan_fun(HashNode hn, int unused)
 {
     BackendNode bn = (BackendNode)hn;
     DbBackendEntryPoint be = bn->main_entry;
+    if (!be) {
+        zwarn("Backend %s registered but uninitialized", hn->nam);
+        return;
+    }
     /* 0 - shell true value */
     if(0 == be(DB_IS_TIED, In_ParamName)) {
         Out_FoundBe = be;
