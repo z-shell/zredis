@@ -421,7 +421,7 @@ gdbmgetfn(Param pm)
    * - if we are writers, we for sure have newest copy of data
    * - if we are readers, we for sure have newest copy of data
    */
-  if ( pm->node.flags & PM_UPTODATE ) {
+  if (pm->node.flags & PM_UPTODATE && ((struct gsu_scalar_ext *)pm->gsu.s)->use_cache) {
     return pm->u.str ? pm->u.str : (char *) hcalloc(1);
   }
 
