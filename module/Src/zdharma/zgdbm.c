@@ -45,6 +45,7 @@
 #define DB_UNTIE 2
 #define DB_IS_TIED 3
 #define DB_GET_ADDRESS 4
+#define DB_CLEAR_CACHE 5
 /* }}} */
 /* DECLARATIONS {{{ */
 static Param createhash( char *name, int flags );
@@ -99,9 +100,7 @@ static const struct gsu_scalar_ext gdbm_gsu_ext =
 static const struct gsu_hash gdbm_hash_gsu =
   { hashgetfn, gdbmhashsetfn, gdbmhashunsetfn };
 
-static struct builtin bintab[] = {
-                                  BUILTIN("zgdbmclear", 0, bin_zgdbmclear, 2, -1, 0, "", NULL),
-};
+static struct builtin bintab[] = {};
 
 #define ROARRPARAMDEF(name, var)                                        \
   { name, PM_ARRAY | PM_READONLY, (void *) var, NULL,  NULL, NULL, NULL }
@@ -119,7 +118,7 @@ static int
 gdbm_main_entry(VA_ALIST1(int cmd))
   VA_DCL
 {
-  char *address = NULL, *pass = NULL, *pfile = NULL, *pmname = NULL;
+  char *address = NULL, *pass = NULL, *pfile = NULL, *pmname = NULL, *key = NULL;
   int rdonly = 0, zcache = 0, pprompt = 0, rountie = 0;
 
   va_list ap;
@@ -173,6 +172,15 @@ gdbm_main_entry(VA_ALIST1(int cmd))
      */
     pmname = va_arg(ap, char*);
     return zgdbmpath_cmd(pmname);
+
+  case DB_CLEAR_CACHE:
+    /* Order is:
+     * Parameter name, char *
+     * key name, char *
+     */
+    pmname = va_arg(ap, char*);
+    key = va_arg(ap, char*);
+    return zgdbmclear_cmd(pmname, key);
 
   default:
 #ifdef DEBUG
@@ -345,27 +353,27 @@ zgdbmpath_cmd(char *pmname)
 
 /**/
 static int
-bin_zgdbmclear(char *nam, char **args, Options ops, UNUSED(int func))
+zgdbmclear_cmd(char *pmname, char *key)
 {
   Param pm;
-  char *pmname, *key;
-
-  pmname = *args++;
-  key = *args;
 
   if (!pmname) {
-    zwarnnam(nam, "parameter name (whose path is to be written to $REPLY) is required");
+    zwarn("parameter name (whose read-cache is to be cleared) is required");
+    return 1;
+  }
+  if (!key) {
+    zwarn("hash-key (whose read-cache is to be cleared) is required");
     return 1;
   }
 
   pm = (Param) paramtab->getnode(paramtab, pmname);
   if(!pm) {
-    zwarnnam(nam, "no such parameter: %s", pmname);
+    zwarnnam("no such parameter: %s", pmname);
     return 1;
   }
 
   if (pm->gsu.h != &gdbm_hash_gsu) {
-    zwarnnam(nam, "not a tied gdbm parameter: %s", pmname);
+    zwarnnam("not a tied gdbm parameter: %s", pmname);
     return 1;
   }
 
@@ -717,7 +725,7 @@ gdbmhashunsetfn(Param pm, UNUSED(int exp))
 /* }}} */
 /* ARRAY: module_features {{{ */
 static struct features module_features = {
-                                          bintab, sizeof(bintab)/sizeof(*bintab),
+                                          NULL, 0,
                                           NULL, 0,
                                           NULL, 0,
                                           patab, sizeof(patab)/sizeof(*patab),

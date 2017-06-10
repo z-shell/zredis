@@ -28,6 +28,7 @@
 #define DB_UNTIE 2
 #define DB_IS_TIED 3
 #define DB_GET_ADDRESS 4
+#define DB_CLEAR_CACHE 5
 
 #define RESET         "\033[m"
 #define BOLD          "\033[1m"
@@ -57,6 +58,7 @@ static void set_length(char *buf, int size);
 static void ztie_usage();
 static void zuntie_usage();
 static void ztaddress_usage();
+static void ztclear_usage();
 
 static HashTable createhashtable(char *name);
 static void freebackendnode(HashNode hn);
@@ -87,6 +89,7 @@ static struct builtin bintab[] = {
                                   BUILTIN("ztie", 0, bin_ztie, 0, -1, 0, "hrlzf:d:a:p:P:", NULL),
                                   BUILTIN("zuntie", 0, bin_zuntie, 0, -1, 0, "uh", NULL),
                                   BUILTIN("ztaddress", 0, bin_ztaddress, 0, -1, 0, "h", NULL),
+                                  BUILTIN("ztclear", 0, bin_ztclear, 0, -1, 0, "h", NULL),
 };
 /* }}} */
 /* ARRAY: other {{{ */
@@ -279,7 +282,7 @@ bin_ztaddress(char *nam, char **args, Options ops, UNUSED(int func))
     }
 
     pmname = *args;
-    In_ParamName = *args;
+    In_ParamName = pmname;
     Out_FoundBe = NULL;
 
     scanhashtable(backends_hash, 0, 0, 0, backend_scan_fun, 0);
@@ -294,6 +297,43 @@ bin_ztaddress(char *nam, char **args, Options ops, UNUSED(int func))
     return ret;
 }
 /* }}} */
+/* FUNCTION: bin_ztclear {{{ */
+
+/**/
+static int
+bin_ztclear(char *nam, char **args, Options ops, UNUSED(int func))
+{
+    char *pmname, *key;
+    int ret = 0;
+
+    if (OPT_ISSET(ops,'h')) {
+        ztclear_usage();
+        return 0;
+    }
+
+    if (!*args) {
+        zwarnnam(nam, "One-to-two parameters' names are needed, see -h");
+        return 1;
+    }
+
+    pmname = *args;
+    key = *(args+1);
+
+    In_ParamName = pmname;
+    Out_FoundBe = NULL;
+
+    scanhashtable(backends_hash, 0, 0, 0, backend_scan_fun, 0);
+
+    if (!Out_FoundBe) {
+        zwarnnam(nam, "Didn't recognize `%s' as a tied parameter", pmname);
+        return 1;
+    }
+
+    ret = Out_FoundBe(DB_CLEAR_CACHE, pmname, key) ? 1 : ret;
+
+    return ret;
+}
+/* }}} */
 
 /* FUNCTION: ztaddress_usage {{{ */
 
@@ -302,6 +342,18 @@ ztaddress_usage()
 {
     fprintf(stdout, YELLOW "Usage:" RESET " ztaddress {tied-parameter-name}\n");
     fprintf(stdout, YELLOW "Description:" RESET " stores address used by given parameter to $REPLY\n");
+    fflush(stdout);
+}
+/* }}} */
+/* FUNCTION: ztclear_usage {{{ */
+
+static void
+ztclear_usage()
+{
+    fprintf(stdout, YELLOW "Usage:" RESET " ztclear {tied-parameter-name} [key name]\n");
+    fprintf(stdout, YELLOW "Description:" RESET " clears cache of given hash/key or of given plain\n");
+    fprintf(stdout, YELLOW "            " RESET " parameter: set (array), list (array), string (scalar);\n");
+    fprintf(stdout, YELLOW "            " RESET " pass `-z' to ztie to globally disable cache for parameter\n");
     fflush(stdout);
 }
 /* }}} */

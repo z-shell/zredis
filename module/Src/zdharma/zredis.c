@@ -32,6 +32,7 @@
 #define DB_UNTIE 2
 #define DB_IS_TIED 3
 #define DB_GET_ADDRESS 4
+#define DB_CLEAR_CACHE 5
 
 #define RESET         "\033[m"
 #define BOLD          "\033[1m"
@@ -80,7 +81,6 @@ static int connect(redisContext **rc, const char* password, const char *host, in
 static int type(redisContext **rc, const char *redis_host_port, const char *password, char *key, size_t key_len);
 static int is_tied(Param pm);
 static void zrzset_usage();
-static void zredisclear_usage();
 static void myfreeparamnode(HashNode hn);
 static int reconnect(redisContext **rc, const char *hostspec, const char *password);
 static int auth(redisContext **rc, const char *password);
@@ -173,7 +173,6 @@ static const struct gsu_array_ext arrlist_gsu_ext =
 /* }}} */
 /* ARRAY: builtin {{{ */
 static struct builtin bintab[] = {
-    BUILTIN("zredisclear", 0, bin_zredisclear, 0, 2, 0, "h", NULL),
     BUILTIN("zrzset", 0, bin_zrzset, 0, 1, 0, "h", NULL),
 };
 /* }}} */
@@ -194,7 +193,7 @@ static int
 redis_main_entry(VA_ALIST1(int cmd))
 VA_DCL
 {
-    char *address = NULL, *pass = NULL, *pfile = NULL, *pmname = NULL;
+    char *address = NULL, *pass = NULL, *pfile = NULL, *pmname = NULL, *key = NULL;
     int rdonly = 0, zcache = 0, pprompt = 0, rountie = 0;
 
     va_list ap;
@@ -248,6 +247,15 @@ VA_DCL
          */
         pmname = va_arg(ap, char *);
         return zredishost_cmd(pmname);
+
+    case DB_CLEAR_CACHE:
+        /* Order is:
+         * parameter name, char *
+         * key name, char *
+         */
+        pmname = va_arg(ap, char *);
+        key = va_arg(ap, char *);
+        return zredisclear_cmd(pmname, key);
 
     default:
 #ifdef DEBUG
@@ -689,33 +697,24 @@ zredishost_cmd(char *pmname)
 
 /**/
 static int
-bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
+zredisclear_cmd(char *pmname, char *key)
 {
     Param pm;
-    char *pmname, *key;
-
-    pmname = *args++;
-    key = *args;
-
-    if (OPT_ISSET(ops,'h')) {
-        zredisclear_usage();
-        return 0;
-    }
 
     if (!pmname) {
-        zwarnnam(nam, "parameter name (whose cache is to be cleared) is required, see -h");
+        zwarn("parameter name (whose cache is to be cleared) is required, see -h");
         return 1;
     }
 
     pm = (Param) paramtab->getnode(paramtab, pmname);
     if (!pm) {
-        zwarnnam(nam, "no such parameter: %s", pmname);
+        zwarn("no such parameter: %s", pmname);
         return 1;
     }
 
     if (pm->gsu.h == &redis_hash_gsu) {
         if (!key) {
-            zwarnnam(nam, "Key name, which is to be cache-cleared in hash `%s', is required", pmname);
+            zwarn("Key name, which is to be cache-cleared in hash `%s', is required", pmname);
             return 1;
         }
         HashTable ht = pm->u.hash;
@@ -727,14 +726,14 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
     } else if (pm->gsu.s->getfn == &redis_str_getfn) {
         pm->node.flags &= ~(PM_UPTODATE);
         if (key)
-            zwarnnam(nam, "Ignored argument `%s'", key);
+            zwarn("Ignored argument `%s'", key);
     } else if (pm->gsu.a->getfn == &redis_arrset_getfn) {
         pm->node.flags &= ~(PM_UPTODATE);
         if (key)
-            zwarnnam(nam, "Ignored argument `%s'", key);
+            zwarn("Ignored argument `%s'", key);
     } else if(pm->gsu.h == &hash_zset_gsu) {
         if (!key) {
-            zwarnnam(nam, "Key name, which is to be cache-cleared in hash/zset `%s', is required", pmname);
+            zwarn("Key name, which is to be cache-cleared in hash/zset `%s', is required", pmname);
             return 1;
         }
         HashTable ht = pm->u.hash;
@@ -745,7 +744,7 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
         }
     } else if(pm->gsu.h == &hash_hset_gsu) {
         if (!key) {
-            zwarnnam(nam, "Key name, which is to be cache-cleared in hash/hset `%s', is required", pmname);
+            zwarn("Key name, which is to be cache-cleared in hash/hset `%s', is required", pmname);
             return 1;
         }
         HashTable ht = pm->u.hash;
@@ -757,9 +756,9 @@ bin_zredisclear(char *nam, char **args, Options ops, UNUSED(int func))
     } else if (pm->gsu.a->getfn == &redis_arrlist_getfn) {
         pm->node.flags &= ~(PM_UPTODATE);
         if (key)
-            zwarnnam(nam, "Ignored argument `%s'", key);
+            zwarn("Ignored argument `%s'", key);
     } else {
-        zwarnnam(nam, "not a tied zredis parameter: %s", pmname);
+        zwarn("not a tied zredis parameter: %s", pmname);
         return 1;
     }
 
@@ -3511,18 +3510,6 @@ zrzset_usage()
 {
     fprintf(stdout, YELLOW "Usage:" RESET " zrzset {tied-param-name}\n");
     fprintf(stdout, YELLOW "Output:" RESET " $reply array, to hold elements of the sorted set\n");
-    fflush(stdout);
-}
-/* }}} */
-/* FUNCTION: zredisclear_usage {{{ */
-
-static void
-zredisclear_usage()
-{
-    fprintf(stdout, YELLOW "Usage:" RESET " zredisclear {tied-variable-name} [key name]\n");
-    fprintf(stdout, YELLOW "Description:" RESET " clears cache of given hash/key or of given plain\n");
-    fprintf(stdout, YELLOW "            " RESET " variable: set (array), list (array), string (scalar);\n");
-    fprintf(stdout, YELLOW "            " RESET " pass `-p' option to zrtie to disable cache for variable\n");
     fflush(stdout);
 }
 /* }}} */
