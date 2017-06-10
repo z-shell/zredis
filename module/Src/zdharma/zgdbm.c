@@ -266,6 +266,7 @@ zgtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
   struct gsu_scalar_ext *dbf_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
   dbf_carrier->std = gdbm_gsu_ext.std;
   dbf_carrier->dbf = dbf;
+  dbf_carrier->use_cache = 1;
   if (zcache) {
     dbf_carrier->use_cache = 0;
   }
@@ -421,7 +422,7 @@ gdbmgetfn(Param pm)
    * - if we are writers, we for sure have newest copy of data
    * - if we are readers, we for sure have newest copy of data
    */
-  if (pm->node.flags & PM_UPTODATE && ((struct gsu_scalar_ext *)pm->gsu.s)->use_cache) {
+  if ((pm->node.flags & PM_UPTODATE) && ((struct gsu_scalar_ext *)pm->gsu.s)->use_cache) {
     return pm->u.str ? pm->u.str : (char *) hcalloc(1);
   }
 
