@@ -57,6 +57,9 @@ static void set_length(char *buf, int size);
 static int is_tied_cmd(char *pmname);
 static int is_tied(Param pm);
 
+static int no_database_action = 0;
+/* }}} */
+
 /*
  * Make sure we have all the bits I'm using for memory mapping, otherwise
  * I don't know what I'm doing.
@@ -65,7 +68,6 @@ static int is_tied(Param pm);
 
 #include <gdbm.h>
 
-/* }}} */
 /* ARRAY: GSU {{{ */
 
 /*
@@ -491,7 +493,7 @@ gdbmsetfn(Param pm, char *val)
 
   /* Database */
   dbf = ((struct gsu_scalar_ext *)pm->gsu.s)->dbf;
-  if (dbf) {
+  if (dbf && no_database_action == 0) {
     int umlen = 0;
     char *umkey = unmetafy_zalloc(pm->node.nam,&umlen);
 
@@ -628,6 +630,10 @@ gdbmhashsetfn(Param pm, HashTable ht)
 
   /* just deleted everything, clean up */
   (void)gdbm_reorganize(dbf);
+
+  no_database_action = 1;
+  emptyhashtable(pm->u.hash);
+  no_database_action = 0;
 
   if (!ht)
     return;
