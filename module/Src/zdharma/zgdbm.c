@@ -755,7 +755,6 @@ static struct features module_features =
 int
 setup_(UNUSED(Module m))
 {
-    zsh_db_register_backend("db/gdbm", gdbm_main_entry);
     return 0;
 }
 /* }}} */
@@ -784,6 +783,7 @@ int
 boot_(UNUSED(Module m))
 {
     zgdbm_tied = zshcalloc((1) * sizeof(char *));
+    zsh_db_register_backend("db/gdbm", gdbm_main_entry);
     return 0;
 }
 /* }}} */
