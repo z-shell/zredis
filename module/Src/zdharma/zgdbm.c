@@ -649,7 +649,7 @@ gdbmhashsetfn(Param pm, HashTable ht)
     /* Put new strings into database, waiting
      * for their interfacing-Params to be created */
 
-    for (i = 0; i < ht->hsize; i++)
+    for (i = 0; i < ht->hsize; i++) {
         for (hn = ht->nodes[i]; hn; hn = hn->next) {
             struct value v;
 
@@ -685,6 +685,9 @@ gdbmhashsetfn(Param pm, HashTable ht)
 
             unqueue_signals();
         }
+    }
+    /* We reuse our hash, the input is to be deleted */
+    deleteparamtable(ht);
 }
 /* }}} */
 /* FUNCTION: gdbmuntie {{{*/

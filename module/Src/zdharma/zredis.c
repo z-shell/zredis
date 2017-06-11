@@ -1207,12 +1207,14 @@ redis_hash_setfn(Param pm, HashTable ht)
             if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry2;
             else
-                return;
+                break;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             zwarn("Aborting (no connection)");
-            return;
+            break;
         }
     }
+    /* We reuse our hash, the input is to be deleted */
+    deleteparamtable(ht);
 }
 /* }}} */
 /* FUNCTION: redis_hash_unsetfn {{{ */
@@ -2115,12 +2117,14 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
             if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry2;
             else
-                return;
+                break;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             zwarn("Aborting (no connection)");
-            return;
+            break;
         }
     }
+    /* We reuse our hash, the input is to be deleted */
+    deleteparamtable(ht);
 }
 /* }}} */
 /* FUNCTION: redis_hash_zset_unsetfn {{{ */
@@ -2715,12 +2719,14 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
             if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry2;
             else
-                return;
+                break;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             zwarn("Aborting (no connection)");
-            return;
+            break;
         }
     }
+    /* We reuse our hash, the input is to be deleted */
+    deleteparamtable(ht);
 }
 /* }}} */
 /* FUNCTION: redis_hash_hset_unsetfn {{{ */
