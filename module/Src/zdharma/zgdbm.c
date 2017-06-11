@@ -197,7 +197,7 @@ gdbm_main_entry(VA_ALIST1(int cmd))
     return 1;
 }
 /* }}} */
-/* FUNCTION: bin_ztie {{{ */
+/* FUNCTION: zgtie_cmd {{{ */
 
 /**/
 static int
