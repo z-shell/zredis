@@ -29,27 +29,6 @@
 #define DB_IS_TIED 3
 #define DB_GET_ADDRESS 4
 #define DB_CLEAR_CACHE 5
-
-#define RESET         "\033[m"
-#define BOLD          "\033[1m"
-#define RED           "\033[31m"
-#define GREEN         "\033[32m"
-#define YELLOW        "\033[33m"
-#define BLUE          "\033[34m"
-#define MAGENTA       "\033[35m"
-#define CYAN          "\033[36m"
-#define BOLD_RED      "\033[1;31m"
-#define BOLD_GREEN    "\033[1;32m"
-#define BOLD_YELLOW   "\033[1;33m"
-#define BOLD_BLUE     "\033[1;34m"
-#define BOLD_MAGENTA  "\033[1;35m"
-#define BOLD_CYAN     "\033[1;36m"
-#define BG_RED        "\033[41m"
-#define BG_GREEN      "\033[42m"
-#define BG_YELLOW     "\033[43m"
-#define BG_BLUE       "\033[44m"
-#define BG_MAGENTA    "\033[45m"
-#define BG_CYAN       "\033[46m"
 /* }}} */
 /* DECLARATIONS {{{ */
 static char *unmetafy_zalloc(const char *to_copy, int *new_len);
@@ -388,8 +367,8 @@ bin_ztclear(char *nam, char **args, Options ops, UNUSED(int func))
 static void
 ztaddress_usage()
 {
-    fprintf(stdout, YELLOW "Usage:" RESET " ztaddress {tied-parameter-name}\n");
-    fprintf(stdout, YELLOW "Description:" RESET " stores address used by given parameter to $REPLY\n");
+    fprintf(stdout, "Usage: ztaddress {tied-parameter-name}\n");
+    fprintf(stdout, "Description: stores address used by given parameter to $REPLY\n");
     fflush(stdout);
 }
 /* }}} */
@@ -398,10 +377,10 @@ ztaddress_usage()
 static void
 ztclear_usage()
 {
-    fprintf(stdout, YELLOW "Usage:" RESET " ztclear {tied-parameter-name} [key name]\n");
-    fprintf(stdout, YELLOW "Description:" RESET " clears cache of given hash/key or of given plain\n");
-    fprintf(stdout, YELLOW "            " RESET " parameter: set (array), list (array), string (scalar);\n");
-    fprintf(stdout, YELLOW "            " RESET " pass `-z' to ztie to globally disable cache for parameter\n");
+    fprintf(stdout, "Usage: ztclear {tied-parameter-name} [key name]\n");
+    fprintf(stdout, "Description: clears cache of given hash/key or of given plain\n");
+    fprintf(stdout, "             parameter: set (array), list (array), string (scalar);\n");
+    fprintf(stdout, "             pass `-z' to ztie to globally disable cache for parameter\n");
     fflush(stdout);
 }
 /* }}} */
@@ -677,16 +656,16 @@ backend_scan_fun(HashNode hn, int unused)
 static void
 ztie_usage()
 {
-    fprintf(stdout, YELLOW "Usage:" RESET " ztie -d db/... [-z] [-r] [-p password] [-P password_file] "
-            MAGENTA "-f/-a {db_address}" RESET " " RED "{parameter_name}" RESET "\n");
-    fprintf(stdout, YELLOW "Options:" RESET "\n");
-    fprintf(stdout, GREEN " -d" RESET ":       select database type: \"db/gdbm\", \"db/redis\"\n");
-    fprintf(stdout, GREEN " -z" RESET ":       zero-cache for read operations (always access database)\n");
-    fprintf(stdout, GREEN " -r" RESET ":       create read-only parameter\n" );
-    fprintf(stdout, GREEN " -f or -a" RESET ": database-address in format {host}[:port][/[db_idx][/key]] or a file path\n");
-    fprintf(stdout, GREEN " -p" RESET ":       database-password to be used for authentication\n");
-    fprintf(stdout, GREEN " -P" RESET ":       path to file with database-password\n");
-    fprintf(stdout, "The " RED "{parameter_name}" RESET " - choose name for the created database-bound parameter\n");
+    fprintf(stdout, "Usage: ztie -d db/... [-z] [-r] [-p password] [-P password_file] "
+            "-f/-a {db_address} {parameter_name}\n");
+    fprintf(stdout, "Options:\n");
+    fprintf(stdout, " -d:       select database type: \"db/gdbm\", \"db/redis\"\n");
+    fprintf(stdout, " -z:       zero-cache for read operations (always access database)\n");
+    fprintf(stdout, " -r:       create read-only parameter\n" );
+    fprintf(stdout, " -f or -a: database-address in format {host}[:port][/[db_idx][/key]] or a file path\n");
+    fprintf(stdout, " -p:       database-password to be used for authentication\n");
+    fprintf(stdout, " -P:       path to file with database-password\n");
+    fprintf(stdout, "The {parameter_name} - choose name for the created database-bound parameter\n");
     fflush(stdout);
 }
 /* }}} */
@@ -695,11 +674,11 @@ ztie_usage()
 static void
 zuntie_usage()
 {
-    fprintf(stdout, YELLOW "Usage:" RESET " zuntie [-u] {tied-variable-name} [tied-variable-name] ...\n");
-    fprintf(stdout, YELLOW "Options:" RESET "\n");
-    fprintf(stdout, GREEN " -u" RESET ": Allow to untie read-only parameter\n");
-    fprintf(stdout, YELLOW "Description:" RESET " detaches variable from its database and removes the variable;\n");
-    fprintf(stdout, YELLOW "            " RESET " database is not cleared (unlike when unset)\n");
+    fprintf(stdout, "Usage: zuntie [-u] {tied-variable-name} [tied-variable-name] ...\n");
+    fprintf(stdout, "Options:\n");
+    fprintf(stdout, " -u: Allow to untie read-only parameter\n");
+    fprintf(stdout, "Description: detaches variable from its database and removes the variable;\n");
+    fprintf(stdout, "             database is not cleared (unlike when unset)\n");
     fflush(stdout);
 }
 /* }}} */

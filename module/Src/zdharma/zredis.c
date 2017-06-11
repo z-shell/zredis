@@ -34,27 +34,7 @@
 #define DB_GET_ADDRESS 4
 #define DB_CLEAR_CACHE 5
 
-#define RESET         "\033[m"
-#define BOLD          "\033[1m"
-#define RED           "\033[31m"
-#define GREEN         "\033[32m"
-#define YELLOW        "\033[33m"
-#define BLUE          "\033[34m"
-#define MAGENTA       "\033[35m"
-#define CYAN          "\033[36m"
-#define BOLD_RED      "\033[1;31m"
-#define BOLD_GREEN    "\033[1;32m"
-#define BOLD_YELLOW   "\033[1;33m"
-#define BOLD_BLUE     "\033[1;34m"
-#define BOLD_MAGENTA  "\033[1;35m"
-#define BOLD_CYAN     "\033[1;36m"
-#define BG_RED        "\033[41m"
-#define BG_GREEN      "\033[42m"
-#define BG_YELLOW     "\033[43m"
-#define BG_BLUE       "\033[44m"
-#define BG_MAGENTA    "\033[45m"
-#define BG_CYAN       "\033[46m"
-
+/* Redis data types */
 #define RD_TYPE_UNKNOWN 0
 #define RD_TYPE_STRING 1
 #define RD_TYPE_LIST 2
@@ -3514,8 +3494,8 @@ is_tied(Param pm)
 static void
 zrzset_usage()
 {
-    fprintf(stdout, YELLOW "Usage:" RESET " zrzset {tied-param-name}\n");
-    fprintf(stdout, YELLOW "Output:" RESET " $reply array, to hold elements of the sorted set\n");
+    fprintf(stdout, "Usage: zrzset {tied-param-name}\n");
+    fprintf(stdout, "Output: $reply array, to hold elements of the sorted set\n");
     fflush(stdout);
 }
 /* }}} */
