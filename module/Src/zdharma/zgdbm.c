@@ -107,8 +107,6 @@ static const struct gsu_scalar_ext gdbm_gsu_ext =
 static const struct gsu_hash gdbm_hash_gsu =
     { hashgetfn, gdbmhashsetfn, gdbmhashunsetfn };
 
-static struct builtin bintab[] = {};
-
 #define ROARRPARAMDEF(name, var) \
     { name, PM_ARRAY | PM_READONLY, (void *) var, NULL,  NULL, NULL, NULL }
 
