@@ -361,12 +361,13 @@ ztclear_usage()
 /*************** MAIN CODE ***************/
 
 /* ARRAY features {{{ */
-static struct features module_features = {
-                                          bintab, sizeof(bintab)/sizeof(*bintab),
-                                          NULL, 0,
-                                          NULL, 0,
-                                          NULL, 0,
-                                          0
+static struct features module_features =
+{
+    bintab, sizeof(bintab)/sizeof(*bintab),
+    NULL, 0,
+    NULL, 0,
+    NULL, 0,
+    0
 };
 /* }}} */
 
