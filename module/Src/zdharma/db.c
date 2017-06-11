@@ -64,6 +64,9 @@ static HashTable createhashtable(char *name);
 static void freebackendnode(HashNode hn);
 static void backend_scan_fun(HashNode hn, int unused);
 
+static Param createhashparam(char *name, int flags);
+static void myfreeparamnode(HashNode hn);
+
 /* Type of provided (by backend module) entry-point */
 typedef int (*DbBackendEntryPoint)(VA_ALIST1(int cmd));
 
@@ -97,6 +100,47 @@ static struct builtin bintab[] = {
     { name, PM_ARRAY | PM_READONLY, (void *) var, NULL,  NULL, NULL, NULL }
 /* }}} */
 
+/* FUNCTION: update_user_hash {{{ */
+static void update_user_hash(char *id, int is_loading) {
+    Param pm = (Param) paramtab->getnode(paramtab, "zdb_backends");
+    if(!pm) {
+        zwarn("no such parameter: zdb_backends, internal error");
+        return;
+    }
+
+    /* Must be a special hash */
+    if (!(pm->node.flags & PM_HASHED) || !(pm->node.flags & PM_SPECIAL)) {
+        zwarn("zsh/db: Parameter zdb_backends is defined by user, will not update it");
+        return;
+    }
+
+    HashTable ht = pm->u.hash;
+    HashNode hn = gethashnode2(ht, id);
+    Param val_pm = (Param) hn;
+
+    if (val_pm) {
+        if (val_pm->u.str) {
+            zsfree(val_pm->u.str);
+            val_pm->u.str = NULL;
+        }
+        if (is_loading) {
+            val_pm->u.str = ztrdup("re-loaded");
+        } else {
+            val_pm->u.str = ztrdup("unloaded");
+        }
+    } else {
+        val_pm = (Param) zshcalloc(sizeof (*val_pm));
+        val_pm->node.flags = PM_SCALAR | PM_HASHELEM;
+        val_pm->gsu.s = &stdscalar_gsu;
+        if (is_loading) {
+            val_pm->u.str = ztrdup("loaded");
+        } else {
+            val_pm->u.str = ztrdup("unloaded");
+        }
+        addhashnode(ht, ztrdup(id), val_pm); // sets pm->node.nam
+    }
+}
+/* }}} */
 /* FUNCTION: zsh_db_register_backend {{{ */
 
 /**/
@@ -108,7 +152,10 @@ zsh_db_register_backend(char *id, void *entry_point) {
         addhashnode(backends_hash, ztrdup(id), (void *)bn);
     } else {
         zwarn("Out of memory when allocating backend entry");
+        return;
     }
+
+    update_user_hash(id, 1);
 }
 /* }}} */
 /* FUNCTION: zsh_db_unregister_backend {{{ */
@@ -120,6 +167,7 @@ zsh_db_unregister_backend(char *id) {
     if (bn) {
         freebackendnode(bn);
     }
+    update_user_hash(id, 0);
 }
 /* }}} */
 /* FUNCTION: bin_ztie {{{ */
@@ -377,11 +425,38 @@ static struct features module_features =
 int
 setup_(UNUSED(Module m))
 {
-    /* Create hash */
+    Param pm  = NULL;
+
+    /* Create private registration hash */
     if (!(backends_hash = createhashtable("ZSH_BACKENDS"))) {
         zwarn("Cannot create backend-register hash");
         return 1;
     }
+
+    /* Unset zdb_backends if it exists. Inherited from db_gdbm,
+     * it clears current scope, leaving any upper scope untouched,
+     * which can result in zdb_backends being local. Can be seen
+     * as a feature */
+    if ((pm = (Param)paramtab->getnode(paramtab, "zdb_backends")) && !(pm->node.flags & PM_UNSET)) {
+        pm->node.flags &= ~PM_READONLY;
+        if (unsetparam_pm(pm, 0, 1)) {
+            zwarn("Cannot properly manage scoping of variables");
+            return 1;
+        }
+    }
+
+    /* Create zdb_backends public hash that will hold state of backends */
+    pm = createhashparam("zdb_backends", PM_READONLY | PM_REMOVABLE);
+    if (NULL == pm) {
+        zwarn("Cannot create user backends-list hash parameter");
+        if (backends_hash) {
+            deletehashtable(backends_hash);
+            backends_hash = NULL;
+        }
+        return 1;
+    }
+    pm->gsu.h = &stdhash_gsu;
+
     return 0;
 }
 /* }}} */
@@ -515,12 +590,67 @@ createhashtable(char *name)
     return ht;
 }
 /* }}} */
+/* FUNCTION: createhashparam {{{ */
+static Param
+createhashparam(char *name, int flags)
+{
+    Param pm;
+    HashTable ht;
+
+    pm = createparam(name, flags | PM_SPECIAL | PM_HASHED);
+    if (!pm) {
+        return NULL;
+    }
+
+    if (pm->old)
+        pm->level = locallevel;
+
+    /* This creates standard hash. */
+    ht = pm->u.hash = newparamtable(7, name);
+    if (!pm->u.hash) {
+        paramtab->removenode(paramtab, name);
+        paramtab->freenode(&pm->node);
+        zwarnnam(name, "Out of memory when allocating user-visible hash of backends");
+        return NULL;
+    }
+
+    /* Does free Param (unsetfn is called) */
+    ht->freenode = myfreeparamnode;
+
+    return pm;
+}
+/* }}} */
 /* FUNCTION: freebackendnode {{{ */
 static void
 freebackendnode(HashNode hn)
 {
     zsfree(hn->nam);
     zfree(hn, sizeof(struct backend_node));
+}
+/* }}} */
+/* FUNCTION: myfreeparamnode {{{ */
+
+static void
+myfreeparamnode(HashNode hn)
+{
+    Param pm = (Param) hn;
+
+    /* Upstream: The second argument of unsetfn() is used by modules to
+     * differentiate "exp"licit unset from implicit unset, as when
+     * a parameter is going out of scope.  It's not clear which
+     * of these applies here, but passing 1 has always worked.
+     */
+
+    /* if (delunset) */
+    pm->gsu.s->unsetfn(pm, 1);
+
+    zsfree(pm->node.nam);
+    /* If this variable was tied by the user, ename was ztrdup'd */
+    if (pm->node.flags & PM_TIED && pm->ename) {
+        zsfree(pm->ename);
+        pm->ename = NULL;
+    }
+    zfree(pm, sizeof(struct param));
 }
 /* }}} */
 /* FUNCTION: backend_scan_fun {{{ */
