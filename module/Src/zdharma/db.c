@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 4 -*-
+/* -*- Mode: C; c-default-style: "linux"; c-basic-offset: 4; indent-tabs-mode: nil -*-
  * vim:sw=4:sts=4:et
  */
 
@@ -491,7 +491,7 @@ set_length(char *buf, int size)
     }
 }
 /* }}} */
-/* FUNCTION: createhash {{{ */
+/* FUNCTION: createhashtable {{{ */
 static HashTable
 createhashtable(char *name)
 {
