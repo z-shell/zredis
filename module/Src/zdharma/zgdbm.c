@@ -38,18 +38,12 @@
 #include "zgdbm.mdh"
 #include "zgdbm.pro"
 #include "db.epro"
+#include "db.h"
 
 /* MACROS {{{ */
 #ifndef PM_UPTODATE
 #define PM_UPTODATE     (1<<19) /* Parameter has up-to-date data (e.g. loaded from DB) */
 #endif
-
-/* Backend commands */
-#define DB_TIE 1
-#define DB_UNTIE 2
-#define DB_IS_TIED 3
-#define DB_GET_ADDRESS 4
-#define DB_CLEAR_CACHE 5
 /* }}} */
 /* DECLARATIONS {{{ */
 static Param createhash( char *name, int flags );
