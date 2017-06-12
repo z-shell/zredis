@@ -721,8 +721,8 @@ gdbmhashunsetfn(Param pm, UNUSED(int exp))
      * u.hash->tmpdata before hash gets deleted */
     struct gsu_scalar_ext * gsu_ext = pm->u.hash->tmpdata;
 
-    /* Uses normal unsetter. Will delete all owned
-     * parameters and also hashtable. */
+    /* Uses normal unsetter (because gdbmuntie is called above).
+     * Will delete all owned field-parameters and also hashtable. */
     pm->gsu.h->setfn(pm, NULL);
 
     /* Don't need custom GSU structure with its

@@ -1205,8 +1205,8 @@ redis_hash_unsetfn(Param pm, UNUSED(int exp))
      * u.hash->tmpdata before hash gets deleted */
     struct gsu_scalar_ext * gsu_ext = pm->u.hash->tmpdata;
 
-    /* Uses normal unsetter. Will delete all owned
-     * parameters and also hashtable. */
+    /* Uses normal unsetter (because gdbmuntie is called above).
+     * Will delete all owned field-parameters and also hashtable. */
     pm->gsu.h->setfn(pm, NULL);
 
     /* Don't need custom GSU structure with its
@@ -2115,8 +2115,8 @@ redis_hash_zset_unsetfn(Param pm, UNUSED(int exp))
      * u.hash->tmpdata before hash gets deleted */
     struct gsu_scalar_ext * gsu_ext = pm->u.hash->tmpdata;
 
-    /* Uses normal unsetter. Will delete all owned
-     * parameters and also hashtable. */
+    /* Uses normal unsetter (because gdbmuntie is called above).
+     * Will delete all owned field-parameters and also hashtable. */
     pm->gsu.h->setfn(pm, NULL);
 
     /* Don't need custom GSU structure with its
@@ -2717,8 +2717,8 @@ redis_hash_hset_unsetfn(Param pm, UNUSED(int exp))
      * u.hash->tmpdata before hash gets deleted */
     struct gsu_scalar_ext * gsu_ext = pm->u.hash->tmpdata;
 
-    /* Uses normal unsetter. Will delete all owned
-     * parameters and also hashtable. */
+    /* Uses normal unsetter (because gdbmuntie is called above).
+     * Will delete all owned field-parameters and also hashtable. */
     pm->gsu.h->setfn(pm, NULL);
 
     /* Don't need custom GSU structure with its
