@@ -65,7 +65,7 @@ fi
 # Finally load the module - if it has compiled
 if [[ -e "${ZREDIS_REPO_DIR}/module/Src/zdharma/zredis.so" ]]; then
     MODULE_PATH="${ZREDIS_REPO_DIR}/module/Src":"$MODULE_PATH"
-    zmodload -u zdharma/db 2>/dev/null
-    zmodload zdharma/db
+    #zmodload -u zdharma/db 2>/dev/null
+    zmodload -d zdharma/zredis zdharma/db
     zmodload zdharma/zredis
 fi
