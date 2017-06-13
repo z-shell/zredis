@@ -366,7 +366,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
         if (lazy) {
             tpe = type_from_string(lazy, strlen(lazy));
             tpe2 = type(&rc, address, pass, key, (size_t) strlen(key));
-            if (tpe != tpe2) {
+            if (tpe != tpe2 && tpe2 != DB_KEY_TYPE_NONE) {
                 zwarn("Key `%s' already exists and is of type: `%s', aborting",
                       key, (tpe2 >= 0 && tpe2 <= 8) ? type_names[tpe2] : "error");
                 redisFree(rc);
