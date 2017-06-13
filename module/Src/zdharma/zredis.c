@@ -348,6 +348,8 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
         rc_carrier->use_cache = 1;
         if (zcache)
             rc_carrier->use_cache = 0;
+        if (lazy)
+            rc_carrier->is_lazy = 1;
         rc_carrier->rc = rc;
 
         /* Fill also host:port// and password fields */
@@ -379,6 +381,8 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             rc_carrier->use_cache = 1;
             if (zcache)
                 rc_carrier->use_cache = 0;
+            if (lazy)
+                rc_carrier->is_lazy = 1;
             rc_carrier->rc = rc;
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
@@ -404,6 +408,8 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             rc_carrier->use_cache = 1;
             if (zcache)
                 rc_carrier->use_cache = 0;
+            if (lazy)
+                rc_carrier->is_lazy = 1;
             rc_carrier->rc = rc;
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
@@ -431,6 +437,8 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             rc_carrier->use_cache = 1;
             if (zcache)
                 rc_carrier->use_cache = 0;
+            if (lazy)
+                rc_carrier->is_lazy = 1;
             rc_carrier->rc = rc;
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
@@ -459,6 +467,8 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             rc_carrier->use_cache = 1;
             if (zcache)
                 rc_carrier->use_cache = 0;
+            if (lazy)
+                rc_carrier->is_lazy = 1;
             rc_carrier->rc = rc;
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
@@ -485,6 +495,8 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             rc_carrier->use_cache = 1;
             if (zcache)
                 rc_carrier->use_cache = 0;
+            if (lazy)
+                rc_carrier->is_lazy = 1;
             rc_carrier->rc = rc;
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);

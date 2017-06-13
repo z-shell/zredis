@@ -273,6 +273,9 @@ zgtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
     if (zcache) {
         dbf_carrier->use_cache = 0;
     }
+    if (lazy) {
+        dbf_carrier->is_lazy = 1;
+    }
     tied_param->u.hash->tmpdata = (void *)dbf_carrier;
 
     /* Fill also file path field */
