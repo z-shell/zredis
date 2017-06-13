@@ -18,8 +18,7 @@
 
 %test
 
- redis-cli -n 10 set key "" 2>/dev/null 1>&2
- ztie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 -L string string
  echo $string
  string=testdata
  zuntie string
@@ -32,8 +31,7 @@
 >testdata
 >0
 
- redis-cli -n 11 set key "" 2>/dev/null 1>&2
- ztie -d db/redis -f $db2 string
+ ztie -d db/redis -f $db2 -L string string
  echo $string
  string=testdata
  zuntie string
@@ -57,8 +55,7 @@
 >
 >0
 
- redis-cli -n 10 set key "" 2>/dev/null 1>&2
- ztie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 -L string string
  string=testdata
  zuntie string
  ztie -d db/redis -f $db1 string
@@ -70,13 +67,11 @@
  echo $zredis_tied ${#zredis_tied}
 0:store & remove key from database (the same variables)
 >testdata
->(eval):10: Key doesn't exist: `key', use -L {type} for lazy binding
+>(eval):9: Key doesn't exist: `key', use -L {type} for lazy binding
 >0
 
- redis-cli -n 10 set key "" 2>/dev/null 1>&2
- redis-cli -n 11 set key "" 2>/dev/null 1>&2
- ztie -d db/redis -f $db1 string
- ztie -d db/redis -f $db2 string2
+ ztie -d db/redis -f $db1 -L string string
+ ztie -d db/redis -f $db2 -L string string2
  string=testdata
  string2=$string
  zuntie string
@@ -147,11 +142,10 @@
 >from_start
 >Can connect: testdata
 
- redis-cli -n 11 set key "testdata2" 2>/dev/null 1>&2
  echo First $zredis_tied ${#zredis_tied}
- ztie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 -L string string
  echo $zredis_tied ${#zredis_tied}
- ztie -d db/redis -f $db2 string2
+ ztie -d db/redis -f $db2 -L string string2
  echo $zredis_tied ${#zredis_tied}
  zuntie string
  echo $zredis_tied ${#zredis_tied}
@@ -190,8 +184,8 @@
 >correct
 >correct
 
- ztie -d db/redis -f $db1 string
- ztie -d db/redis -f $db2 string2
+ ztie -d db/redis -f $db1 -L string string
+ ztie -d db/redis -f $db2 -L string string2
  string="漢字"
  echo $string
  zuntie string
