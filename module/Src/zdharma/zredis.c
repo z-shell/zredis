@@ -53,6 +53,7 @@ static void parse_host_string(const char *input, char *buffer, int size,
                                 char **host, int *port, int *db_index, char **key);
 static int connect(redisContext **rc, const char* password, const char *host, int port, int db_index, const char *address);
 static int type(redisContext **rc, const char *redis_host_port, const char *password, char *key, size_t key_len);
+static int type_from_string(const char *string, int len);
 static int is_tied(Param pm);
 static void zrzset_usage();
 static void myfreeparamnode(HashNode hn);
@@ -169,7 +170,7 @@ static int
 redis_main_entry(VA_ALIST1(int cmd))
 VA_DCL
 {
-    char *address = NULL, *pass = NULL, *pfile = NULL, *pmname = NULL, *key = NULL;
+    char *address = NULL, *pass = NULL, *pfile = NULL, *pmname = NULL, *key = NULL, *lazy = NULL;
     int rdonly = 0, zcache = 0, pprompt = 0, rountie = 0;
 
     va_list ap;
@@ -196,7 +197,8 @@ VA_DCL
         pfile = va_arg(ap, char *);
         pprompt = va_arg(ap, int);
         pmname = va_arg(ap, char *);
-        return zrtie_cmd(address, rdonly, zcache, pass, pfile, pprompt, pmname);
+        lazy = va_arg(ap, char *);
+        return zrtie_cmd(address, rdonly, zcache, pass, pfile, pprompt, pmname, lazy);
 
     case DB_UNTIE:
         /* Order is:
@@ -246,7 +248,7 @@ VA_DCL
 
 /**/
 static int
-zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pprompt, char *pmname)
+zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pprompt, char *pmname, char *lazy)
 {
     redisContext *rc = NULL;
     int pmflags = PM_REMOVABLE;
@@ -363,7 +365,12 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
         tied_param->u.hash->tmpdata = (void *)rc_carrier;
         tied_param->gsu.h = &redis_hash_gsu;
     } else {
-        int tpe = type(&rc, address, pass, key, (size_t) strlen(key));
+        int tpe;
+        if (lazy) {
+            tpe = type_from_string(lazy, strlen(lazy));
+        } else {
+            tpe = type(&rc, address, pass, key, (size_t) strlen(key));
+        }
         if (tpe == RD_TYPE_STRING) {
             if (!(tied_param = createparam(pmname, pmflags | PM_SPECIAL))) {
                 zwarn("cannot create the requested scalar parameter: %s", pmname);
@@ -3380,6 +3387,7 @@ static int
 type(redisContext **rc, const char *redis_host_port, const char *password, char *key, size_t key_len)
 {
     redisReply *reply = NULL;
+    int tpe;
 
     int retry = 0;
  retry:
@@ -3414,28 +3422,34 @@ type(redisContext **rc, const char *redis_host_port, const char *password, char 
             return RD_TYPE_UNKNOWN;
     }
 
+    /* Holds necessary strncmp() invocations */
+    tpe = type_from_string(reply->str, reply->len);
 
-    if (0 == strncmp("string", reply->str, reply->len)) {
-        freeReplyObject(reply);
+    freeReplyObject(reply);
+
+    return tpe;
+}
+/* }}} */
+/* FUNCTION: type_from_string {{{ */
+
+static int
+type_from_string(const char *string, int len)
+{
+    if (0 == strncmp("string", string, 7)) {
         return RD_TYPE_STRING;
     }
-    if (0 == strncmp("list", reply->str, reply->len)) {
-        freeReplyObject(reply);
+    if (0 == strncmp("list", string, 4)) {
         return RD_TYPE_LIST;
     }
-    if (0 == strncmp("set", reply->str, reply->len)) {
-        freeReplyObject(reply);
+    if (0 == strncmp("set", string, 3)) {
         return RD_TYPE_SET;
     }
-    if (0 == strncmp("zset", reply->str, reply->len)) {
-        freeReplyObject(reply);
+    if (0 == strncmp("zset", string, 4)) {
         return RD_TYPE_ZSET;
     }
-    if (0 == strncmp("hash", reply->str, reply->len)) {
-        freeReplyObject(reply);
+    if (0 == strncmp("hash", string, 4)) {
         return RD_TYPE_HASH;
     }
-    freeReplyObject(reply);
     return RD_TYPE_UNKNOWN;
 }
 /* }}} */
