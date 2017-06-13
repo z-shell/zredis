@@ -80,7 +80,7 @@ static int no_database_action = 0;
  * for strings.
  */
 struct gsu_scalar_ext {
-    struct gsu_scalar std;
+    struct gsu_scalar std; /* Size of three pointers */
     int type;
     int use_cache;
     int is_lazy;
@@ -93,7 +93,7 @@ struct gsu_scalar_ext {
 
 /* Used by sets */
 struct gsu_array_ext {
-    struct gsu_array std;
+    struct gsu_array std; /* Size of three pointers */
     int type;
     int use_cache;
     int is_lazy;

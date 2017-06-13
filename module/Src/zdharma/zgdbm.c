@@ -86,7 +86,7 @@ static int no_database_action = 0;
  */
 
 struct gsu_scalar_ext {
-    struct gsu_scalar std;
+    struct gsu_scalar std; /* Size of three pointers */
     int type;
     int use_cache;
     int is_lazy;
