@@ -89,22 +89,24 @@ static int no_database_action = 0;
 struct gsu_scalar_ext {
     struct gsu_scalar std;
     int use_cache;
-    redisContext *rc;
+    int is_lazy;
     char *redis_host_port;
     char *key;
     size_t key_len;
     char *password;
+    redisContext *rc;
 };
 
 /* Used by sets */
 struct gsu_array_ext {
     struct gsu_array std;
     int use_cache;
-    redisContext *rc;
+    int is_lazy;
     char *redis_host_port;
     char *key;
     size_t key_len;
     char *password;
+    redisContext *rc;
 };
 
 /* Source structure - will be copied to allocated one,
@@ -344,7 +346,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
          * gsu_scalar_ext allocation. */
 
         struct gsu_scalar_ext *rc_carrier = NULL;
-        rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
+        rc_carrier = (struct gsu_scalar_ext *) zshcalloc(sizeof(struct gsu_scalar_ext));
         rc_carrier->std = hashel_gsu_ext.std;
         rc_carrier->use_cache = 1;
         if (zcache)
@@ -369,7 +371,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 return 1;
             }
             struct gsu_scalar_ext *rc_carrier = NULL;
-            rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
+            rc_carrier = (struct gsu_scalar_ext *) zshcalloc(sizeof(struct gsu_scalar_ext));
             rc_carrier->std = string_gsu_ext.std;
             rc_carrier->use_cache = 1;
             if (zcache)
@@ -393,7 +395,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 return 1;
             }
             struct gsu_array_ext *rc_carrier = NULL;
-            rc_carrier = (struct gsu_array_ext *) zalloc(sizeof(struct gsu_array_ext));
+            rc_carrier = (struct gsu_array_ext *) zshcalloc(sizeof(struct gsu_array_ext));
             rc_carrier->std = arrset_gsu_ext.std;
             rc_carrier->use_cache = 1;
             if (zcache)
@@ -419,7 +421,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             }
 
             struct gsu_scalar_ext *rc_carrier = NULL;
-            rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
+            rc_carrier = (struct gsu_scalar_ext *) zshcalloc(sizeof(struct gsu_scalar_ext));
             rc_carrier->std = hashel_zset_gsu_ext.std;
             rc_carrier->use_cache = 1;
             if (zcache)
@@ -446,7 +448,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             }
 
             struct gsu_scalar_ext *rc_carrier = NULL;
-            rc_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
+            rc_carrier = (struct gsu_scalar_ext *) zshcalloc(sizeof(struct gsu_scalar_ext));
             rc_carrier->std = hashel_hset_gsu_ext.std;
             rc_carrier->use_cache = 1;
             if (zcache)
@@ -471,7 +473,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 return 1;
             }
             struct gsu_array_ext *rc_carrier = NULL;
-            rc_carrier = (struct gsu_array_ext *) zalloc(sizeof(struct gsu_array_ext));
+            rc_carrier = (struct gsu_array_ext *) zshcalloc(sizeof(struct gsu_array_ext));
             rc_carrier->std = arrlist_gsu_ext.std;
             rc_carrier->use_cache = 1;
             if (zcache)

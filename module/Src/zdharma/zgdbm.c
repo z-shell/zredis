@@ -87,9 +87,13 @@ static int no_database_action = 0;
 
 struct gsu_scalar_ext {
     struct gsu_scalar std;
-    GDBM_FILE dbf;
-    char *dbfile_path;
     int use_cache;
+    int is_lazy;
+    char *dbfile_path;
+    char *key;
+    size_t key_len;
+    char *password;
+    GDBM_FILE dbf; /* a pointer */
 };
 
 /* Source structure - will be copied to allocated one,
@@ -258,7 +262,7 @@ zgtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
      * dbf allocation is 1 to 1 accompanied by
      * gsu_scalar_ext allocation. */
 
-    struct gsu_scalar_ext *dbf_carrier = (struct gsu_scalar_ext *) zalloc(sizeof(struct gsu_scalar_ext));
+    struct gsu_scalar_ext *dbf_carrier = (struct gsu_scalar_ext *) zshcalloc(sizeof(struct gsu_scalar_ext));
     dbf_carrier->std = gdbm_gsu_ext.std;
     dbf_carrier->dbf = dbf;
     dbf_carrier->use_cache = 1;
