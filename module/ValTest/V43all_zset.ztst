@@ -13,8 +13,8 @@
  if ! zmodload $modname2 ; then
    ZTST_unimplemented="can't load $modname2 module for testing"
  fi
- redis-cli -n 10 flushdb
- redis-cli -n 11 flushdb
+ redis-cli -n 10 flushdb >&| /dev/null || ZTST_unimplemented="local redis database (with free indexes 10 and 11) not accessible"
+ redis-cli -n 11 flushdb >&| /dev/null || ZTST_unimplemented="local redis database (with free indexes 10 and 11) not accessible"
 
 %test
 
