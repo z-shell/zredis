@@ -17,10 +17,10 @@ field1 value1 fld2 val2
 field1 fld2
 % echo ${(v)hset}
 value1 val2
-% ztie -d db/redis -f "127.0.0.1/3/LIST" -L list list  % lazy binding, will create string-key on write
+% ztie -d db/redis -f "127.0.0.1/3/LIST" -L list list  % lazy binding, will create list-key on write
 % echo ${(t)list}
 array-special
-% list=( ${(k)hset} )
+% list=( ${(k)hset} )  % Copying hash keys into list
 % echo $list
 field1 fld2
 % redis-cli -n 3 lrange LIST 0 -1
