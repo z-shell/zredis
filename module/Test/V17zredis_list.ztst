@@ -57,8 +57,7 @@
 >
 >0
 
- redis-cli -n 10 rpush mylist first 2>/dev/null 1>&2
- ztie -d db/redis -f $db1 alist
+ ztie -d db/redis -f $db1 -L list alist
  alist=( testdata )
  zuntie alist
  ztie -d db/redis -f $db1 alist
@@ -70,7 +69,7 @@
  echo $zredis_tied ${#zredis_tied}
 0:store & remove key from database (the same variables)
 >testdata
->(eval):10: Key doesn't exist: `mylist', use -L {type} for lazy binding
+>(eval):9: Key doesn't exist: `mylist', use -L {type} for lazy binding
 >0
 
  redis-cli -n 10 rpush mylist first second 2>/dev/null 1>&2
@@ -148,11 +147,10 @@
 >from_start
 >Can connect: first second
 
- redis-cli -n 11 rpush mylist testdata2 2>/dev/null 1>&2
  echo First $zredis_tied ${#zredis_tied}
  ztie -d db/redis -f $db1 alist
  echo $zredis_tied ${#zredis_tied}
- ztie -d db/redis -f $db2 alist2
+ ztie -d db/redis -f $db2 -L list alist2
  echo $zredis_tied ${#zredis_tied}
  zuntie alist
  echo $zredis_tied ${#zredis_tied}
@@ -191,8 +189,8 @@
 >correct
 >correct
 
- ztie -d db/redis -f $db1 alist
- ztie -d db/redis -f $db2 alist2
+ ztie -d db/redis -f $db1 -L list alist
+ ztie -d db/redis -f $db2 -L list alist2
  alist=( "漢字" )
  echo $alist
  zuntie alist
