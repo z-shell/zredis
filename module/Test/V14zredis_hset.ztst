@@ -15,15 +15,13 @@
  fi
  redis-cli -n 10 flushdb >&| /dev/null || ZTST_unimplemented="local redis database (with free indexes 10 and 11) not accessible"
  redis-cli -n 11 flushdb >&| /dev/null || ZTST_unimplemented="local redis database (with free indexes 10 and 11) not accessible"
- redis-cli -n 10 hset myhset testkey test >&| /dev/null
- redis-cli -n 11 hset myhset testkey test >&| /dev/null
 
 %test
 
  (zmodload -u $modname2 && zmodload $modname2)
 0:unload and reload the module without crashing
 
- ztie -d db/redis -f $db1 dbase
+ ztie -d db/redis -f $db1 -L hash dbase
  dbase[testkey]=testdata
  zuntie dbase
  unset dbase
@@ -35,7 +33,7 @@
 >testdata
 >0
 
- ztie -d db/redis -f $db2 dbase
+ ztie -d db/redis -f $db2 -L hash dbase
  dbase[testkey]=testdata
  zuntie dbase
  unset dbase
