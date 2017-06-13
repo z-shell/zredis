@@ -23,7 +23,7 @@ TAGS
 /module/stamp-h
 /module/autom4te.cache
 
-Config/defs.mk
+module/Config/defs.mk
 
 CVS
 .#*
@@ -120,34 +120,39 @@ module/Src/Builtins/*.mdhs
 module/Src/Builtins/*.mdh.tmp
 module/Src/Builtins/rlimits.h
 
-module/Src/Modules/Makefile.in
-module/Src/Modules/*.export
-module/Src/Modules/so_locations
-module/Src/Modules/*.pro
-module/Src/Modules/*.epro
-module/Src/Modules/*.syms
-module/Src/Modules/*.mdh
-module/Src/Modules/*.mdhi
-module/Src/Modules/*.mdhs
-module/Src/Modules/*.mdh.tmp
-module/Src/Modules/errnames.c
-module/Src/Modules/errcount.h
-module/Src/Modules/curses_keys.h
+module/Src/zdharma/Makefile.in
+module/Src/zdharma/*.export
+module/Src/zdharma/so_locations
+module/Src/zdharma/*.pro
+module/Src/zdharma/*.epro
+module/Src/zdharma/*.syms
+module/Src/zdharma/*.mdh
+module/Src/zdharma/*.mdhi
+module/Src/zdharma/*.mdhs
+module/Src/zdharma/*.mdh.tmp
+module/Src/zdharma/errnames.c
+module/Src/zdharma/errcount.h
+module/Src/zdharma/curses_keys.h
 
-Src/Zle/Makefile.in
-Src/Zle/*.export
-Src/Zle/so_locations
-Src/Zle/*.pro
-Src/Zle/*.epro
-Src/Zle/*.syms
-Src/Zle/*.mdh
-Src/Zle/*.mdhi
-Src/Zle/*.mdhs
-Src/Zle/*.mdh.tmp
-Src/Zle/thingies.list
-Src/Zle/widgets.list
-Src/Zle/zle_things.h
-Src/Zle/zle_widget.h
+.ycm_extra_conf.py
+module/COMPILED_AT
 
-Test/*.tmp
+
+module/Src/Zle/Makefile.in
+module/Src/Zle/*.export
+module/Src/Zle/so_locations
+module/Src/Zle/*.pro
+module/Src/Zle/*.epro
+module/Src/Zle/*.syms
+module/Src/Zle/*.mdh
+module/Src/Zle/*.mdhi
+module/Src/Zle/*.mdhs
+module/Src/Zle/*.mdh.tmp
+module/Src/Zle/thingies.list
+module/Src/Zle/widgets.list
+module/Src/Zle/zle_things.h
+module/Src/Zle/zle_widget.h
+
+module/Test/*.tmp
 /.project
+module/ValTest/test_type
