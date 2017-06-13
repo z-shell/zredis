@@ -57,8 +57,7 @@
 >
 >0
 
- redis-cli -n 10 sadd myset first 2>/dev/null 1>&2
- ztie -d db/redis -f $db1 aset
+ ztie -d db/redis -f $db1 -L set aset
  aset=( testdata )
  zuntie aset
  ztie -d db/redis -f $db1 aset
@@ -70,7 +69,7 @@
  echo $zredis_tied ${#zredis_tied}
 0:store & remove key from database (the same variables)
 >testdata
->(eval):10: Key doesn't exist: `myset', use -L {type} for lazy binding
+>(eval):9: Key doesn't exist: `myset', use -L {type} for lazy binding
 >0
 
  redis-cli -n 10 sadd myset first second 2>/dev/null 1>&2
