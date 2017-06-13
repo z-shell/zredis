@@ -362,9 +362,16 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
         tied_param->u.hash->tmpdata = (void *)rc_carrier;
         tied_param->gsu.h = &redis_hash_gsu;
     } else {
-        int tpe;
+        int tpe, tpe2;
         if (lazy) {
             tpe = type_from_string(lazy, strlen(lazy));
+            tpe2 = type(&rc, address, pass, key, (size_t) strlen(key));
+            if (tpe != tpe2) {
+                zwarn("Key `%s' already exists and is of type: `%s', aborting",
+                      key, (tpe2 >= 0 && tpe2 <= 8) ? type_names[tpe2] : "error");
+                redisFree(rc);
+                return 1;
+            }
         } else {
             tpe = type(&rc, address, pass, key, (size_t) strlen(key));
         }
