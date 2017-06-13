@@ -27,20 +27,12 @@
 #ifndef PM_UPTODATE
 #define PM_UPTODATE     (1<<19) /* Parameter has up-to-date data (e.g. loaded from DB) */
 #endif
-
-/* Redis data types */
-#define RD_TYPE_UNKNOWN 0
-#define RD_TYPE_STRING 1
-#define RD_TYPE_LIST 2
-#define RD_TYPE_SET 3
-#define RD_TYPE_ZSET 4
-#define RD_TYPE_HASH 5
 /* }}} */
 
 #if defined(HAVE_HIREDIS_HIREDIS_H) && defined(HAVE_REDISCONNECT)
 
 /* DECLARATIONS {{{ */
-static char *type_names[7] = { "invalid", "string", "list", "set", "sorted-set", "hash", "error" };
+static char *type_names[10] = { "none", "invalid", "no-key (main hash)", "string", "list", "set", "sorted-set", "hash", "error", NULL };
 
 #include <hiredis/hiredis.h>
 
@@ -89,6 +81,7 @@ static int no_database_action = 0;
  */
 struct gsu_scalar_ext {
     struct gsu_scalar std;
+    int type;
     int use_cache;
     int is_lazy;
     char *redis_host_port;
@@ -101,6 +94,7 @@ struct gsu_scalar_ext {
 /* Used by sets */
 struct gsu_array_ext {
     struct gsu_array std;
+    int type;
     int use_cache;
     int is_lazy;
     char *redis_host_port;
@@ -350,6 +344,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
         struct gsu_scalar_ext *rc_carrier = NULL;
         rc_carrier = (struct gsu_scalar_ext *) zshcalloc(sizeof(struct gsu_scalar_ext));
         rc_carrier->std = hashel_gsu_ext.std;
+        rc_carrier->type = DB_KEY_TYPE_NO_KEY;
         rc_carrier->use_cache = 1;
         if (zcache)
             rc_carrier->use_cache = 0;
@@ -371,7 +366,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
         } else {
             tpe = type(&rc, address, pass, key, (size_t) strlen(key));
         }
-        if (tpe == RD_TYPE_STRING) {
+        if (tpe == DB_KEY_TYPE_STRING) {
             if (!(tied_param = createparam(pmname, pmflags | PM_SPECIAL))) {
                 zwarn("cannot create the requested scalar parameter: %s", pmname);
                 redisFree(rc);
@@ -380,6 +375,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             struct gsu_scalar_ext *rc_carrier = NULL;
             rc_carrier = (struct gsu_scalar_ext *) zshcalloc(sizeof(struct gsu_scalar_ext));
             rc_carrier->std = string_gsu_ext.std;
+            rc_carrier->type = DB_KEY_TYPE_STRING;
             rc_carrier->use_cache = 1;
             if (zcache)
                 rc_carrier->use_cache = 0;
@@ -395,7 +391,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 rc_carrier->password = NULL;
 
             tied_param->gsu.s = (GsuScalar) rc_carrier;
-        } else if (tpe == RD_TYPE_SET) {
+        } else if (tpe == DB_KEY_TYPE_SET) {
             if (!(tied_param = createparam(pmname, pmflags | PM_ARRAY | PM_SPECIAL))) {
                 zwarn("cannot create the requested array (for set) parameter: %s", pmname);
                 redisFree(rc);
@@ -404,6 +400,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             struct gsu_array_ext *rc_carrier = NULL;
             rc_carrier = (struct gsu_array_ext *) zshcalloc(sizeof(struct gsu_array_ext));
             rc_carrier->std = arrset_gsu_ext.std;
+            rc_carrier->type = DB_KEY_TYPE_SET;
             rc_carrier->use_cache = 1;
             if (zcache)
                 rc_carrier->use_cache = 0;
@@ -419,7 +416,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 rc_carrier->password = NULL;
 
             tied_param->gsu.s = (GsuScalar) rc_carrier;
-        } else if (tpe == RD_TYPE_ZSET) {
+        } else if (tpe == DB_KEY_TYPE_ZSET) {
             /* Create hash */
             if (!(tied_param = createhash(pmname, pmflags, 1))) {
                 zwarn("cannot create the requested hash (for zset) parameter: %s", pmname);
@@ -430,6 +427,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             struct gsu_scalar_ext *rc_carrier = NULL;
             rc_carrier = (struct gsu_scalar_ext *) zshcalloc(sizeof(struct gsu_scalar_ext));
             rc_carrier->std = hashel_zset_gsu_ext.std;
+            rc_carrier->type = DB_KEY_TYPE_ZSET;
             rc_carrier->use_cache = 1;
             if (zcache)
                 rc_carrier->use_cache = 0;
@@ -446,7 +444,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
 
             tied_param->u.hash->tmpdata = (void *)rc_carrier;
             tied_param->gsu.h = &hash_zset_gsu;
-        } else if (tpe == RD_TYPE_HASH) {
+        } else if (tpe == DB_KEY_TYPE_HASH) {
             /* Create hash */
             if (!(tied_param = createhash(pmname, pmflags, 2))) {
                 zwarn("cannot create the requested hash (for hset) parameter: %s", pmname);
@@ -457,6 +455,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             struct gsu_scalar_ext *rc_carrier = NULL;
             rc_carrier = (struct gsu_scalar_ext *) zshcalloc(sizeof(struct gsu_scalar_ext));
             rc_carrier->std = hashel_hset_gsu_ext.std;
+            rc_carrier->type = DB_KEY_TYPE_HASH;
             rc_carrier->use_cache = 1;
             if (zcache)
                 rc_carrier->use_cache = 0;
@@ -473,7 +472,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
 
             tied_param->u.hash->tmpdata = (void *)rc_carrier;
             tied_param->gsu.h = &hash_hset_gsu;
-        } else if (tpe == RD_TYPE_LIST) {
+        } else if (tpe == DB_KEY_TYPE_LIST) {
             if (!(tied_param = createparam(pmname, pmflags | PM_ARRAY | PM_SPECIAL))) {
                 zwarn("cannot create the requested array (for list) parameter: %s", pmname);
                 redisFree(rc);
@@ -482,6 +481,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             struct gsu_array_ext *rc_carrier = NULL;
             rc_carrier = (struct gsu_array_ext *) zshcalloc(sizeof(struct gsu_array_ext));
             rc_carrier->std = arrlist_gsu_ext.std;
+            rc_carrier->type = DB_KEY_TYPE_LIST;
             rc_carrier->use_cache = 1;
             if (zcache)
                 rc_carrier->use_cache = 0;
@@ -499,7 +499,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             tied_param->gsu.s = (GsuScalar) rc_carrier;
         } else {
             redisFree(rc);
-            zwarn("Unknown key type: %s", type_names[tpe]);
+            zwarn("Unknown key type: %s", (tpe >= 0 && tpe <= 8) ? type_names[tpe] : "error");
             return 1;
         }
     }
@@ -1032,7 +1032,7 @@ scan_keys(HashTable ht, ScanFunc func, int flags)
             key_len = entry->len;
 
             /* Only scan string keys, ignore the rest (hashes, sets, etc.) */
-            if (RD_TYPE_STRING != type(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password, key, (size_t) key_len)) {
+            if (DB_KEY_TYPE_STRING != type(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password, key, (size_t) key_len)) {
                 rc = gsu_ext->rc;
                 continue;
             }
@@ -1099,7 +1099,7 @@ redis_hash_setfn(Param pm, HashTable ht)
         key_len = entry->len;
 
         /* Only scan string keys, ignore the rest (hashes, sets, etc.) */
-        if (RD_TYPE_STRING != type(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password, key, (size_t) key_len)) {
+        if (DB_KEY_TYPE_STRING != type(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password, key, (size_t) key_len)) {
             rc = gsu_ext->rc;
             continue;
         }
@@ -3392,7 +3392,7 @@ type(redisContext **rc, const char *redis_host_port, const char *password, char 
     int retry = 0;
  retry:
     if (!*rc) {
-        return RD_TYPE_UNKNOWN;
+        return DB_KEY_TYPE_UNKNOWN;
     }
 
     reply = redisCommand(*rc, "TYPE %b", key, (size_t) key_len);
@@ -3404,7 +3404,7 @@ type(redisContext **rc, const char *redis_host_port, const char *password, char 
         if ((*rc)->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
             goto do_retry;
         } else {
-            return RD_TYPE_UNKNOWN;
+            return DB_KEY_TYPE_UNKNOWN;
         }
     }
 
@@ -3413,13 +3413,13 @@ type(redisContext **rc, const char *redis_host_port, const char *password, char 
     if ((*rc)->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
         if (retry) {
             zwarn("Aborting (no connection)");
-            return RD_TYPE_UNKNOWN;
+            return DB_KEY_TYPE_UNKNOWN;
         }
         retry = 1;
         if(reconnect(rc, redis_host_port, password))
             goto retry;
         else
-            return RD_TYPE_UNKNOWN;
+            return DB_KEY_TYPE_UNKNOWN;
     }
 
     /* Holds necessary strncmp() invocations */
@@ -3436,21 +3436,21 @@ static int
 type_from_string(const char *string, int len)
 {
     if (0 == strncmp("string", string, 7)) {
-        return RD_TYPE_STRING;
+        return DB_KEY_TYPE_STRING;
     }
     if (0 == strncmp("list", string, 4)) {
-        return RD_TYPE_LIST;
+        return DB_KEY_TYPE_LIST;
     }
     if (0 == strncmp("set", string, 3)) {
-        return RD_TYPE_SET;
+        return DB_KEY_TYPE_SET;
     }
     if (0 == strncmp("zset", string, 4)) {
-        return RD_TYPE_ZSET;
+        return DB_KEY_TYPE_ZSET;
     }
     if (0 == strncmp("hash", string, 4)) {
-        return RD_TYPE_HASH;
+        return DB_KEY_TYPE_HASH;
     }
-    return RD_TYPE_UNKNOWN;
+    return DB_KEY_TYPE_UNKNOWN;
 }
 /* }}} */
 /* FUNCTION: auth {{{ */
