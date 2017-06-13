@@ -497,6 +497,14 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 rc_carrier->password = NULL;
 
             tied_param->gsu.s = (GsuScalar) rc_carrier;
+        } else if (tpe == DB_KEY_TYPE_NONE) {
+            redisFree(rc);
+            if (lazy) {
+                zwarn("`none' disallowed as key-type, aborting");
+            } else {
+                zwarn("Key doesn't exist: `%s', use -L {type} for lazy binding", key);
+            }
+            return 1;
         } else {
             redisFree(rc);
             zwarn("Unknown key type: %s", (tpe >= 0 && tpe <= 8) ? type_names[tpe] : "error");
@@ -3449,6 +3457,9 @@ type_from_string(const char *string, int len)
     }
     if (0 == strncmp("hash", string, 4)) {
         return DB_KEY_TYPE_HASH;
+    }
+    if (0 == strncmp("none", string, 4)) {
+        return DB_KEY_TYPE_NONE;
     }
     return DB_KEY_TYPE_UNKNOWN;
 }
