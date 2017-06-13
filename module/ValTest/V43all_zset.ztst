@@ -14,16 +14,14 @@
    ZTST_unimplemented="can't load $modname2 module for testing"
  fi
  redis-cli -n 10 flushdb
- redis-cli -n 10 zadd myzset 0.0 testkey
  redis-cli -n 11 flushdb
- redis-cli -n 11 zadd myzset 0.0 testkey
 
 %test
 
  (zmodload -u $modname2 && zmodload $modname2)
 0:unload and reload the module without crashing
 
- ztie -d db/redis -f $db1 dbase
+ ztie -d db/redis -f $db1 -L zset dbase
  dbase[testkey]=1.0
  zuntie dbase
  unset dbase
@@ -35,7 +33,7 @@
 >1
 >0
 
- ztie -d db/redis -f $db2 dbase
+ ztie -d db/redis -f $db2 -L zset dbase
  dbase[testkey]=1.0
  zuntie dbase
  unset dbase
