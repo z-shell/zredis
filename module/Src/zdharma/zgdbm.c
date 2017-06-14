@@ -94,6 +94,7 @@ struct gsu_scalar_ext {
     char *key;
     size_t key_len;
     char *password;
+    int fdesc;
     GDBM_FILE dbf; /* a pointer */
 };
 
@@ -251,13 +252,9 @@ zgtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
 
     if (!(tied_param = createhash(pmname, pmflags))) {
         zwarn("cannot create the requested parameter %s", pmname);
-        fdtable[gdbm_fdesc(dbf)] = FDT_UNUSED;
         gdbm_close(dbf);
         return 1;
     }
-
-    addmodulefd(gdbm_fdesc(dbf), FDT_MODULE);
-    append_tied_name(pmname);
 
     tied_param->gsu.h = &gdbm_hash_gsu;
 
@@ -268,6 +265,7 @@ zgtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
     struct gsu_scalar_ext *dbf_carrier = (struct gsu_scalar_ext *) zshcalloc(sizeof(struct gsu_scalar_ext));
     dbf_carrier->std = gdbm_gsu_ext.std;
     dbf_carrier->type = DB_KEY_TYPE_NO_KEY;
+    dbf_carrier->fdesc = gdbm_fdesc(dbf);
     dbf_carrier->dbf = dbf;
     dbf_carrier->use_cache = 1;
     if (zcache) {
@@ -285,6 +283,10 @@ zgtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
         address = xsymlink(address, 1);
     }
     dbf_carrier->dbfile_path = ztrdup(address);
+
+    addmodulefd(dbf_carrier->fdesc, FDT_INTERNAL);
+    append_tied_name(pmname);
+
     return 0;
 }
 /* }}} */
@@ -696,11 +698,12 @@ gdbmhashsetfn(Param pm, HashTable ht)
 static void
 gdbmuntie(Param pm)
 {
-    GDBM_FILE dbf = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->dbf;
+    struct gsu_scalar_ext *gsu_ext = (struct gsu_scalar_ext *)pm->u.hash->tmpdata;
+    GDBM_FILE dbf = gsu_ext->dbf;
     HashTable ht = pm->u.hash;
 
     if (dbf) { /* paranoia */
-        fdtable[gdbm_fdesc(dbf)] = FDT_UNUSED;
+        fdtable[gsu_ext->fdesc] = FDT_UNUSED;
         gdbm_close(dbf);
 
         /* Let hash fields know there's no backend */

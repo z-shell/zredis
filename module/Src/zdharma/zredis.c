@@ -44,12 +44,12 @@ static void set_length(char *buf, int size);
 static void parse_host_string(const char *input, char *buffer, int size,
                                 char **host, int *port, int *db_index, char **key);
 static int connect(redisContext **rc, const char* password, const char *host, int port, int db_index, const char *address);
-static int type(redisContext **rc, const char *redis_host_port, const char *password, char *key, size_t key_len);
+static int type(redisContext **rc, int *fdesc, const char *redis_host_port, const char *password, char *key, size_t key_len);
 static int type_from_string(const char *string, int len);
 static int is_tied(Param pm);
 static void zrzset_usage();
 static void myfreeparamnode(HashNode hn);
-static int reconnect(redisContext **rc, const char *hostspec, const char *password);
+static int reconnect(redisContext **rc, int *fdesc, const char *hostspec, const char *password);
 static int auth(redisContext **rc, const char *password);
 static int is_tied_cmd(char *pmname);
 
@@ -88,6 +88,7 @@ struct gsu_scalar_ext {
     char *key;
     size_t key_len;
     char *password;
+    int fdesc;
     redisContext *rc;
 };
 
@@ -101,6 +102,7 @@ struct gsu_array_ext {
     char *key;
     size_t key_len;
     char *password;
+    int fdesc;
     redisContext *rc;
 };
 
@@ -346,11 +348,14 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
         rc_carrier->std = hashel_gsu_ext.std;
         rc_carrier->type = DB_KEY_TYPE_NO_KEY;
         rc_carrier->use_cache = 1;
+
         if (zcache)
             rc_carrier->use_cache = 0;
         if (lazy)
             rc_carrier->is_lazy = 1;
+
         rc_carrier->rc = rc;
+        rc_carrier->fdesc = rc->fd;
 
         /* Fill also host:port// and password fields */
         rc_carrier->redis_host_port = ztrdup(address);
@@ -361,11 +366,12 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
 
         tied_param->u.hash->tmpdata = (void *)rc_carrier;
         tied_param->gsu.h = &redis_hash_gsu;
+        addmodulefd(rc_carrier->fdesc, FDT_INTERNAL);
     } else {
-        int tpe, tpe2;
+        int tpe, tpe2, dummy_fd = 0;
         if (lazy) {
             tpe = type_from_string(lazy, strlen(lazy));
-            tpe2 = type(&rc, address, pass, key, (size_t) strlen(key));
+            tpe2 = type(&rc, &dummy_fd, address, pass, key, (size_t) strlen(key));
             if (tpe != tpe2 && tpe2 != DB_KEY_TYPE_NONE) {
                 zwarn("Key `%s' already exists and is of type: `%s', aborting",
                       key, (tpe2 >= 0 && tpe2 <= 8) ? type_names[tpe2] : "error");
@@ -373,7 +379,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 return 1;
             }
         } else {
-            tpe = type(&rc, address, pass, key, (size_t) strlen(key));
+            tpe = type(&rc, &dummy_fd, address, pass, key, (size_t) strlen(key));
         }
         if (tpe == DB_KEY_TYPE_STRING) {
             if (!(tied_param = createparam(pmname, pmflags | PM_SPECIAL))) {
@@ -386,11 +392,15 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             rc_carrier->std = string_gsu_ext.std;
             rc_carrier->type = DB_KEY_TYPE_STRING;
             rc_carrier->use_cache = 1;
+
             if (zcache)
                 rc_carrier->use_cache = 0;
             if (lazy)
                 rc_carrier->is_lazy = 1;
+
             rc_carrier->rc = rc;
+            rc_carrier->fdesc = rc->fd;
+
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
 
@@ -402,6 +412,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 rc_carrier->password = NULL;
 
             tied_param->gsu.s = (GsuScalar) rc_carrier;
+            addmodulefd(rc_carrier->fdesc, FDT_INTERNAL);
         } else if (tpe == DB_KEY_TYPE_SET) {
             if (!(tied_param = createparam(pmname, pmflags | PM_ARRAY | PM_SPECIAL))) {
                 zwarn("cannot create the requested array (for set) parameter: %s", pmname);
@@ -413,11 +424,15 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             rc_carrier->std = arrset_gsu_ext.std;
             rc_carrier->type = DB_KEY_TYPE_SET;
             rc_carrier->use_cache = 1;
+
             if (zcache)
                 rc_carrier->use_cache = 0;
             if (lazy)
                 rc_carrier->is_lazy = 1;
+
             rc_carrier->rc = rc;
+            rc_carrier->fdesc = rc->fd;
+
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
 
@@ -429,6 +444,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 rc_carrier->password = NULL;
 
             tied_param->gsu.s = (GsuScalar) rc_carrier;
+            addmodulefd(rc_carrier->fdesc, FDT_INTERNAL);
         } else if (tpe == DB_KEY_TYPE_ZSET) {
             /* Create hash */
             if (!(tied_param = createhash(pmname, pmflags, 1))) {
@@ -442,11 +458,15 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             rc_carrier->std = hashel_zset_gsu_ext.std;
             rc_carrier->type = DB_KEY_TYPE_ZSET;
             rc_carrier->use_cache = 1;
+
             if (zcache)
                 rc_carrier->use_cache = 0;
             if (lazy)
                 rc_carrier->is_lazy = 1;
+
             rc_carrier->rc = rc;
+            rc_carrier->fdesc = rc->fd;
+
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
 
@@ -459,6 +479,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
 
             tied_param->u.hash->tmpdata = (void *)rc_carrier;
             tied_param->gsu.h = &hash_zset_gsu;
+            addmodulefd(rc_carrier->fdesc, FDT_INTERNAL);
         } else if (tpe == DB_KEY_TYPE_HASH) {
             /* Create hash */
             if (!(tied_param = createhash(pmname, pmflags, 2))) {
@@ -472,11 +493,15 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             rc_carrier->std = hashel_hset_gsu_ext.std;
             rc_carrier->type = DB_KEY_TYPE_HASH;
             rc_carrier->use_cache = 1;
+
             if (zcache)
                 rc_carrier->use_cache = 0;
             if (lazy)
                 rc_carrier->is_lazy = 1;
+
             rc_carrier->rc = rc;
+            rc_carrier->fdesc = rc->fd;
+
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
 
@@ -489,6 +514,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
 
             tied_param->u.hash->tmpdata = (void *)rc_carrier;
             tied_param->gsu.h = &hash_hset_gsu;
+            addmodulefd(rc_carrier->fdesc, FDT_INTERNAL);
         } else if (tpe == DB_KEY_TYPE_LIST) {
             if (!(tied_param = createparam(pmname, pmflags | PM_ARRAY | PM_SPECIAL))) {
                 zwarn("cannot create the requested array (for list) parameter: %s", pmname);
@@ -500,11 +526,15 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             rc_carrier->std = arrlist_gsu_ext.std;
             rc_carrier->type = DB_KEY_TYPE_LIST;
             rc_carrier->use_cache = 1;
+
             if (zcache)
                 rc_carrier->use_cache = 0;
             if (lazy)
                 rc_carrier->is_lazy = 1;
+
             rc_carrier->rc = rc;
+            rc_carrier->fdesc = rc->fd;
+
             rc_carrier->key = ztrdup(key);
             rc_carrier->key_len = strlen(key);
 
@@ -516,6 +546,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 rc_carrier->password = NULL;
 
             tied_param->gsu.s = (GsuScalar) rc_carrier;
+            addmodulefd(rc_carrier->fdesc, FDT_INTERNAL);
         } else if (tpe == DB_KEY_TYPE_NONE) {
             redisFree(rc);
             if (lazy) {
@@ -855,7 +886,7 @@ redis_getfn(Param pm)
 
         if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             zwarn("Aborting (no connection)");
@@ -937,7 +968,7 @@ redis_setfn(Param pm, char *val)
 
         if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             zwarn("Aborting (no connection)");
@@ -1025,7 +1056,7 @@ scan_keys(HashTable ht, ScanFunc func, int flags)
                 return;
             }
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry;
             else
                 return;
@@ -1057,7 +1088,7 @@ scan_keys(HashTable ht, ScanFunc func, int flags)
             key_len = entry->len;
 
             /* Only scan string keys, ignore the rest (hashes, sets, etc.) */
-            if (DB_KEY_TYPE_STRING != type(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password, key, (size_t) key_len)) {
+            if (DB_KEY_TYPE_STRING != type(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password, key, (size_t) key_len)) {
                 rc = gsu_ext->rc;
                 continue;
             }
@@ -1124,7 +1155,7 @@ redis_hash_setfn(Param pm, HashTable ht)
         key_len = entry->len;
 
         /* Only scan string keys, ignore the rest (hashes, sets, etc.) */
-        if (DB_KEY_TYPE_STRING != type(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password, key, (size_t) key_len)) {
+        if (DB_KEY_TYPE_STRING != type(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password, key, (size_t) key_len)) {
             rc = gsu_ext->rc;
             continue;
         }
@@ -1148,7 +1179,7 @@ redis_hash_setfn(Param pm, HashTable ht)
  do_retry:
     if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
         retry = 1;
-        if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+        if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
             goto retry;
         else
             return;
@@ -1212,7 +1243,7 @@ redis_hash_setfn(Param pm, HashTable ht)
         /* Disconnect detection */
         if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry2;
             else
                 break;
@@ -1259,11 +1290,13 @@ redis_hash_unsetfn(Param pm, UNUSED(int exp))
 static void
 redis_hash_untie(Param pm)
 {
-    redisContext *rc = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->rc;
+    struct gsu_scalar_ext *gsu_ext = (struct gsu_scalar_ext *)pm->u.hash->tmpdata;
+    redisContext *rc = gsu_ext->rc;
     HashTable ht = pm->u.hash;
 
     if (rc) { /* paranoia */
         redisFree(rc);
+        fdtable[gsu_ext->fdesc] = FDT_UNUSED;
 
         /* Let hash fields know there's no backend */
         ((struct gsu_scalar_ext *)ht->tmpdata)->rc = NULL;
@@ -1339,7 +1372,7 @@ redis_str_getfn(Param pm)
 
     if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
         retry = 1;
-        if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+        if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
             goto retry;
     } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
         zwarn("Aborting (no connection)");
@@ -1406,7 +1439,7 @@ redis_str_setfn(Param pm, char *val)
 
         if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             zwarn("Aborting (no connection)");
@@ -1437,8 +1470,10 @@ redis_str_untie(Param pm)
 {
     struct gsu_scalar_ext *gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
 
-    if (gsu_ext->rc) /* paranoia */
+    if (gsu_ext->rc) { /* paranoia */
         redisFree(gsu_ext->rc);
+        fdtable[gsu_ext->fdesc] = FDT_UNUSED;
+    }
 
     /* Remove from list of tied parameters */
     remove_tied_name(pm->node.nam);
@@ -1551,7 +1586,7 @@ redis_arrset_getfn(Param pm)
             return &my_nullarray;
         }
         retry = 1;
-        if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+        if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
             goto retry;
     }
 
@@ -1615,7 +1650,7 @@ redis_arrset_setfn(Param pm, char **val)
                 return;
             }
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry;
             else
                 return;
@@ -1651,7 +1686,7 @@ redis_arrset_setfn(Param pm, char **val)
                     return;
                 }
                 retry = 1;
-                if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+                if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                     goto retry;
             }
         }
@@ -1684,8 +1719,10 @@ redis_arrset_untie(Param pm)
 {
     struct gsu_array_ext *gsu_ext = (struct gsu_array_ext *) pm->gsu.a;
 
-    if (gsu_ext->rc) /* paranoia */
+    if (gsu_ext->rc) { /* paranoia */
         redisFree(gsu_ext->rc);
+        fdtable[gsu_ext->fdesc] = FDT_UNUSED;
+    }
 
     /* Remove from list of tied parameters */
     remove_tied_name(pm->node.nam);
@@ -1778,7 +1815,7 @@ redis_zset_getfn(Param pm)
 
         if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             zwarn("Aborting (no connection)");
@@ -1866,7 +1903,7 @@ redis_zset_setfn(Param pm, char *val)
 
         if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             zwarn("Aborting (no connection)");
@@ -1954,7 +1991,7 @@ zset_scan_keys(HashTable ht, ScanFunc func, int flags)
                 break;
             }
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry;
             else
                 break;
@@ -2052,7 +2089,7 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
  do_retry:
     if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
         retry = 1;
-        if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+        if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
             goto retry;
         else
             return;
@@ -2122,7 +2159,7 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
         /* Disconnect detection */
         if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry2;
             else
                 break;
@@ -2170,11 +2207,13 @@ redis_hash_zset_unsetfn(Param pm, UNUSED(int exp))
 static void
 redis_hash_zset_untie(Param pm)
 {
-    redisContext *rc = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->rc;
+    struct gsu_scalar_ext *gsu_ext = (struct gsu_scalar_ext *)pm->u.hash->tmpdata;
+    redisContext *rc = gsu_ext->rc;
     HashTable ht = pm->u.hash;
 
     if (rc) { /* paranoia */
         redisFree(rc);
+        fdtable[gsu_ext->fdesc] = FDT_UNUSED;
 
         /* Let hash fields know there's no backend */
         ((struct gsu_scalar_ext *)ht->tmpdata)->rc = NULL;
@@ -2351,7 +2390,7 @@ redis_hset_getfn(Param pm)
 
         if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             zwarn("Aborting (no connection)");
@@ -2439,7 +2478,7 @@ redis_hset_setfn(Param pm, char *val)
 
         if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry;
         } else if (retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             zwarn("Aborting (no connection)");
@@ -2528,7 +2567,7 @@ hset_scan_keys(HashTable ht, ScanFunc func, int flags)
                 break;
             }
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 // The same cursor
                 goto retry;
             else
@@ -2657,7 +2696,7 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
 
     if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
         retry = 1;
-        if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+        if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
             goto retry;
         else
             return;
@@ -2723,7 +2762,7 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
         /* Disconnect detection */
         if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry2;
             else
                 break;
@@ -2771,11 +2810,13 @@ redis_hash_hset_unsetfn(Param pm, UNUSED(int exp))
 static void
 redis_hash_hset_untie(Param pm)
 {
-    redisContext *rc = ((struct gsu_scalar_ext *)pm->u.hash->tmpdata)->rc;
+    struct gsu_scalar_ext *gsu_ext = (struct gsu_scalar_ext *)pm->u.hash->tmpdata;
+    redisContext *rc = gsu_ext->rc;
     HashTable ht = pm->u.hash;
 
     if (rc) { /* paranoia */
         redisFree(rc);
+        fdtable[gsu_ext->fdesc] = FDT_UNUSED;
 
         /* Let hash fields know there's no backend */
         ((struct gsu_scalar_ext *)ht->tmpdata)->rc = NULL;
@@ -2889,7 +2930,7 @@ redis_arrlist_getfn(Param pm)
             return &my_nullarray;
         }
         retry = 1;
-        if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+        if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
             goto retry;
     }
 
@@ -2951,7 +2992,7 @@ redis_arrlist_setfn(Param pm, char **val)
                 return;
             }
             retry = 1;
-            if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                 goto retry;
             else
                 return;
@@ -2987,7 +3028,7 @@ redis_arrlist_setfn(Param pm, char **val)
                     return;
                 }
                 retry = 1;
-                if(reconnect(&gsu_ext->rc, gsu_ext->redis_host_port, gsu_ext->password))
+                if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
                     goto retry;
             }
         }
@@ -3020,8 +3061,10 @@ redis_arrlist_untie(Param pm)
 {
     struct gsu_array_ext *gsu_ext = (struct gsu_array_ext *) pm->gsu.a;
 
-    if (gsu_ext->rc) /* paranoia */
+    if (gsu_ext->rc) { /* paranoia */
         redisFree(gsu_ext->rc);
+        fdtable[gsu_ext->fdesc] = FDT_UNUSED;
+    }
 
     /* Remove from list of tied parameters */
     remove_tied_name(pm->node.nam);
@@ -3408,7 +3451,7 @@ connect(redisContext **rc, const char* password, const char *host, int port, int
 /* FUNCTION: type {{{ */
 
 static int
-type(redisContext **rc, const char *redis_host_port, const char *password, char *key, size_t key_len)
+type(redisContext **rc, int *fdesc, const char *redis_host_port, const char *password, char *key, size_t key_len)
 {
     redisReply *reply = NULL;
     int tpe;
@@ -3440,7 +3483,7 @@ type(redisContext **rc, const char *redis_host_port, const char *password, char 
             return DB_KEY_TYPE_UNKNOWN;
         }
         retry = 1;
-        if(reconnect(rc, redis_host_port, password))
+        if(reconnect(rc, fdesc, redis_host_port, password))
             goto retry;
         else
             return DB_KEY_TYPE_UNKNOWN;
@@ -3539,7 +3582,7 @@ zrzset_usage()
 /* FUNCTION: reconnect {{{ */
 
 static int
-reconnect(redisContext **rc, const char *hostspec_in, const char *password)
+reconnect(redisContext **rc, int *fdesc, const char *hostspec_in, const char *password)
 {
     char hostspec[192];
     char *host="127.0.0.1", *key="";
@@ -3549,10 +3592,15 @@ reconnect(redisContext **rc, const char *hostspec_in, const char *password)
 
     redisFree(*rc);
     *rc = NULL;
+
+    fdtable[*fdesc] = FDT_UNUSED;
+
     if(!connect(rc, password, host, port, db_index, hostspec_in)) {
         zwarn("Not connected, retrying... Failed, aborting");
         return 0;
     } else {
+        *fdesc = (*rc)->fd;
+        addmodulefd(*fdesc, FDT_INTERNAL);
         zwarn("Not connected, retrying... Success");
         return 1;
     }
