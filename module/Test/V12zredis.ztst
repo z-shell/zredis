@@ -18,7 +18,7 @@
 
 %test
 
- (zmodload -u $modname1 && zmodload $modname1)
+ (zmodload -u $modname2 && zmodload $modname2)
 0:unload and reload the module without crashing
 
  ztie -d db/redis -f $db1 dbase
