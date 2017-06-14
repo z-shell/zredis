@@ -35,7 +35,6 @@ static void freebackendnode(HashNode hn);
 static void backend_scan_fun(HashNode hn, int unused);
 
 static Param createhashparam(char *name, int flags);
-static void myfreeparamnode(HashNode hn);
 
 /* Type of provided (by backend module) entry-point */
 typedef int (*DbBackendEntryPoint)(VA_ALIST1(int cmd));
@@ -539,7 +538,7 @@ createhashparam(char *name, int flags)
     }
 
     /* Does free Param (unsetfn is called) */
-    ht->freenode = myfreeparamnode;
+    ht->freenode = zsh_db_freeparamnode;
 
     return pm;
 }
@@ -552,10 +551,11 @@ freebackendnode(HashNode hn)
     zfree(hn, sizeof(struct backend_node));
 }
 /* }}} */
-/* FUNCTION: myfreeparamnode {{{ */
+/* FUNCTION: zsh_db_freeparamnode {{{ */
 
-static void
-myfreeparamnode(HashNode hn)
+/**/
+void
+zsh_db_freeparamnode(HashNode hn)
 {
     Param pm = (Param) hn;
 

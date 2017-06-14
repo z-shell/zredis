@@ -46,7 +46,6 @@ static int type(redisContext **rc, int *fdesc, const char *redis_host_port, cons
 static int type_from_string(const char *string, int len);
 static int is_tied(Param pm);
 static void zrzset_usage();
-static void myfreeparamnode(HashNode hn);
 static int reconnect(redisContext **rc, int *fdesc, const char *hostspec, const char *password);
 static int auth(redisContext **rc, const char *password);
 static int is_tied_cmd(char *pmname);
@@ -3202,7 +3201,7 @@ createhash(char *name, int flags, int which)
     }
 
     /* Does free Param (unsetfn is called) */
-    ht->freenode = myfreeparamnode;
+    ht->freenode = zsh_db_freeparamnode;
 
     /* These provide special features */
     if ( which == 0 ) {
@@ -3244,7 +3243,7 @@ standarize_hash(Param pm) {
     ht->removenode  = removehashnode;
     ht->disablenode = NULL;
     ht->enablenode  = NULL;
-    ht->freenode    = myfreeparamnode;
+    ht->freenode    = zsh_db_freeparamnode;
 }
 /* }}} */
 /* FUNCTION: deletehashparam {{{ */
@@ -3611,31 +3610,6 @@ reconnect(redisContext **rc, int *fdesc, const char *hostspec_in, const char *pa
         zwarn("Not connected, retrying... Success");
         return 1;
     }
-}
-/* }}} */
-/* FUNCTION: myfreeparamnode {{{ */
-
-static void
-myfreeparamnode(HashNode hn)
-{
-    Param pm = (Param) hn;
- 
-    /* Upstream: The second argument of unsetfn() is used by modules to
-     * differentiate "exp"licit unset from implicit unset, as when
-     * a parameter is going out of scope.  It's not clear which
-     * of these applies here, but passing 1 has always worked.
-     */
-
-    /* if (delunset) */
-      pm->gsu.s->unsetfn(pm, 1);
-
-    zsfree(pm->node.nam);
-    /* If this variable was tied by the user, ename was ztrdup'd */
-    if (pm->node.flags & PM_TIED && pm->ename) {
-        zsfree(pm->ename);
-        pm->ename = NULL;
-    }
-    zfree(pm, sizeof(struct param));
 }
 /* }}} */
 /* FUNCTION: get_from_hash {{{ */

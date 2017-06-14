@@ -47,7 +47,6 @@
 /* }}} */
 /* DECLARATIONS {{{ */
 static Param createhash( char *name, int flags );
-static void myfreeparamnode(HashNode hn);
 static int append_tied_name( const char *name );
 static int remove_tied_name( const char *name );
 static int is_tied_cmd(char *pmname);
@@ -840,38 +839,13 @@ static Param createhash( char *name, int flags ) {
     }
 
     /* Does free Param (unsetfn is called) */
-    ht->freenode = myfreeparamnode;
+    ht->freenode = zsh_db_freeparamnode;
 
     /* These provide special features */
     ht->getnode = ht->getnode2 = getgdbmnode;
     ht->scantab = scangdbmkeys;
 
     return pm;
-}
-/* }}} */
-/* FUNCTION: myfreeparamnode {{{ */
-
-static void
-myfreeparamnode(HashNode hn)
-{
-    Param pm = (Param) hn;
-
-    /* Upstream: The second argument of unsetfn() is used by modules to
-     * differentiate "exp"licit unset from implicit unset, as when
-     * a parameter is going out of scope.  It's not clear which
-     * of these applies here, but passing 1 has always worked.
-     */
-
-    /* if (delunset) */
-    pm->gsu.s->unsetfn(pm, 1);
-
-    zsfree(pm->node.nam);
-    /* If this variable was tied by the user, ename was ztrdup'd */
-    if (pm->node.flags & PM_TIED && pm->ename) {
-        zsfree(pm->ename);
-        pm->ename = NULL;
-    }
-    zfree(pm, sizeof(struct param));
 }
 /* }}} */
 /* FUNCTION: append_tied_name {{{ */
