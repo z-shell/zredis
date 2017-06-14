@@ -50,8 +50,6 @@ static Param createhash( char *name, int flags );
 static void myfreeparamnode(HashNode hn);
 static int append_tied_name( const char *name );
 static int remove_tied_name( const char *name );
-static char *unmetafy_zalloc(const char *to_copy, int *new_len);
-static void set_length(char *buf, int size);
 static int is_tied_cmd(char *pmname);
 static int is_tied(Param pm);
 
@@ -951,51 +949,6 @@ static int remove_tied_name( const char *name ) {
     }
 
     return 0;
-}
-/* }}} */
-/* FUNCTION: unmetafy_zalloc {{{ */
-
-/*
- * Unmetafy that:
- * - duplicates bufer to work on it,
- * - does zalloc of exact size for the new string,
- * - restores work buffer to original content, to restore strlen
- *
- * No zsfree()-confusing string will be produced.
- */
-static char *unmetafy_zalloc(const char *to_copy, int *new_len) {
-    char *work, *to_return;
-    int my_new_len = 0;
-
-    work = ztrdup(to_copy);
-    work = unmetafy(work,&my_new_len);
-
-    if (new_len)
-        *new_len = my_new_len;
-
-    /* This string can be correctly zsfree()-d */
-    to_return = (char *) zalloc((my_new_len+1)*sizeof(char));
-    memcpy(to_return, work, sizeof(char)*my_new_len); // memcpy handles $'\0'
-    to_return[my_new_len]='\0';
-
-    /* Restore original strlen and correctly free */
-    strcpy(work, to_copy);
-    zsfree(work);
-
-    return to_return;
-}
-/* }}} */
-/* FUNCTION: set_length {{{ */
-/*
- * For zsh-allocator, rest of Zsh seems to use
- * free() instead of zsfree(), and such length
- * restoration causes slowdown, but all is this
- * way strict - correct */
-static void set_length(char *buf, int size) {
-    buf[size]='\0';
-    while ( -- size >= 0 ) {
-        buf[size]=' ';
-    }
 }
 /* }}} */
 /* FUNCTION: is_tied_cmd {{{ */
