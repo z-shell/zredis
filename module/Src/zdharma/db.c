@@ -676,6 +676,89 @@ zsh_db_standarize_hash(Param pm) {
     ht->freenode    = zsh_db_freeparamnode;
 }
 /* }}} */
+/* FUNCTION: zsh_db_arr_append {{{ */
+
+/*
+ * Adds parameter name to `zgdbm_tied`
+ */
+
+/**/
+int
+zsh_db_arr_append(char ***arr, const char *input_s)
+{
+    int old_len = arrlen(*arr);
+    char **new_arr = zshcalloc( (old_len+2) * sizeof(char *));
+
+    /* Copy */
+    char **p = *arr;
+    char **dst = new_arr;
+    while (*p) {
+        *dst++ = *p++;
+    }
+
+    /* Append new one */
+    *dst = ztrdup(input_s);
+
+    /* Substitute, free old one */
+    zfree(*arr, sizeof(char *) * (old_len + 1));
+    *arr = new_arr;
+
+    return 0;
+}
+/* }}} */
+/* FUNCTION: zsh_db_filter_arr {{{ */
+
+/*
+ * Removes parameter name from `zgdbm_tied`
+ */
+
+/**/
+int
+zsh_db_filter_arr(char ***arr, const char *input_s)
+{
+    int old_len = arrlen(*arr);
+
+    /* Two stage, to always have arrlen() == zfree-size - 1.
+     * Could do allocation and revert when `not found`, but
+     * what would be better about that. */
+
+    /* Find one to remove */
+    char **p = *arr;
+    while (*p) {
+        if (0==strcmp(input_s,*p)) {
+            break;
+        }
+        p++;
+    }
+
+    /* Copy x+1 to x */
+    while (*p) {
+        *p=*(p+1);
+        p++;
+    }
+
+    /* Second stage. Size changed? Only old_size-1
+     * change is possible, but.. paranoia way */
+    int new_len = arrlen(*arr);
+    if (new_len != old_len) {
+        char **new_arr = (char **) zshcalloc((new_len+1) * sizeof(char *));
+
+        /* Copy */
+        p = *arr;
+        char **dst = new_arr;
+        while (*p) {
+            *dst++ = *p++;
+        }
+        *dst = NULL;
+
+        /* Substitute, free old one */
+        zfree(*arr, sizeof(char *) * (old_len + 1));
+        *arr = new_arr;
+    }
+
+    return 0;
+}
+/* }}} */
 
 /***************** USAGE *****************/
 

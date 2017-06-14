@@ -47,8 +47,6 @@
 /* }}} */
 /* DECLARATIONS {{{ */
 static Param createhash( char *name, int flags );
-static int append_tied_name( const char *name );
-static int remove_tied_name( const char *name );
 static int is_tied_cmd(char *pmname);
 static int is_tied(Param pm);
 
@@ -282,7 +280,7 @@ zgtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
     dbf_carrier->dbfile_path = ztrdup(address);
 
     addmodulefd(dbf_carrier->fdesc, FDT_INTERNAL);
-    append_tied_name(pmname);
+    zsh_db_arr_append(&zgdbm_tied, pmname);
 
     return 0;
 }
@@ -707,7 +705,7 @@ gdbmuntie(Param pm)
         ((struct gsu_scalar_ext *)ht->tmpdata)->dbf = NULL;
 
         /* Remove from list of tied parameters */
-        remove_tied_name(pm->node.nam);
+        zsh_db_filter_arr(&zgdbm_tied, pm->node.nam);
     }
 
     /* for completeness ... createspecialhash() should have an inverse */
@@ -846,83 +844,6 @@ static Param createhash( char *name, int flags ) {
     ht->scantab = scangdbmkeys;
 
     return pm;
-}
-/* }}} */
-/* FUNCTION: append_tied_name {{{ */
-
-/*
- * Adds parameter name to `zgdbm_tied`
- */
-
-static int append_tied_name( const char *name ) {
-    int old_len = arrlen(zgdbm_tied);
-    char **new_zgdbm_tied = zshcalloc( (old_len+2) * sizeof(char *));
-
-    /* Copy */
-    char **p = zgdbm_tied;
-    char **dst = new_zgdbm_tied;
-    while (*p) {
-        *dst++ = *p++;
-    }
-
-    /* Append new one */
-    *dst = ztrdup(name);
-
-    /* Substitute, free old one */
-    zfree(zgdbm_tied, sizeof(char *) * (old_len + 1));
-    zgdbm_tied = new_zgdbm_tied;
-
-    return 0;
-}
-/* }}} */
-/* FUNCTION: remove_tied_name {{{ */
-
-/*
- * Removes parameter name from `zgdbm_tied`
- */
-
-static int remove_tied_name( const char *name ) {
-    int old_len = arrlen(zgdbm_tied);
-
-    /* Two stage, to always have arrlen() == zfree-size - 1.
-     * Could do allocation and revert when `not found`, but
-     * what would be better about that. */
-
-    /* Find one to remove */
-    char **p = zgdbm_tied;
-    while (*p) {
-        if (0==strcmp(name,*p)) {
-            break;
-        }
-        p++;
-    }
-
-    /* Copy x+1 to x */
-    while (*p) {
-        *p=*(p+1);
-        p++;
-    }
-
-    /* Second stage. Size changed? Only old_size-1
-     * change is possible, but.. paranoia way */
-    int new_len = arrlen(zgdbm_tied);
-    if (new_len != old_len) {
-        char **new_zgdbm_tied = zshcalloc((new_len+1) * sizeof(char *));
-
-        /* Copy */
-        p = zgdbm_tied;
-        char **dst = new_zgdbm_tied;
-        while (*p) {
-            *dst++ = *p++;
-        }
-        *dst = NULL;
-
-        /* Substitute, free old one */
-        zfree(zgdbm_tied, sizeof(char *) * (old_len + 1));
-        zgdbm_tied = new_zgdbm_tied;
-    }
-
-    return 0;
 }
 /* }}} */
 /* FUNCTION: is_tied_cmd {{{ */

@@ -37,8 +37,6 @@ static char *type_names[10] = { "none", "invalid", "no-key (main hash)", "string
 #include <hiredis/hiredis.h>
 
 static Param createhash(char *name, int flags, int which);
-static int append_tied_name(const char *name);
-static int remove_tied_name(const char *name);
 static void parse_host_string(const char *input, char *buffer, int size,
                                 char **host, int *port, int *db_index, char **key);
 static int connect(redisContext **rc, const char* password, const char *host, int port, int db_index, const char *address);
@@ -582,7 +580,7 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
     }
 
     /* Save in tied-enumeration array */
-    append_tied_name(pmname);
+    zsh_db_arr_append(&zredis_tied, pmname);
 
     return 0;
 }
@@ -1321,7 +1319,7 @@ redis_hash_untie(Param pm)
         ((struct gsu_scalar_ext *)ht->tmpdata)->rc = NULL;
 
         /* Remove from list of tied parameters */
-        remove_tied_name(pm->node.nam);
+        zsh_db_filter_arr(&zredis_tied, pm->node.nam);
     }
 
     /* for completeness ... createspecialhash() should have an inverse */
@@ -1495,7 +1493,7 @@ redis_str_untie(Param pm)
     }
 
     /* Remove from list of tied parameters */
-    remove_tied_name(pm->node.nam);
+    zsh_db_filter_arr(&zredis_tied, pm->node.nam);
 
     pm->node.flags &= ~(PM_SPECIAL|PM_READONLY);
     pm->gsu.s = &stdscalar_gsu;
@@ -1744,7 +1742,7 @@ redis_arrset_untie(Param pm)
     }
 
     /* Remove from list of tied parameters */
-    remove_tied_name(pm->node.nam);
+    zsh_db_filter_arr(&zredis_tied, pm->node.nam);
 
     pm->node.flags &= ~(PM_SPECIAL|PM_READONLY);
     pm->gsu.a = &stdarray_gsu;
@@ -2238,7 +2236,7 @@ redis_hash_zset_untie(Param pm)
         ((struct gsu_scalar_ext *)ht->tmpdata)->rc = NULL;
 
         /* Remove from list of tied parameters */
-        remove_tied_name(pm->node.nam);
+        zsh_db_filter_arr(&zredis_tied, pm->node.nam);
     }
 
     /* for completeness ... createspecialhash() should have an inverse */
@@ -2841,7 +2839,7 @@ redis_hash_hset_untie(Param pm)
         ((struct gsu_scalar_ext *)ht->tmpdata)->rc = NULL;
 
         /* Remove from list of tied parameters */
-        remove_tied_name(pm->node.nam);
+        zsh_db_filter_arr(&zredis_tied, pm->node.nam);
     }
 
     /* for completeness ... createspecialhash() should have an inverse */
@@ -3086,7 +3084,7 @@ redis_arrlist_untie(Param pm)
     }
 
     /* Remove from list of tied parameters */
-    remove_tied_name(pm->node.nam);
+    zsh_db_filter_arr(&zredis_tied, pm->node.nam);
 
     pm->node.flags &= ~(PM_SPECIAL|PM_READONLY);
     pm->gsu.a = &stdarray_gsu;
@@ -3227,87 +3225,6 @@ deletehashparam(Param tied_param, const char *pmname) {
     deletehashtable(tied_param->u.hash);
     tied_param->u.hash = NULL;
     paramtab->freenode(&tied_param->node);
-}
-/* }}} */
-/* FUNCTION: append_tied_name {{{ */
-
-/*
- * Adds parameter name to `zredis_tied`
- */
-
-static int
-append_tied_name(const char *name)
-{
-    int old_len = arrlen(zredis_tied);
-    char **new_zredis_tied = zshcalloc((old_len+2) * sizeof(char *));
-
-    /* Copy */
-    char **p = zredis_tied;
-    char **dst = new_zredis_tied;
-    while (*p) {
-        *dst++ = *p++;
-    }
-
-    /* Append new one */
-    *dst = ztrdup(name);
-
-    /* Substitute, free old one */
-    zfree(zredis_tied, sizeof(char *) * (old_len + 1));
-    zredis_tied = new_zredis_tied;
-
-    return 0;
-}
-/* }}} */
-/* FUNCTION: remove_tied_name {{{ */
-
-/*
- * Removes parameter name from `zredis_tied`
- */
-
-static int
-remove_tied_name(const char *name)
-{
-    int old_len = arrlen(zredis_tied);
-
-    /* Two stage, to always have arrlen() == zfree-size - 1.
-     * Could do allocation and revert when `not found`, but
-     * what would be better about that. */
-
-    /* Find one to remove */
-    char **p = zredis_tied;
-    while (*p) {
-        if (0==strcmp(name,*p)) {
-            break;
-        }
-        p++;
-    }
-
-    /* Copy x+1 to x */
-    while (*p) {
-        *p=*(p+1);
-        p++;
-    }
-
-    /* Second stage. Size changed? Only old_size-1
-     * change is possible, but.. paranoia way */
-    int new_len = arrlen(zredis_tied);
-    if (new_len != old_len) {
-        char **new_zredis_tied = zshcalloc((new_len+1) * sizeof(char *));
-
-        /* Copy */
-        p = zredis_tied;
-        char **dst = new_zredis_tied;
-        while (*p) {
-            *dst++ = *p++;
-        }
-        *dst = NULL;
-
-        /* Substitute, free old one */
-        zfree(zredis_tied, sizeof(char *) * (old_len + 1));
-        zredis_tied = new_zredis_tied;
-    }
-
-    return 0;
 }
 /* }}} */
 /* FUNCTION: parse_host_string {{{ */
