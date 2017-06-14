@@ -464,10 +464,17 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
 
             struct gsu_scalar_ext *rc_carrier = NULL;
             rc_carrier = (struct gsu_scalar_ext *) zshcalloc(sizeof(struct gsu_scalar_ext));
+            if (!rc_carrier) {
+                redisFree(rc);
+                deletehashparam(tied_param, pmname);
+                zwarn("Out of memory when allocating common data structure (2)");
+                return 1;
+            }
+
             rc_carrier->std = hashel_zset_gsu_ext.std;
             rc_carrier->type = DB_KEY_TYPE_ZSET;
-            rc_carrier->use_cache = 1;
 
+            rc_carrier->use_cache = 1;
             if (zcache)
                 rc_carrier->use_cache = 0;
             if (lazy)
@@ -499,10 +506,17 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
 
             struct gsu_scalar_ext *rc_carrier = NULL;
             rc_carrier = (struct gsu_scalar_ext *) zshcalloc(sizeof(struct gsu_scalar_ext));
+            if (!rc_carrier) {
+                redisFree(rc);
+                deletehashparam(tied_param, pmname);
+                zwarn("Out of memory when allocating common data structure (3)");
+                return 1;
+            }
+
             rc_carrier->std = hashel_hset_gsu_ext.std;
             rc_carrier->type = DB_KEY_TYPE_HASH;
-            rc_carrier->use_cache = 1;
 
+            rc_carrier->use_cache = 1;
             if (zcache)
                 rc_carrier->use_cache = 0;
             if (lazy)
