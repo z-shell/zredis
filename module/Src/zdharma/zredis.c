@@ -52,6 +52,8 @@ static void myfreeparamnode(HashNode hn);
 static int reconnect(redisContext **rc, int *fdesc, const char *hostspec, const char *password);
 static int auth(redisContext **rc, const char *password);
 static int is_tied_cmd(char *pmname);
+static void standarize_hash(Param pm);
+static void deletehashparam(Param tied_param, const char *pmname);
 
 
 static char *my_nullarray = NULL;
@@ -345,10 +347,17 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
 
         struct gsu_scalar_ext *rc_carrier = NULL;
         rc_carrier = (struct gsu_scalar_ext *) zshcalloc(sizeof(struct gsu_scalar_ext));
+        if (!rc_carrier) {
+            redisFree(rc);
+            deletehashparam(tied_param, pmname);
+            zwarn("Out of memory when allocating common data structure (1)");
+            return 1;
+        }
+
         rc_carrier->std = hashel_gsu_ext.std;
         rc_carrier->type = DB_KEY_TYPE_NO_KEY;
-        rc_carrier->use_cache = 1;
 
+        rc_carrier->use_cache = 1;
         if (zcache)
             rc_carrier->use_cache = 0;
         if (lazy)
@@ -3198,6 +3207,42 @@ createhash(char *name, int flags, int which)
     }
 
     return pm;
+}
+/* }}} */
+/* FUNCTION: standarize_hash {{{ */
+
+static void
+standarize_hash(Param pm) {
+    if (0 == (pm->node.flags & PM_HASHED)) {
+        return;
+    }
+
+    pm->node.flags &= ~(PM_SPECIAL|PM_READONLY);
+    pm->gsu.h = &stdhash_gsu;
+
+    HashTable ht = pm->u.hash;
+
+    ht->hash        = hasher;
+    ht->emptytable  = emptyhashtable;
+    ht->filltable   = NULL;
+    ht->cmpnodes    = strcmp;
+    ht->addnode     = addhashnode;
+    ht->getnode     = gethashnode;
+    ht->getnode2    = gethashnode2;
+    ht->removenode  = removehashnode;
+    ht->disablenode = NULL;
+    ht->enablenode  = NULL;
+    ht->freenode    = myfreeparamnode;
+}
+/* }}} */
+/* FUNCTION: deletehashparam {{{ */
+static void
+deletehashparam(Param tied_param, const char *pmname) {
+    standarize_hash(tied_param);
+    paramtab->removenode(paramtab, pmname);
+    deletehashtable(tied_param->u.hash);
+    tied_param->u.hash = NULL;
+    paramtab->freenode(&tied_param->node);
 }
 /* }}} */
 /* FUNCTION: append_tied_name {{{ */
