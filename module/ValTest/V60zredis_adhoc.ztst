@@ -1,0 +1,36 @@
+# Tests for the zdharma/redis module
+
+%prep
+
+ module_path=( `pwd`/Modules )
+ modname1="zdharma/db"
+ modname2="zdharma/zredis"
+ db1="127.0.0.1:6379/10"
+ db2="127.0.0.1/11/void"
+ if ! zmodload $modname1 ; then
+   ZTST_unimplemented="can't load $modname1 module for testing"
+ fi
+ if ! zmodload $modname2 ; then
+   ZTST_unimplemented="can't load $modname2 module for testing"
+ fi
+ redis-cli -n 10 flushdb >&| /dev/null || ZTST_unimplemented="local redis database (with free indexes 10 and 11) not accessible"
+ redis-cli -n 11 flushdb >&| /dev/null || ZTST_unimplemented="local redis database (with free indexes 10 and 11) not accessible"
+
+%test
+
+# ztie -d db/redis -f $db1 -r redis 2>&1
+#1:Test for reversed if(!rc_carrier) check, i.e. simulated out of memory (main storage)
+#>(eval):1: Out of memory when allocating common data structure (1)
+
+# ztie -d db/redis -f $db2 -r -L zset voidzset 2>&1
+#1:Test for reversed if(!rc_carrier) check, i.e. simulated out of memory (zset)
+#>(eval):1: Out of memory when allocating common data structure (2)
+
+ ztie -d db/redis -f $db2 -r -L hash voidhash 2>&1
+1:Test for reversed if(!rc_carrier) check, i.e. simulated out of memory (hash)
+>(eval):1: Out of memory when allocating common data structure (3)
+
+%clean
+
+ redis-cli -n 10 flushdb
+ redis-cli -n 11 flushdb
