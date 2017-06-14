@@ -1489,6 +1489,7 @@ redis_str_untie(Param pm)
 
     if (gsu_ext->rc) { /* paranoia */
         redisFree(gsu_ext->rc);
+        gsu_ext->rc = NULL;
         fdtable[gsu_ext->fdesc] = FDT_UNUSED;
     }
 
@@ -1738,6 +1739,7 @@ redis_arrset_untie(Param pm)
 
     if (gsu_ext->rc) { /* paranoia */
         redisFree(gsu_ext->rc);
+        gsu_ext->rc = NULL;
         fdtable[gsu_ext->fdesc] = FDT_UNUSED;
     }
 
@@ -3080,6 +3082,7 @@ redis_arrlist_untie(Param pm)
 
     if (gsu_ext->rc) { /* paranoia */
         redisFree(gsu_ext->rc);
+        gsu_ext->rc = NULL;
         fdtable[gsu_ext->fdesc] = FDT_UNUSED;
     }
 
