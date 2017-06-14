@@ -596,7 +596,7 @@ backend_scan_fun(HashNode hn, int unused)
 
 /*********** SHARED UTILITIES ***********/
 
-/* FUNCTION: unmetafy_zalloc {{{ */
+/* FUNCTION: zsh_db_unmetafy_zalloc {{{ */
 
 /*
  * Unmetafy that:
@@ -609,7 +609,7 @@ backend_scan_fun(HashNode hn, int unused)
 
 /**/
 char *
-unmetafy_zalloc(const char *to_copy, int *new_len)
+zsh_db_unmetafy_zalloc(const char *to_copy, int *new_len)
 {
     char *work, *to_return;
     int my_new_len = 0;
@@ -632,7 +632,7 @@ unmetafy_zalloc(const char *to_copy, int *new_len)
     return to_return;
 }
 /* }}} */
-/* FUNCTION: set_length {{{ */
+/* FUNCTION: zsh_db_set_length {{{ */
 
 /* For zsh-allocator, rest of Zsh seems to use
  * free() instead of zsfree(), and such length
@@ -641,7 +641,7 @@ unmetafy_zalloc(const char *to_copy, int *new_len)
 
 /**/
 void
-set_length(char *buf, int size)
+zsh_db_set_length(char *buf, int size)
 {
     buf[size]='\0';
     while (-- size >= 0) {

@@ -433,7 +433,7 @@ gdbmgetfn(Param pm)
     /* Unmetafy key. GDBM fits nice into this
      * process, as it uses length of data */
     int umlen = 0;
-    char *umkey = unmetafy_zalloc(pm->node.nam,&umlen);
+    char *umkey = zsh_db_unmetafy_zalloc(pm->node.nam,&umlen);
 
     key.dptr = umkey;
     key.dsize = umlen;
@@ -458,7 +458,7 @@ gdbmgetfn(Param pm)
         free(content.dptr);
 
         /* Free key, restoring its original length */
-        set_length(umkey, umlen);
+        zsh_db_set_length(umkey, umlen);
         zsfree(umkey);
 
         /* Can return pointer, correctly saved inside hash */
@@ -466,7 +466,7 @@ gdbmgetfn(Param pm)
     }
 
     /* Free key, restoring its original length */
-    set_length(umkey, umlen);
+    zsh_db_set_length(umkey, umlen);
     zsfree(umkey);
 
     return "";
@@ -501,14 +501,14 @@ gdbmsetfn(Param pm, char *val)
     dbf = ((struct gsu_scalar_ext *)pm->gsu.s)->dbf;
     if (dbf && no_database_action == 0) {
         int umlen = 0;
-        char *umkey = unmetafy_zalloc(pm->node.nam,&umlen);
+        char *umkey = zsh_db_unmetafy_zalloc(pm->node.nam,&umlen);
 
         key.dptr = umkey;
         key.dsize = umlen;
 
         if (val) {
             /* Unmetafy with exact zalloc size */
-            char *umval = unmetafy_zalloc(val,&umlen);
+            char *umval = zsh_db_unmetafy_zalloc(val,&umlen);
 
             /* Store */
             content.dptr = umval;
@@ -516,14 +516,14 @@ gdbmsetfn(Param pm, char *val)
             (void)gdbm_store(dbf, key, content, GDBM_REPLACE);
 
             /* Free */
-            set_length(umval, umlen);
+            zsh_db_set_length(umval, umlen);
             zsfree(umval);
         } else {
             (void)gdbm_delete(dbf, key);
         }
 
         /* Free key */
-        set_length(umkey, key.dsize);
+        zsh_db_set_length(umkey, key.dsize);
         zsfree(umkey);
     }
 }
@@ -660,7 +660,7 @@ gdbmhashsetfn(Param pm, HashTable ht)
 
             /* Unmetafy key */
             int umlen = 0;
-            char *umkey = unmetafy_zalloc(v.pm->node.nam,&umlen);
+            char *umkey = zsh_db_unmetafy_zalloc(v.pm->node.nam,&umlen);
 
             key.dptr = umkey;
             key.dsize = umlen;
@@ -668,19 +668,19 @@ gdbmhashsetfn(Param pm, HashTable ht)
             queue_signals();
 
             /* Unmetafy */
-            char *umval = unmetafy_zalloc(getstrvalue(&v),&umlen);
+            char *umval = zsh_db_unmetafy_zalloc(getstrvalue(&v),&umlen);
 
             /* Store */
             content.dptr = umval;
             content.dsize = umlen;
             (void)gdbm_store(dbf, key, content, GDBM_REPLACE);
 
-            /* Free - unmetafy_zalloc allocates exact required
+            /* Free - zsh_db_unmetafy_zalloc allocates exact required
              * space, however unmetafied string can have zeros
              * in content, so we must first fill with non-0 bytes */
-            set_length(umval, content.dsize);
+            zsh_db_set_length(umval, content.dsize);
             zsfree(umval);
-            set_length(umkey, key.dsize);
+            zsh_db_set_length(umkey, key.dsize);
             zsfree(umkey);
 
             unqueue_signals();

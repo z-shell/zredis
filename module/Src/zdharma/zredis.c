@@ -862,7 +862,7 @@ redis_getfn(Param pm)
     /* Unmetafy key. Redis fits nice into this
      * process, as it can use length of data */
     int umlen = 0;
-    char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
+    char *umkey = zsh_db_unmetafy_zalloc(pm->node.nam, &umlen);
 
     key = umkey;
     key_len = umlen;
@@ -893,7 +893,7 @@ redis_getfn(Param pm)
                 freeReplyObject(reply);
 
                 /* Free key, restoring its original length */
-                set_length(umkey, key_len);
+                zsh_db_set_length(umkey, key_len);
                 zsfree(umkey);
 
                 /* Can return pointer, correctly saved inside hash */
@@ -915,7 +915,7 @@ redis_getfn(Param pm)
     }
 
     /* Free key, restoring its original length */
-    set_length(umkey, key_len);
+    zsh_db_set_length(umkey, key_len);
     zsfree(umkey);
 
     return "";
@@ -958,14 +958,14 @@ redis_setfn(Param pm, char *val)
     /* Can be NULL, when calling unset after untie */
     if (rc && no_database_action == 0) {
         int umlen = 0;
-        char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
+        char *umkey = zsh_db_unmetafy_zalloc(pm->node.nam, &umlen);
 
         key = umkey;
         key_len = umlen;
 
         if (val) {
             /* Unmetafy with exact zalloc size */
-            char *umval = unmetafy_zalloc(val, &umlen);
+            char *umval = zsh_db_unmetafy_zalloc(val, &umlen);
 
             /* Store */
             content = umval;
@@ -975,7 +975,7 @@ redis_setfn(Param pm, char *val)
                 freeReplyObject(reply);
 
             /* Free */
-            set_length(umval, content_len);
+            zsh_db_set_length(umval, content_len);
             zsfree(umval);
         } else {
             reply = redisCommand(rc, "DEL %b", key, (size_t) key_len);
@@ -984,7 +984,7 @@ redis_setfn(Param pm, char *val)
         }
 
         /* Free key */
-        set_length(umkey, key_len);
+        zsh_db_set_length(umkey, key_len);
         zsfree(umkey);
 
         if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
@@ -1234,7 +1234,7 @@ redis_hash_setfn(Param pm, HashTable ht)
 
             /* Unmetafy key */
             int umlen = 0;
-            char *umkey = unmetafy_zalloc(v.pm->node.nam, &umlen);
+            char *umkey = zsh_db_unmetafy_zalloc(v.pm->node.nam, &umlen);
 
             key = umkey;
             key_len = umlen;
@@ -1242,7 +1242,7 @@ redis_hash_setfn(Param pm, HashTable ht)
             queue_signals();
 
             /* Unmetafy data */
-            char *umval = unmetafy_zalloc(getstrvalue(&v), &umlen);
+            char *umval = zsh_db_unmetafy_zalloc(getstrvalue(&v), &umlen);
 
             content = umval;
             content_len = umlen;
@@ -1253,9 +1253,9 @@ redis_hash_setfn(Param pm, HashTable ht)
                 freeReplyObject(reply);
 
             /* Free, restoring original length */
-            set_length(umval, content_len);
+            zsh_db_set_length(umval, content_len);
             zsfree(umval);
-            set_length(umkey, key_len);
+            zsh_db_set_length(umkey, key_len);
             zsfree(umkey);
 
             unqueue_signals();
@@ -1440,7 +1440,7 @@ redis_str_setfn(Param pm, char *val)
         if (val) {
             /* Unmetafy with exact zalloc size */
             int umlen = 0;
-            char *umval = unmetafy_zalloc(val, &umlen);
+            char *umval = zsh_db_unmetafy_zalloc(val, &umlen);
 
             /* Store */
             content = umval;
@@ -1450,7 +1450,7 @@ redis_str_setfn(Param pm, char *val)
                 freeReplyObject(reply);
 
             /* Free */
-            set_length(umval, content_len);
+            zsh_db_set_length(umval, content_len);
             zsfree(umval);
         } else {
             reply = redisCommand(rc, "DEL %b", key, (size_t) key_len);
@@ -1681,7 +1681,7 @@ redis_arrset_setfn(Param pm, char **val)
             for (j=0; j<alen; j ++) {
                 /* Unmetafy with exact zalloc size */
                 int umlen = 0;
-                char *umval = unmetafy_zalloc(val[j], &umlen);
+                char *umval = zsh_db_unmetafy_zalloc(val[j], &umlen);
 
                 /* Store */
                 content = umval;
@@ -1696,7 +1696,7 @@ redis_arrset_setfn(Param pm, char **val)
                 }
 
                 /* Free */
-                set_length(umval, umlen);
+                zsh_db_set_length(umval, umlen);
                 zsfree(umval);
             }
 
@@ -1795,7 +1795,7 @@ redis_zset_getfn(Param pm)
     /* Unmetafy key. Redis fits nice into this
      * process, as it can use length of data */
     int umlen = 0;
-    char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
+    char *umkey = zsh_db_unmetafy_zalloc(pm->node.nam, &umlen);
 
     key = umkey;
     key_len = umlen;
@@ -1825,7 +1825,7 @@ redis_zset_getfn(Param pm)
             freeReplyObject(reply);
 
             /* Free key, restoring its original length */
-            set_length(umkey, key_len);
+            zsh_db_set_length(umkey, key_len);
             zsfree(umkey);
 
             /* Can return pointer, correctly saved inside hash */
@@ -1844,7 +1844,7 @@ redis_zset_getfn(Param pm)
     }
 
     /* Free key, restoring its original length */
-    set_length(umkey, key_len);
+    zsh_db_set_length(umkey, key_len);
     zsfree(umkey);
 
     return "";
@@ -1886,7 +1886,7 @@ redis_zset_setfn(Param pm, char *val)
     /* Can be NULL, when calling unset after untie */
     if (rc && no_database_action == 0) {
         int umlen = 0;
-        char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
+        char *umkey = zsh_db_unmetafy_zalloc(pm->node.nam, &umlen);
 
         key = umkey;
         key_len = umlen;
@@ -1896,7 +1896,7 @@ redis_zset_setfn(Param pm, char *val)
 
         if (val) {
             /* Unmetafy with exact zalloc size */
-            char *umval = unmetafy_zalloc(val, &umlen);
+            char *umval = zsh_db_unmetafy_zalloc(val, &umlen);
 
             content = umval;
             content_len = umlen;
@@ -1910,7 +1910,7 @@ redis_zset_setfn(Param pm, char *val)
                 freeReplyObject(reply);
 
             /* Free */
-            set_length(umval, content_len);
+            zsh_db_set_length(umval, content_len);
             zsfree(umval);
         } else {
             reply = redisCommand(rc, "ZREM %b %b", main_key, (size_t) main_key_len, key, (size_t) key_len);
@@ -1919,7 +1919,7 @@ redis_zset_setfn(Param pm, char *val)
         }
 
         /* Free key */
-        set_length(umkey, key_len);
+        zsh_db_set_length(umkey, key_len);
         zsfree(umkey);
 
         if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
@@ -2144,7 +2144,7 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
 
             /* Unmetafy key */
             int umlen = 0;
-            char *umkey = unmetafy_zalloc(v.pm->node.nam, &umlen);
+            char *umkey = zsh_db_unmetafy_zalloc(v.pm->node.nam, &umlen);
 
             key = umkey;
             key_len = umlen;
@@ -2152,7 +2152,7 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
             queue_signals();
 
             /* Unmetafy data */
-            char *umval = unmetafy_zalloc(getstrvalue(&v), &umlen);
+            char *umval = zsh_db_unmetafy_zalloc(getstrvalue(&v), &umlen);
 
             content = umval;
             content_len = umlen;
@@ -2169,9 +2169,9 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
                 break;
 
             /* Free, restoring original length */
-            set_length(umval, content_len);
+            zsh_db_set_length(umval, content_len);
             zsfree(umval);
-            set_length(umkey, key_len);
+            zsh_db_set_length(umkey, key_len);
             zsfree(umkey);
 
             unqueue_signals();
@@ -2370,7 +2370,7 @@ redis_hset_getfn(Param pm)
     /* Unmetafy key. Redis fits nice into this
      * process, as it can use length of data */
     int umlen = 0;
-    char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
+    char *umkey = zsh_db_unmetafy_zalloc(pm->node.nam, &umlen);
 
     key = umkey;
     key_len = umlen;
@@ -2400,7 +2400,7 @@ redis_hset_getfn(Param pm)
             freeReplyObject(reply);
 
             /* Free key, restoring its original length */
-            set_length(umkey, key_len);
+            zsh_db_set_length(umkey, key_len);
             zsfree(umkey);
 
             /* Can return pointer, correctly saved inside hash */
@@ -2419,7 +2419,7 @@ redis_hset_getfn(Param pm)
     }
 
     /* Free key, restoring its original length */
-    set_length(umkey, key_len);
+    zsh_db_set_length(umkey, key_len);
     zsfree(umkey);
 
     return "";
@@ -2461,7 +2461,7 @@ redis_hset_setfn(Param pm, char *val)
     /* Can be NULL, when calling unset after untie */
     if (rc && no_database_action == 0) {
         int umlen = 0;
-        char *umkey = unmetafy_zalloc(pm->node.nam, &umlen);
+        char *umkey = zsh_db_unmetafy_zalloc(pm->node.nam, &umlen);
 
         key = umkey;
         key_len = umlen;
@@ -2471,7 +2471,7 @@ redis_hset_setfn(Param pm, char *val)
 
         if (val) {
             /* Unmetafy with exact zalloc size */
-            char *umval = unmetafy_zalloc(val, &umlen);
+            char *umval = zsh_db_unmetafy_zalloc(val, &umlen);
 
             content = umval;
             content_len = umlen;
@@ -2485,7 +2485,7 @@ redis_hset_setfn(Param pm, char *val)
                 freeReplyObject(reply);
 
             /* Free */
-            set_length(umval, content_len);
+            zsh_db_set_length(umval, content_len);
             zsfree(umval);
         } else {
             reply = redisCommand(rc, "HDEL %b %b", main_key, (size_t) main_key_len, key, (size_t) key_len);
@@ -2494,7 +2494,7 @@ redis_hset_setfn(Param pm, char *val)
         }
 
         /* Free key */
-        set_length(umkey, key_len);
+        zsh_db_set_length(umkey, key_len);
         zsfree(umkey);
 
         if (!retry && (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))) {
@@ -2751,7 +2751,7 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
 
             /* Unmetafy key */
             int umlen = 0;
-            char *umkey = unmetafy_zalloc(v.pm->node.nam, &umlen);
+            char *umkey = zsh_db_unmetafy_zalloc(v.pm->node.nam, &umlen);
 
             key = umkey;
             key_len = umlen;
@@ -2759,7 +2759,7 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
             queue_signals();
 
             /* Unmetafy data */
-            char *umval = unmetafy_zalloc(getstrvalue(&v), &umlen);
+            char *umval = zsh_db_unmetafy_zalloc(getstrvalue(&v), &umlen);
 
             content = umval;
             content_len = umlen;
@@ -2772,9 +2772,9 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
                 freeReplyObject(reply);
 
             /* Free, restoring original length */
-            set_length(umval, content_len);
+            zsh_db_set_length(umval, content_len);
             zsfree(umval);
-            set_length(umkey, key_len);
+            zsh_db_set_length(umkey, key_len);
             zsfree(umkey);
 
             unqueue_signals();
@@ -3023,7 +3023,7 @@ redis_arrlist_setfn(Param pm, char **val)
             for (j=0; j<alen; j ++) {
                 /* Unmetafy with exact zalloc size */
                 int umlen = 0;
-                char *umval = unmetafy_zalloc(val[j], &umlen);
+                char *umval = zsh_db_unmetafy_zalloc(val[j], &umlen);
 
                 /* Store */
                 content = umval;
@@ -3038,7 +3038,7 @@ redis_arrlist_setfn(Param pm, char **val)
                 }
 
                 /* Free */
-                set_length(umval, umlen);
+                zsh_db_set_length(umval, umlen);
                 zsfree(umval);
             }
 
