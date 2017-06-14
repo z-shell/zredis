@@ -406,9 +406,7 @@ zgdbmclear_cmd(char *pmname, char *key)
  * wasn't yet queried.
  *
  * It will be left in this state if database doesn't
- * contain such key. That might be a drawback, maybe
- * setting to empty value has sense, as no other writer
- * can exist. This would remove subtle hcalloc(1) leak.
+ * contain such key.
  */
 
 /**/
@@ -429,7 +427,7 @@ gdbmgetfn(Param pm)
      * - if we are readers, we for sure have newest copy of data
      */
     if ((pm->node.flags & PM_UPTODATE) && ((struct gsu_scalar_ext *)pm->gsu.s)->use_cache) {
-        return pm->u.str ? pm->u.str : (char *) hcalloc(1);
+        return pm->u.str ? pm->u.str : "";
     }
 
     /* Unmetafy key. GDBM fits nice into this
@@ -471,8 +469,7 @@ gdbmgetfn(Param pm)
     set_length(umkey, umlen);
     zsfree(umkey);
 
-    /* Can this be "" ? */
-    return (char *) hcalloc(1);
+    return "";
 }
 /* }}} */
 /* FUNCTION: gdbmsetfn {{{ */

@@ -787,9 +787,7 @@ zredisclear_cmd(char *pmname, char *key)
  * wasn't yet queried.
  *
  * It will be left in this state if database doesn't
- * contain such key. That might be a drawback, maybe
- * setting to empty value has sense. This would remove
- * subtle hcalloc(1) leak.
+ * contain such key.
  */
 
 /**/
@@ -806,7 +804,7 @@ redis_getfn(Param pm)
 
     /* Key already retrieved? */
     if ((pm->node.flags & PM_UPTODATE) && gsu_ext->use_cache) {
-        return pm->u.str ? pm->u.str : (char *) hcalloc(1);
+        return pm->u.str ? pm->u.str : "";
     }
 
     /* Unmetafy key. Redis fits nice into this
@@ -1300,7 +1298,7 @@ redis_str_getfn(Param pm)
     gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
     /* Key already retrieved? */
     if ((pm->node.flags & PM_UPTODATE) && gsu_ext->use_cache) {
-        return pm->u.str ? pm->u.str : (char *) hcalloc(1);
+        return pm->u.str ? pm->u.str : "";
     }
 
     key = gsu_ext->key;
@@ -1733,7 +1731,7 @@ redis_zset_getfn(Param pm)
 
     /* Key already retrieved? */
     if ((pm->node.flags & PM_UPTODATE) && gsu_ext->use_cache) {
-        return pm->u.str ? pm->u.str : (char *) hcalloc(1);
+        return pm->u.str ? pm->u.str : "";
     }
 
     /* Unmetafy key. Redis fits nice into this
@@ -2306,7 +2304,7 @@ redis_hset_getfn(Param pm)
 
     /* Key already retrieved? */
     if ((pm->node.flags & PM_UPTODATE) && gsu_ext->use_cache) {
-        return pm->u.str ? pm->u.str : (char *) hcalloc(1);
+        return pm->u.str ? pm->u.str : "";
     }
 
     /* Unmetafy key. Redis fits nice into this
@@ -2364,8 +2362,7 @@ redis_hset_getfn(Param pm)
     set_length(umkey, key_len);
     zsfree(umkey);
 
-    /* Can this be "" ? */
-    return (char *) hcalloc(1);
+    return "";
 }
 /* }}} */
 /* FUNCTION: redis_hset_setfn {{{ */
