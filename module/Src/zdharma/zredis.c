@@ -49,7 +49,6 @@ static void zrzset_usage();
 static int reconnect(redisContext **rc, int *fdesc, const char *hostspec, const char *password);
 static int auth(redisContext **rc, const char *password);
 static int is_tied_cmd(char *pmname);
-static void standarize_hash(Param pm);
 static void deletehashparam(Param tied_param, const char *pmname);
 
 
@@ -3220,36 +3219,10 @@ createhash(char *name, int flags, int which)
     return pm;
 }
 /* }}} */
-/* FUNCTION: standarize_hash {{{ */
-
-static void
-standarize_hash(Param pm) {
-    if (0 == (pm->node.flags & PM_HASHED)) {
-        return;
-    }
-
-    pm->node.flags &= ~(PM_SPECIAL|PM_READONLY);
-    pm->gsu.h = &stdhash_gsu;
-
-    HashTable ht = pm->u.hash;
-
-    ht->hash        = hasher;
-    ht->emptytable  = emptyhashtable;
-    ht->filltable   = NULL;
-    ht->cmpnodes    = strcmp;
-    ht->addnode     = addhashnode;
-    ht->getnode     = gethashnode;
-    ht->getnode2    = gethashnode2;
-    ht->removenode  = removehashnode;
-    ht->disablenode = NULL;
-    ht->enablenode  = NULL;
-    ht->freenode    = zsh_db_freeparamnode;
-}
-/* }}} */
 /* FUNCTION: deletehashparam {{{ */
 static void
 deletehashparam(Param tied_param, const char *pmname) {
-    standarize_hash(tied_param);
+    zsh_db_standarize_hash(tied_param);
     paramtab->removenode(paramtab, pmname);
     deletehashtable(tied_param->u.hash);
     tied_param->u.hash = NULL;

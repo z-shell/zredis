@@ -649,6 +649,33 @@ zsh_db_set_length(char *buf, int size)
     }
 }
 /* }}} */
+/* FUNCTION: zsh_db_standarize_hash {{{ */
+
+/**/
+void
+zsh_db_standarize_hash(Param pm) {
+    if (0 == (pm->node.flags & PM_HASHED)) {
+        return;
+    }
+
+    pm->node.flags &= ~(PM_SPECIAL|PM_READONLY);
+    pm->gsu.h = &stdhash_gsu;
+
+    HashTable ht = pm->u.hash;
+
+    ht->hash        = hasher;
+    ht->emptytable  = emptyhashtable;
+    ht->filltable   = NULL;
+    ht->cmpnodes    = strcmp;
+    ht->addnode     = addhashnode;
+    ht->getnode     = gethashnode;
+    ht->getnode2    = gethashnode2;
+    ht->removenode  = removehashnode;
+    ht->disablenode = NULL;
+    ht->enablenode  = NULL;
+    ht->freenode    = zsh_db_freeparamnode;
+}
+/* }}} */
 
 /***************** USAGE *****************/
 
