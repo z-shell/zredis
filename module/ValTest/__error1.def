@@ -1,0 +1,120 @@
+# -*- Mode: sh; sh-indentation: 4; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
+# vim:ft=zsh:sw=4:sts=4:et
+
+typeset -ga errors1
+errors1+=(
+    # Trailing functions in stack trace are all /usr/lib/system/*
+    # Memory leak - 112 bytes in 1 blocks are definitely lost in loss record 468 of 627
+    "zsh_main / setupvals / getpwuid / *"
+
+    # As above
+    # 2,744 (16 direct, 2,728 indirect) bytes in 1 blocks are definitely lost in loss record 524 of 542
+    "zsh_main / setupvals / gettimeofday / *"
+
+    # Typical addvars effect. Memory leak report
+    # 104 bytes in 12 blocks are definitely lost in loss record 412 of 562
+    "* / eval / * / addvars / ztrdup / *"
+
+    # The zredis_tied array is to be collected by OS
+    # 278 bytes in 46 blocks are definitely lost in loss record 551 of 624
+    "* / bin_ztie / redis_main_entry / zrtie_cmd / zsh_db_arr_append / ztrdup / *"
+
+    # As above
+    # 23 (16 direct, 7 indirect) bytes in 1 blocks are definitely lost in loss record 187 of 575
+    "* / bin_ztie / redis_main_entry / zrtie_cmd / zsh_db_arr_append / zshcalloc / *"
+
+    # TODO Strong thesis, checked this, redisFree() would have to not work completely
+    "* / bin_ztie / redis_main_entry / zrtie_cmd / connect / redisConnectWithTimeout / *"
+
+    # Initial empty zredis_tied array, to be collected by OS
+    # 8 bytes in 1 blocks are definitely lost in loss record 71 of 587
+    "* / bin_zmodload / * / load_module / do_boot_module / * / boot_ / zshcalloc / *"
+
+    # Looks like for-OS to collect builtin entry
+    # 80 (64 direct, 16 indirect) bytes in 1 blocks are definitely lost in loss record 422 of 587
+    "main / zsh_main / init_bltinmods / autofeatures / add_autobin / zshcalloc / *"
+
+    # Backends-registry in hash, to be collected by OS
+    # 241 (136 direct, 105 indirect) bytes in 1 blocks are definitely lost in loss record 505 of 587
+    "* / bin_zmodload / * / load_module / * / setup_ / createhashtable / newhashtable / zshcalloc / *"
+
+    # Reallocation of zredis_tied array, which is to be collected by OS
+    # 8 bytes in 1 blocks are definitely lost in loss record 72 of 571
+    "* / execbuiltin / bin_zuntie / redis_main_entry / * / unsetparam_pm / * / redis_hash_untie / zsh_db_filter_arr / *"
+
+    #
+    # Possibly lost
+    #
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / addvars / assignsparam / assignstrvalue / redis_setfn / redisCommand / * / sdsempty / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / addvars / assignsparam / assignstrvalue / redis_setfn / redisCommand / * / sdsMakeRoomFor / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / stringsubst / paramsubst / getstrvalue / redis_getfn / redisCommand / * / sdsMakeRoomFor / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / prefork / stringsubst / paramsubst / getstrvalue / redis_str_getfn / redisCommand / * / sdsempty / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / stringsubst / paramsubst / getstrvalue / redis_str_getfn / redisCommand / * / sdsMakeRoomFor / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / addvars / assignsparam / assignstrvalue / redis_str_setfn / redisCommand / * / sdsempty / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / bin_ztie / redis_main_entry / zrtie_cmd / type / redisCommand / * / sdsMakeRoomFor / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / addvars / assignsparam / * / redis_hset_setfn / redisCommand / * / sdsMakeRoomFor / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / addvars / assignsparam / * / redis_hset_setfn / redisCommand / * / sdsempty / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / getarg / getstrvalue / redis_hset_getfn / redisCommand / * / sdsMakeRoomFor / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / addvars / assignsparam / * / redis_zset_setfn / redisCommand / * / sdsempty / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / addvars / assignsparam / * / redis_zset_setfn / redisCommand / * / sdsMakeRoomFor / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / getindex / * / getstrvalue / redis_zset_getfn / redisCommand / * / sdsMakeRoomFor / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / execbuiltin / bin_zrzset / redisCommand / * / sdsempty / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / execbuiltin / bin_zrzset / redisCommand / * / sdsMakeRoomFor / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / addvars / assignaparam / setarrvalue / redis_arrset_setfn / redisCommand / * / sdsempty / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / addvars / assignaparam / setarrvalue / redis_arrset_setfn / redisCommand / * / sdsMakeRoomFor / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / prefork / stringsubst / * / getarrvalue / * / redis_arrset_getfn / redisCommand / * / sdsempty / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / paramsubst / * / getvaluearr / redis_arrset_getfn / redisCommand / * / sdsMakeRoomFor / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / addvars / assignaparam / setarrvalue / redis_arrlist_setfn / redisCommand / * / sdsMakeRoomFor / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / addvars / assignaparam / setarrvalue / redis_arrlist_setfn / redisCommand / * / sdsempty / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / paramsubst / * / getvaluearr / redis_arrlist_getfn / redisCommand / * / sdsMakeRoomFor / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / prefork / stringsubst / paramsubst / * / getvaluearr / redis_arrlist_getfn / redisCommand / * / sdsempty / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / paramsubst / * / getvaluearr / redis_arrlist_getfn / redisCommand / * / sdsMakeRoomFor / *"
+)
