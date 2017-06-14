@@ -833,7 +833,7 @@ static Param createhash( char *name, int flags ) {
         pm->level = locallevel;
 
     /* This creates standard hash. */
-    ht = pm->u.hash = newparamtable(32, name);
+    ht = pm->u.hash = newparamtable(17, name);
     if (!pm->u.hash) {
         paramtab->removenode(paramtab, name);
         paramtab->freenode(&pm->node);
