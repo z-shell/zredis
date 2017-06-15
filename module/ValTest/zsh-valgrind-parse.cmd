@@ -51,7 +51,7 @@ source "${ZERO_DIR}/"__error*.def
 
 debug_mode()
 {
-    return 1; # 0 - yes
+    [[ "$mdebug" = 1 || "$mdebug" = "yes" || "$mdebug" = "on" ]]
 }
 
 #
