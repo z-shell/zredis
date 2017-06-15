@@ -35,21 +35,24 @@ typeset -g ZERO_DIR="${ZERO:h}"
 
 emulate zsh
 
+autoload colors; colors
+
 # Run all specified tests, keeping count of which succeeded.
 # The reason for this extra layer above the test script is to
 # protect from catastrophic failure of an individual test.
 # We could probably do that with subshells instead.
 
+export ZTST_exe
 local cmd="valgrind"
 [[ -x "${ZERO_DIR}/zsh-valgrind-parse.cmd" ]] && cmd="${ZERO_DIR}/zsh-valgrind-parse.cmd"
 [[ "$test_bin" = "local-zsh" ]] && test_bin="${ZTST_exe}"
 
 if [[ "${+tkind}" = "1" && "$tkind" = nopossiblylost* ]]; then
-  print "@@@ Test type: leaks, nopossiblylost @@@ Binary: $test_bin @@@"
+  print "$fg[green]@@@$reset_color Test type: leaks, nopossiblylost $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $fg[green]@@@$reset_color"
 elif [[ "${+tkind}" = "1" && "$tkind" = error* ]]; then
-  print "@@@ Test type: only errors (no leaks) @@@ Binary: $test_bin @@@"
+  print "$fg[green]@@@$reset_color Test type: only errors (no leaks) $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $fg[green]@@@$reset_color"
 elif [[ "${+tkind}" = "1" && "$tkind" = leak* ]]; then
-  print "@@@ Test type: full leak check @@@ Binary: $test_bin @@@"
+  print "$fg[green]@@@$reset_color Test type: full leak check $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $fg[green]@@@$reset_color"
 fi
 
 integer success failure skipped retval
