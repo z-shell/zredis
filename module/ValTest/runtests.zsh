@@ -37,6 +37,10 @@ emulate zsh -o warncreateglobal -o typesetsilent
 
 autoload colors; colors
 
+test_type_msg()
+{
+  print "$fg[green]@@@$reset_color Test type: $1 $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $ZSH_VERSION $fg[green]@@@$reset_color"
+}
 # Run all specified tests, keeping count of which succeeded.
 # The reason for this extra layer above the test script is to
 # protect from catastrophic failure of an individual test.
@@ -44,19 +48,26 @@ autoload colors; colors
 
 export ZTST_exe
 local cmd="valgrind"
+local -a valargs
 [[ -x "${ZERO_DIR}/zsh-valgrind-parse.cmd" ]] && cmd="${ZERO_DIR}/zsh-valgrind-parse.cmd"
 [[ "$test_bin" = "local-zsh" ]] && test_bin="${ZTST_exe}"
 
-if [[ "${+tkind}" = "1" && "$tkind" = nopossiblylost* ]]; then
-  print "$fg[green]@@@$reset_color Test type: leaks, nopossiblylost $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $ZSH_VERSION $fg[green]@@@$reset_color"
-elif [[ "${+tkind}" = "1" && "$tkind" = error* ]]; then
-  print "$fg[green]@@@$reset_color Test type: only errors (no leaks) $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $ZSH_VERSION $fg[green]@@@$reset_color"
-elif [[ "${+tkind}" = "1" && "$tkind" = leak* ]]; then
-  print "$fg[green]@@@$reset_color Test type: full leak check $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $ZSH_VERSION $fg[green]@@@$reset_color"
+if [[ "$tkind" = nopossiblylost* ]]; then
+  valargs=( "--leak-check=full" "--show-possibly-lost=no" )
+  test_type_msg "leaks, nopossiblylost"
+elif [[ "$tkind" = error* ]]; then
+  valargs=() 
+  test_type_msg "only errors (no leaks)"
+elif [[ "$tkind" = leak* ]]; then
+  valargs=( "--leak-check=full" )
+  test_type_msg "full leak check"
+else
+  print "Unknown test type \`$tkind\', supported are: error, leak, nopossiblylost. Aborting."
+  exit 1
 fi
 
 local ctarg    # current arg
-local -a targs # evaluated test_bin args
+local -a targs # evaluated test_bin args, non-evaluated Valgrind args
 integer success failure skipped retval
 
 for file in "${(f)ZTST_testlist}"; do
@@ -66,17 +77,8 @@ for file in "${(f)ZTST_testlist}"; do
     eval "targs+=( \"$ctarg\" )"
   done
 
-  # Three possible valgrind invocations
-  if [[ "${+tkind}" = "1" && "$tkind" = nopossiblylost* ]]; then
-    $cmd --leak-check=full --show-possibly-lost=no "$test_bin" "${targs[@]}"
-  elif [[ "${+tkind}" = "1" && "$tkind" = error* ]]; then
-    $cmd "$test_bin" "${targs[@]}"
-  elif [[ "${+tkind}" = "1" && "$tkind" = leak* ]]; then
-    $cmd --leak-check=full "$test_bin" "${targs[@]}"
-  else
-    print "Unknown test type \`$tkind\', supported are: error, leak, nopossiblylost"
-    return 1
-  fi
+  # Invoke Valgrind (through zsh-valgrind-parse.cmd)
+  $cmd "${valargs[@]}" "$test_bin" "${targs[@]}"
 
   retval=$?
   if (( $retval == 2 )); then
