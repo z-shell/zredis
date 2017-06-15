@@ -136,6 +136,7 @@ process_block() {
 
                 reply=()
                 to_clean_stacktrace "${first_subblock_funs[@]}"
+                reply+=( "--BLOCK--" )
                 to_clean_stacktrace "${second_subblock_funs[@]}"
 
                 if test_stack_trace "${reply[@]}"; then
@@ -247,6 +248,15 @@ compare_error() {
         if [[ "$mode" = "skip" ]]; then
             while [[ "${stacktrace[stack_idx]}" != "$part" ]]; do
                 mdebug_mode && print "Looking for \`$part', skipping (in valgrind stack trace): \`${stacktrace[stack_idx]}'"
+                if [[ "${stacktrace[stack_idx]}" = "--BLOCK--" ]]; then
+                    mdebug_mode && print "Didn't match 2-block error properly - \"--BLOCK--\" boundary was skipped, no match"
+                    # Failed to match --BLOCK-- boundary that is
+                    # used by 2-stage error reports (e.g. information
+                    # about invalid write, then second sub-block with
+                    # information on address used with the write)
+                    return 1;
+                fi
+
                 stack_idx+=1
                 (( stack_idx > ssize )) && break
             done
@@ -292,10 +302,17 @@ compare_error() {
     fi
 
     if (( stack_idx <= ssize )); then
-        # Error-parts ended before reaching end of
-        # stack trace -> in order to match, last part
-        # must be "*", i.e. skip mode
+        # Error-parts ended before reaching end of stack trace
+        # -> in order to match, last part must be "*", i.e. skip
+        # mode, and there cannot be "--BLOCK--" in the remaining
+        # stack trace
         if [[ "$mode" = "skip" ]]; then
+            if [[ "${stacktrace[(I)--BLOCK--]}" -gt "$stack_idx" ]]; then
+                mdebug_mode && print "Single-block error definition vs. 2-block stack trace - no match"
+                # No match, there remains --BLOCK-- element
+                # in stack trace, it cannot be skipped
+                return 1;
+            fi
             mdebug_mode && print "Final \`*' in error definition - a match"
             # Match, return true
             return 0;
