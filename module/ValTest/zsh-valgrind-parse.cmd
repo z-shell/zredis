@@ -9,24 +9,24 @@
 # /bin/sh stage, load configuration to obtain $zsh_control_bin {{{
 SH_ZERO_DIR=${0%/zsh-valgrind-parse.cmd} # this barely works
 
-[[ -z "$ZSHV_TCONF_FILE" ]] && ZSHV_TCONF_FILE="vtest.conf"
-[[ "$1" = conf:* ]] && { ZSHV_TCONF_FILE="${1#conf:}"; shift; }
+[ -z "$ZSHV_TCONF_FILE" ] && ZSHV_TCONF_FILE="vtest.conf"
+[ "$1" != "${1#conf:}" ] && { ZSHV_TCONF_FILE="${1#conf:}"; shift; }
 
-if [[ -n "$ZSHV_TCONF_DIR" ]]; then
-    source "${ZSHV_TCONF_DIR}/${ZSHV_TCONF_FILE}"
-elif [[ -f "${SH_ZERO_DIR}/${ZSHV_TCONF_FILE}" ]]; then
-    source "${SH_ZERO_DIR}/${ZSHV_TCONF_FILE}"
-elif [[ -f "${PWD}/${ZSHV_TCONF_FILE}" ]]; then
-    source "${PWD}/${ZSHV_TCONF_FILE}"
-elif [[ -f "ValTest/${ZSHV_TCONF_FILE}" ]]; then
-    source "ValTest/${ZSHV_TCONF_FILE}"
+if [ -n "$ZSHV_TCONF_DIR" ]; then
+    . "${ZSHV_TCONF_DIR}/${ZSHV_TCONF_FILE}"
+elif [ -f "${SH_ZERO_DIR}/${ZSHV_TCONF_FILE}" ]; then
+    . "${SH_ZERO_DIR}/${ZSHV_TCONF_FILE}"
+elif [ -f "${PWD}/${ZSHV_TCONF_FILE}" ]; then
+    . "${PWD}/${ZSHV_TCONF_FILE}"
+elif [ -f "ValTest/${ZSHV_TCONF_FILE}" ]; then
+    . "ValTest/${ZSHV_TCONF_FILE}"
 else
     echo "Couldn't find ${ZSHV_TCONF_FILE} (searched paths: \$ZSHV_TCONF_DIR=\`$ZSHV_TCONF_DIR', ${SH_ZERO_DIR}/, \$PWD,  ValTest/)"
     exit 1
 fi
 # }}}
 # Restart with proper binary (configuration is loaded) {{{
-[[ -z "$ZSH_VERSION" ]] && exec /usr/bin/env "$zsh_control_bin" -f -c "source \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\" \"$8\" \"$9\""
+[ -z "$ZSH_VERSION" ] && exec /usr/bin/env "$zsh_control_bin" -f -c "source \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\" \"$8\" \"$9\""
 # }}}
 # INIT {{{
 typeset -g ZERO="${(%):-%N}" # this gives immunity to functionargzero being unset
