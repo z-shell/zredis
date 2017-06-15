@@ -2,7 +2,33 @@
 # -*- Mode: sh; sh-indentation: 4; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
 # vim:ft=zsh:sw=4:sts=4:et
 
-[[ -z "$ZSH_VERSION" ]] && exec /usr/bin/env zsh -f -c "source \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\" \"$8\" \"$9\" \"$10\""
+#
+# /bin/sh stage, load configuration to obtain $zsh_bin
+#
+
+# This barely works
+SH_ZERO_DIR=${0%/zsh-valgrind-parse.cmd}
+
+[[ -z "$ZSHV_TCONF_FILE" ]] && ZSHV_TCONF_FILE="vtest.conf"
+[[ "$1" = conf:* ]] && { ZSHV_TCONF_FILE="${1#conf:}"; shift; }
+
+if [[ -n "$ZSHV_TCONF_DIR" ]]; then
+    source "${ZSHV_TCONF_DIR}/${ZSHV_TCONF_FILE}"
+elif [[ -f "${SH_ZERO_DIR}/${ZSHV_TCONF_FILE}" ]]; then
+    source "${SH_ZERO_DIR}/${ZSHV_TCONF_FILE}"
+elif [[ -f "${PWD}/${ZSHV_TCONF_FILE}" ]]; then
+    source "${PWD}/${ZSHV_TCONF_FILE}"
+elif [[ -f "ValTest/${ZSHV_TCONF_FILE}" ]]; then
+    source "ValTest/${ZSHV_TCONF_FILE}"
+fi
+
+[[ -z "$zsh_control_bin" ]] && zsh_control_bin="zsh"
+
+#
+#
+#
+
+[[ -z "$ZSH_VERSION" ]] && exec /usr/bin/env "$zsh_control_bin" -f -c "source \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\" \"$8\" \"$9\" \"$10\""
 
 typeset -g ZERO="${(%):-%N}" # this gives immunity to functionargzero being unset
 typeset -g ZERO_DIR="${ZERO:h}"
