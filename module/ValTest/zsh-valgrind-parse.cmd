@@ -3,11 +3,11 @@
 # vim:ft=zsh:sw=4:sts=4:et
 
 #
-# /bin/sh stage, load configuration to obtain $zsh_control_bin
+# Setup
 #
 
-# This barely works
-SH_ZERO_DIR=${0%/zsh-valgrind-parse.cmd}
+# /bin/sh stage, load configuration to obtain $zsh_control_bin {{{
+SH_ZERO_DIR=${0%/zsh-valgrind-parse.cmd} # this barely works
 
 [[ -z "$ZSHV_TCONF_FILE" ]] && ZSHV_TCONF_FILE="vtest.conf"
 [[ "$1" = conf:* ]] && { ZSHV_TCONF_FILE="${1#conf:}"; shift; }
@@ -24,21 +24,11 @@ else
     echo "Couldn't find ${ZSHV_TCONF_FILE} (searched paths: \$ZSHV_TCONF_DIR=\`$ZSHV_TCONF_DIR', ${SH_ZERO_DIR}/, \$PWD,  ValTest/)"
     exit 1
 fi
-
-# Some fallbacks (currently unused)
-[[ "$test_bin" = "local-zsh" ]] && test_bin="${ZTST_exe}"
-[[ -z "$test_bin" ]] && test_bin="../Src/zsh"
-
-#
-# Restart with proper binary (configuration is loaded)
-#
-
+# }}}
+# Restart with proper binary (configuration is loaded) {{{
 [[ -z "$ZSH_VERSION" ]] && exec /usr/bin/env "$zsh_control_bin" -f -c "source \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\" \"$8\" \"$9\""
-
-#
-# Init
-#
-
+# }}}
+# INIT {{{
 typeset -g ZERO="${(%):-%N}" # this gives immunity to functionargzero being unset
 typeset -g ZERO_DIR="${ZERO:h}"
 
@@ -53,15 +43,11 @@ trap "coproc exit; return" TERM INT QUIT
 
 source "${ZERO_DIR}/"__error*.def
 
-mdebug_mode()
-{
-    [[ "$mdebug" = 1 || "$mdebug" = "yes" || "$mdebug" = "on" ]]
-}
-
-#
-# Set of filters, applied in order
-#
-
+# Some fallbacks (currently unused)
+[[ "$test_bin" = "local-zsh" ]] && test_bin="${ZTST_exe}"
+[[ -z "$test_bin" ]] && test_bin="../Src/zsh"
+# }}}
+# Set of filters, applied in order {{{
 local -A filters
 filters=(
     "1-ByAt" "(#b)(#s)(==[0-9]##==[[:blank:]]##)((#B)(by|at) 0x[A-F0-9]##: )(?##)[[:blank:]]\(([^:]##:[0-9]##)\)(#e)"
@@ -75,10 +61,8 @@ filters=(
 
 # Helper regexes
 local reachable_pat="(#b)(#s)(==[0-9]##==[[:blank:]]##)Reachable blocks?##(#e)"
-
-#
-# Theme
-#
+# }}}
+# Theme {{{
 local -A theme
 theme=(
     pid            $fg_bold[black]
@@ -97,12 +81,64 @@ theme=(
     skip_msg       $fg_bold[black]
     rst            $reset_color
 )
+# }}}
 
 #
-# Functions
+# Testers
 #
 
-# Block of matched lines
+# FUNCTION: mdebug_mode {{{
+mdebug_mode()
+{
+    [[ "$mdebug" = 1 || "$mdebug" = "yes" || "$mdebug" = "on" ]]
+}
+# }}}
+# FUNCTION: is_error {{{
+is_error() {
+    [[ "$1" = "5-Error/"* ]]
+}
+# }}}
+# FUNCTION: is_blank {{{
+is_blank() {
+    [[ "$1" = "7-Blank/"* ]]
+}
+# }}}
+# FUNCTION: which_byat {{{
+which_byat() {
+    [[ "$1" = "1-ByAt/"* ]] && { REPLY="1"; return; }
+    [[ "$1" = "2-ByAt/"* ]] && { REPLY="2"; return; }
+    [[ "$1" = "3-ByAt/"* ]] && { REPLY="3"; return; }
+    REPLY="0"
+}
+# }}}
+# FUNCTION: summaries_enabled {{{
+summaries_enabled()
+{
+    [[ "$summaries" = "1" || "$summaries" = "yes" || "$summaries" = "on" ]]
+}
+# }}}
+# FUNCTION: info_enabled {{{
+info_enabled()
+{
+    [[ "$info" = "1" || "$info" = "yes" || "$info" = "on" ]]
+}
+# }}}
+
+#
+# Business logic
+#
+
+# FUNCTION: process_block {{{
+#
+# Every finished block is passed to this function. It decides to
+# just print it, or convert to stack trace and match to error
+# definitions - suppressing full block if there is a match.
+#
+# Input:
+#   $@ - block of text (i.e. set of lines occurred before Valgrind blank line)
+# Output:
+#   stdout - Valgrind block of text printed or suppressed
+#
 process_block() {
     local -a bl first_subblock_funs second_subblock_funs
     local blank="" first second
@@ -151,38 +187,23 @@ process_block() {
 
     show_block "$@"
 }
-
+# }}}
+# FUNCTION: process_umblock {{{
 # Block of unmatched lines (e.g. program output)
 process_umblock() {
     print -rl -- "$@"
 }
-
-is_error() {
-    [[ "$1" = "5-Error/"* ]]
-}
-
-is_blank() {
-    [[ "$1" = "7-Blank/"* ]]
-}
-
-which_byat() {
-    [[ "$1" = "1-ByAt/"* ]] && { REPLY="1"; return; }
-    [[ "$1" = "2-ByAt/"* ]] && { REPLY="2"; return; }
-    [[ "$1" = "3-ByAt/"* ]] && { REPLY="3"; return; }
-    REPLY="0"
-}
-
-summaries_enabled()
+# }}}
+# FUNCTION: to_clean_stacktrace {{{
+#
+# Input:
+#   $@ - by/at lines from Valgrind output
+#
+# Output:
+#   $reply array, appended with stack trace (ordered function names)
+#
+to_clean_stacktrace()
 {
-    [[ "$summaries" = "1" || "$summaries" = "yes" || "$summaries" = "on" ]]
-}
-
-info_enabled()
-{
-    [[ "$info" = "1" || "$info" = "yes" || "$info" = "on" ]]
-}
-
-to_clean_stacktrace() {
     local -a lines out match mbegin mend
     local l
     lines=( "$@" )
@@ -206,8 +227,18 @@ to_clean_stacktrace() {
 
     reply+=( "${out[@]}" )
 }
-
-test_stack_trace() {
+# }}}
+# FUNCTION: test_stack_trace {{{
+#
+# Input:
+#   $@ - stack trace - array of function names
+#
+# Output:
+#   $REPLY - (if matched) set to the error definition that matched
+#   $? - false if stack trace matched to some error definition
+#
+test_stack_trace()
+{
     local -a stacktrace cur_errors
     integer idx ssize
     local error var_name
@@ -234,8 +265,17 @@ test_stack_trace() {
     # No error matched, return true
     return 0;
 }
-
-compare_error() {
+# }}}
+# FUNCTION: compare_error {{{
+#
+# Input:
+#   $1 - error definition
+#   $@[2,-1] - stack trace to test
+# Output:
+#   $? - true if error matched the stack trace
+#
+compare_error()
+{
     local error="$1"
     shift
 
@@ -335,7 +375,19 @@ compare_error() {
     # Unreachable
     return 0;
 }
-
+# }}}
+# FUNCTION: show_block {{{
+#
+# Displays given block of text using colors (from theme).
+# Obeys vtest.conf, its "summaries" and "info" variables
+# (can suppress those sections).
+#
+# Input:
+#   $@ - block of text to display, with type-prefixes like "6-Info/{text}"
+#
+# Output
+#   stdout - lines printed with colors, if not suppresed by config
+#
 show_block()
 {
     local line next_line MATCH
@@ -392,11 +444,13 @@ show_block()
         fi
     done
 }
+# }}}
 
 #
 # Main code
 #
 
+# Valgrind output processing {{{
 coproc 2>&1 valgrind "$@"
 
 integer count=0
@@ -439,3 +493,4 @@ while read -p line; do
 
     prev_matched="$matched"
 done
+# }}}
