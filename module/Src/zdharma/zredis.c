@@ -2687,7 +2687,7 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
         entry = reply->element[i];
         if (NULL == entry || entry->type != REDIS_REPLY_STRING) {
             if (entry && entry->str && entry->len > 0) {
-                zwarn("Error 6 when replacing database (element %d, message: %s)", i+1, reply2->str);
+                zwarn("Error 6 when replacing database (element %d, message: %s)", i+1, entry->str);
             } else {
                 zwarn("Error 6 when replacing database (element %d)", i+1);
             }
