@@ -3,7 +3,7 @@
 # vim:ft=zsh:sw=4:sts=4:et
 
 #
-# /bin/sh stage, load configuration to obtain $zsh_bin
+# /bin/sh stage, load configuration to obtain $zsh_control_bin
 #
 
 # This barely works
@@ -25,11 +25,15 @@ else
     exit 1
 fi
 
+# Some fallbacks (currently unused)
+[[ "$test_bin" = "local-zsh" ]] && test_bin="${ZTST_exe}"
+[[ -z "$test_bin" ]] && test_bin="../Src/zsh"
+
 #
 # Restart with proper binary (configuration is loaded)
 #
 
-[[ -z "$ZSH_VERSION" ]] && exec /usr/bin/env "$test_bin" -f -c "source \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\" \"$8\" \"$9\" \"$10\""
+[[ -z "$ZSH_VERSION" ]] && exec /usr/bin/env "$zsh_control_bin" -f -c "source \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\" \"$8\" \"$9\" \"$10\""
 
 #
 # Init
