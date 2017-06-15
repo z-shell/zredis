@@ -307,7 +307,9 @@ compare_error() {
 
 show_block()
 {
-    local line
+    local line MATCH
+    integer MBEGIN MEND
+
     for line; do
         if [[ "$line" = "1-ByAt/"* ]]; then
             if [[ "${line#*/}" = ${~filters[1-ByAt]} ]]; then
