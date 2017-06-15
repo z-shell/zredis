@@ -49,7 +49,7 @@ trap "coproc exit; return" TERM INT QUIT
 
 source "${ZERO_DIR}/"__error*.def
 
-debug_mode()
+mdebug_mode()
 {
     [[ "$mdebug" = 1 || "$mdebug" = "yes" || "$mdebug" = "on" ]]
 }
@@ -205,7 +205,7 @@ test_stack_trace() {
         [[ -z "$cur_errors[1]" ]] && continue
         if [[ "${#cur_errors}" -gt 0 ]]; then
             for error in "${cur_errors[@]}"; do
-                debug_mode && print "Processing error: $error"
+                mdebug_mode && print "Processing error: $error"
                 if compare_error "$error" "${stacktrace[@]}"; then
                     # Error matched stack trace, result is false
                     # i.e. skip displaying the block
@@ -242,30 +242,30 @@ compare_error() {
         fi
         if [[ "$mode" = "skip" ]]; then
             while [[ "${stacktrace[stack_idx]}" != "$part" ]]; do
-                debug_mode && print "Looking for \`$part', skipping (in valgrind stack trace): \`${stacktrace[stack_idx]}'"
+                mdebug_mode && print "Looking for \`$part', skipping (in valgrind stack trace): \`${stacktrace[stack_idx]}'"
                 stack_idx+=1
                 (( stack_idx > ssize )) && break
             done
 
             if (( stack_idx > ssize )); then
-                debug_mode && print "Failed to match element \`$part' (after \`*' in error definition)"
+                mdebug_mode && print "Failed to match element \`$part' (after \`*' in error definition)"
                 # Failed to match error-element after "*"
                 return 1;
             fi
 
             # Found, move to next stack element, continue to next error-part
-            debug_mode && print "Found \`$part', moving to next (in valgrind stack trace): \`${stacktrace[stack_idx+1]}'"
+            mdebug_mode && print "Found \`$part', moving to next (in valgrind stack trace): \`${stacktrace[stack_idx+1]}'"
             stack_idx+=1
             mode="exact"
             continue
         elif [[ "$mode" = "exact" ]]; then
             if [[ "${stacktrace[stack_idx]}" != "$part" ]]; then
-                debug_mode && print "Failed to match \`$part' (vs. valgrind stack trace element: \`${stacktrace[stack_idx]})'"
+                mdebug_mode && print "Failed to match \`$part' (vs. valgrind stack trace element: \`${stacktrace[stack_idx]})'"
                 # Failed to match error-element
                 return 1;
             fi
 
-            debug_mode && print "Matched $part (vs. valgrind stack trace: ${stacktrace[stack_idx]})"
+            mdebug_mode && print "Matched $part (vs. valgrind stack trace: ${stacktrace[stack_idx]})"
             # Matched current error-part, move to next stack
             # trace element, continue to next part
             stack_idx+=1
@@ -275,13 +275,13 @@ compare_error() {
     done
 
     if (( stack_idx == -1 )); then
-        debug_mode && print "Valgrind stack trace finished first (too many error elements, no match)"
+        mdebug_mode && print "Valgrind stack trace finished first (too many error elements, no match)"
         # Had error-part to test but stack trace ended -> no match
         return 1;
     fi
 
     if (( stack_idx > ssize )); then
-        debug_mode && print "Processed whole valgrind stack, used all error-parts - a match"
+        mdebug_mode && print "Processed whole valgrind stack, used all error-parts - a match"
         # Processed whole stack trace and error-parts
         # have been fully used - match, return true
         return 0
@@ -292,11 +292,11 @@ compare_error() {
         # stack trace -> in order to match, last part
         # must be "*", i.e. skip mode
         if [[ "$mode" = "skip" ]]; then
-            debug_mode && print "Final \`*' in error definition - a match"
+            mdebug_mode && print "Final \`*' in error definition - a match"
             # Match, return true
             return 0;
         else
-            debug_mode && print "Stack trace was longer than error-parts, no match"
+            mdebug_mode && print "Stack trace was longer than error-parts, no match"
             return 1;
         fi
     fi
