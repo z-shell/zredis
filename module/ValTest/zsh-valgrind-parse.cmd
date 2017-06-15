@@ -172,6 +172,11 @@ which_byat() {
     REPLY="0"
 }
 
+summaries_enabled()
+{
+    [[ "$summaries" = "1" || "$summaries" = "yes" || "$summaries" = "on" ]]
+}
+
 to_clean_stacktrace() {
     local -a lines out match mbegin mend
     local l
@@ -328,10 +333,14 @@ compare_error() {
 
 show_block()
 {
-    local line MATCH
-    integer MBEGIN MEND
+    local line next_line MATCH
+    integer MBEGIN MEND idx max
 
-    for line; do
+    max="${#}"
+    for (( idx = 1; idx <= max; ++ idx )); do
+        line="${@[idx]}"
+        next_line="${@[idx+1]}"
+
         if [[ "$line" = "1-ByAt/"* ]]; then
             if [[ "${line#*/}" = ${~filters[1-ByAt]} ]]; then
                 print "${theme[pid]}${match[1]}${theme[byat]}${match[2]}${theme[func]}${match[3]}${theme[symbol]} (${theme[where_file]}${match[4]/:/${theme[symbol]}:${theme[number]}}${theme[symbol]})${theme[rst]}"
@@ -345,6 +354,9 @@ show_block()
                 print "${theme[pid]}${match[1]}${theme[byat]}${match[2]}${theme[func]}${match[3]}${theme[rst]}"
             fi
         elif [[ "$line" = "4-Summary/"* ]]; then
+            if ! summaries_enabled; then
+                continue
+            fi
             if [[ "${line#*/}" = ${~filters[4-Summary]} ]]; then
                 if [[ "${match[2]}" = [A-Z[:blank:]]##[:] ]]; then
                     match[3]="${match[3]//(#m) [0-9,]## /${theme[number]}$MATCH${theme[rst]}}"
@@ -363,6 +375,11 @@ show_block()
                 print "${theme[pid]}${match[1]}${theme[info]}${match[2]}${theme[rst]}"
             fi
         elif [[ "$line" = "7-Blank/"* ]]; then
+            if [[ "$next_line" = "4-Summary/"* ]]; then
+                if ! summaries_enabled; then
+                    continue
+                fi
+            fi
             print "${theme[pid]}${line#*/}${theme[rst]}"
         fi
     done
