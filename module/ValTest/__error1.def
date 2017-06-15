@@ -17,14 +17,14 @@ errors1+=(
 
     # The zredis_tied array is to be collected by OS
     # 278 bytes in 46 blocks are definitely lost in loss record 551 of 624
-    "* / bin_ztie / redis_main_entry / zrtie_cmd / zsh_db_arr_append / ztrdup / *"
+    "* / bin_ztie / redis_main_entry / zrtie_cmd* / zsh_db_arr_append / ztrdup / *"
 
     # As above
     # 23 (16 direct, 7 indirect) bytes in 1 blocks are definitely lost in loss record 187 of 575
-    "* / bin_ztie / redis_main_entry / zrtie_cmd / zsh_db_arr_append / zshcalloc / *"
+    "* / bin_ztie / redis_main_entry / zrtie_cmd* / zsh_db_arr_append / zshcalloc / *"
 
     # TODO Strong thesis, checked this, redisFree() would have to not work completely
-    "* / bin_ztie / redis_main_entry / zrtie_cmd / connect / redisConnectWithTimeout / *"
+    "* / bin_ztie / redis_main_entry / zrtie_cmd* / connect / redisConnectWithTimeout / *"
 
     # Initial empty zredis_tied array, to be collected by OS
     # 8 bytes in 1 blocks are definitely lost in loss record 71 of 587
@@ -65,7 +65,7 @@ errors1+=(
     "* / addvars / assignsparam / assignstrvalue / redis_str_setfn / redisCommand / * / sdsempty / *"
 
     # Possibly lost due to pointer tricks of sds library
-    "* / bin_ztie / redis_main_entry / zrtie_cmd / type / redisCommand / * / sdsMakeRoomFor / *"
+    "* / bin_ztie / redis_main_entry / zrtie_cmd* / type / redisCommand / * / sdsMakeRoomFor / *"
 
     # Possibly lost due to pointer tricks of sds library
     "* / addvars / assignsparam / * / redis_hset_setfn / redisCommand / * / sdsMakeRoomFor / *"

@@ -296,7 +296,7 @@ compare_error()
             continue
         fi
         if [[ "$mode" = "skip" ]]; then
-            while [[ "${stacktrace[stack_idx]}" != "$part" ]]; do
+            while [[ "${stacktrace[stack_idx]}" != ${~part} ]]; do
                 mdebug_mode && print "Looking for \`$part', skipping (in valgrind stack trace): \`${stacktrace[stack_idx]}'"
                 if [[ "${stacktrace[stack_idx]}" = "--BLOCK--" ]]; then
                     mdebug_mode && print "Didn't match 2-block error properly - \"--BLOCK--\" boundary was skipped, no match"
@@ -323,7 +323,7 @@ compare_error()
             mode="exact"
             continue
         elif [[ "$mode" = "exact" ]]; then
-            if [[ "${stacktrace[stack_idx]}" != "$part" ]]; then
+            if [[ "${stacktrace[stack_idx]}" != ${~part} ]]; then
                 mdebug_mode && print "Failed to match \`$part' (vs. valgrind stack trace element: \`${stacktrace[stack_idx]})'"
                 # Failed to match error-element
                 return 1;
