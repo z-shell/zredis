@@ -48,11 +48,11 @@ local cmd="valgrind"
 [[ "$test_bin" = "local-zsh" ]] && test_bin="${ZTST_exe}"
 
 if [[ "${+tkind}" = "1" && "$tkind" = nopossiblylost* ]]; then
-  print "$fg[green]@@@$reset_color Test type: leaks, nopossiblylost $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $fg[green]@@@$reset_color"
+  print "$fg[green]@@@$reset_color Test type: leaks, nopossiblylost $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $ZSH_VERSION $fg[green]@@@$reset_color"
 elif [[ "${+tkind}" = "1" && "$tkind" = error* ]]; then
-  print "$fg[green]@@@$reset_color Test type: only errors (no leaks) $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $fg[green]@@@$reset_color"
+  print "$fg[green]@@@$reset_color Test type: only errors (no leaks) $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $ZSH_VERSION $fg[green]@@@$reset_color"
 elif [[ "${+tkind}" = "1" && "$tkind" = leak* ]]; then
-  print "$fg[green]@@@$reset_color Test type: full leak check $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $fg[green]@@@$reset_color"
+  print "$fg[green]@@@$reset_color Test type: full leak check $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $ZSH_VERSION $fg[green]@@@$reset_color"
 fi
 
 integer success failure skipped retval
