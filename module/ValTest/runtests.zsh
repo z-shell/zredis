@@ -33,7 +33,7 @@ fi
 typeset -g ZERO="${(%):-%N}" # this gives immunity to functionargzero being unset
 typeset -g ZERO_DIR="${ZERO:h}"
 
-emulate zsh
+emulate zsh -o warncreateglobal -o typesetsilent
 
 autoload colors; colors
 
