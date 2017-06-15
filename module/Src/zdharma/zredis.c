@@ -1043,7 +1043,7 @@ static void
 scan_keys(HashTable ht, ScanFunc func, int flags)
 {
     char *key;
-    size_t key_len;
+    size_t key_len, j;
     unsigned long long cursor = 0;
     redisContext *rc;
     redisReply *reply, *reply2;
@@ -1095,7 +1095,7 @@ scan_keys(HashTable ht, ScanFunc func, int flags)
         }
 
         reply2 = reply->element[1];
-        for (size_t j = 0; j < reply2->elements; j++) {
+        for (j = 0; j < reply2->elements; j++) {
             redisReply *entry = reply2->element[j];
             if (entry == NULL || entry->type != REDIS_REPLY_STRING) {
                 continue;
@@ -1980,7 +1980,7 @@ static void
 zset_scan_keys(HashTable ht, ScanFunc func, int flags)
 {
     char *main_key, *key;
-    size_t main_key_len, key_len;
+    size_t main_key_len, key_len, j;
     unsigned long long cursor = 0;
     redisContext *rc;
     redisReply *reply, *reply2;
@@ -2041,7 +2041,7 @@ zset_scan_keys(HashTable ht, ScanFunc func, int flags)
             break;
         }
 
-        for (size_t j = 0; j < reply2->elements; j+= 2) {
+        for (j = 0; j < reply2->elements; j+= 2) {
             redisReply *entry = reply2->element[j];
             if (entry == NULL || entry->type != REDIS_REPLY_STRING) {
                 continue;
@@ -2555,7 +2555,7 @@ static void
 hset_scan_keys(HashTable ht, ScanFunc func, int flags)
 {
     char *main_key, *key;
-    size_t main_key_len, key_len;
+    size_t main_key_len, key_len, j;
     unsigned long long cursor = 0;
     redisContext *rc;
     redisReply *reply, *reply2;
@@ -2618,7 +2618,7 @@ hset_scan_keys(HashTable ht, ScanFunc func, int flags)
             break;
         }
 
-        for (size_t j = 0; j < reply2->elements; j+= 2) {
+        for (j = 0; j < reply2->elements; j+= 2) {
             redisReply *entry = reply2->element[j];
             if (entry == NULL || entry->type != REDIS_REPLY_STRING) {
                 continue;
