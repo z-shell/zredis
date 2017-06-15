@@ -101,6 +101,10 @@ errors1+=(
     "* / prefork / stringsubst / * / getarrvalue / * / redis_arrset_getfn / redisCommand / * / sdsempty / *"
 
     # Possibly lost due to pointer tricks of sds library
+    # Revealed on Ubuntu 14.04.4, GCC 4.8.4
+    "* / stringsubst / * / getarrvalue / * / redis_arrset_getfn / redisCommand / * / sdsempty / *"
+
+    # Possibly lost due to pointer tricks of sds library
     "* / paramsubst / * / getvaluearr / redis_arrset_getfn / redisCommand / * / sdsMakeRoomFor / *"
 
     # Possibly lost due to pointer tricks of sds library
