@@ -28,7 +28,11 @@ fi
 # Restart with zsh as interpreter
 #
 
-[[ -z "$ZSH_VERSION" ]] && exec /usr/bin/env "$zsh_control_bin" -f -c "source \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\" \"$8\" \"$9\" \"$10\""
+[[ -z "$ZSH_VERSION" ]] && exec /usr/bin/env "$zsh_control_bin" -f -c "source \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\" \"$8\" \"$9\""
+
+#
+# Init
+#
 
 typeset -g ZERO="${(%):-%N}" # this gives immunity to functionargzero being unset
 typeset -g ZERO_DIR="${ZERO:h}"
@@ -41,6 +45,7 @@ test_type_msg()
 {
   print "$fg[green]@@@$reset_color Test type: $1 $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $ZSH_VERSION $fg[green]@@@$reset_color"
 }
+
 # Run all specified tests, keeping count of which succeeded.
 # The reason for this extra layer above the test script is to
 # protect from catastrophic failure of an individual test.
