@@ -40,19 +40,31 @@ emulate zsh
 # protect from catastrophic failure of an individual test.
 # We could probably do that with subshells instead.
 
-[[ -f "test_type" ]] && local tpe=$(<test_type) || local tpe="1"
 local cmd="valgrind"
 [[ -x "${ZERO_DIR}/zsh-valgrind-parse.cmd" ]] && cmd="${ZERO_DIR}/zsh-valgrind-parse.cmd"
+[[ "$test_bin" = "local-zsh" ]] && test_bin="${ZTST_exe}"
+
+if [[ "${+tkind}" = "1" && "$tkind" = nopossiblylost* ]]; then
+  print "@@@ Test type: leaks, nopossiblylost @@@ Binary: $test_bin @@@"
+elif [[ "${+tkind}" = "1" && "$tkind" = error* ]]; then
+  print "@@@ Test type: only errors (no leaks) @@@ Binary: $test_bin @@@"
+elif [[ "${+tkind}" = "1" && "$tkind" = leak* ]]; then
+  print "@@@ Test type: full leak check @@@ Binary: $test_bin @@@"
+fi
 
 integer success failure skipped retval
 for file in "${(f)ZTST_testlist}"; do
-  if [[ "$tpe" = "3" ]]; then
-    $cmd --leak-check=full --show-possibly-lost=no $ZTST_exe +Z -f $ZTST_srcdir/ztst.zsh $file
-  elif [[ "$tpe" = "2" ]]; then
-    $cmd $ZTST_exe +Z -f $ZTST_srcdir/ztst.zsh $file
+  if [[ "${+tkind}" = "1" && "$tkind" = nopossiblylost* ]]; then
+    $cmd --leak-check=full --show-possibly-lost=no "$test_bin" +Z -f $ZTST_srcdir/ztst.zsh $file
+  elif [[ "${+tkind}" = "1" && "$tkind" = error* ]]; then
+    $cmd "$test_bin" +Z -f $ZTST_srcdir/ztst.zsh $file
+  elif [[ "${+tkind}" = "1" && "$tkind" = leak* ]]; then
+    $cmd --leak-check=full "$test_bin" +Z -f $ZTST_srcdir/ztst.zsh $file
   else
-    $cmd --leak-check=full $ZTST_exe +Z -f $ZTST_srcdir/ztst.zsh $file
+    print "Unknown test type \`$tkind\', supported are: error, leak, nopossiblylost"
+    return 1
   fi
+
   retval=$?
   if (( $retval == 2 )); then
     (( skipped++ ))
