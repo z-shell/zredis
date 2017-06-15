@@ -177,6 +177,11 @@ summaries_enabled()
     [[ "$summaries" = "1" || "$summaries" = "yes" || "$summaries" = "on" ]]
 }
 
+info_enabled()
+{
+    [[ "$info" = "1" || "$info" = "yes" || "$info" = "on" ]]
+}
+
 to_clean_stacktrace() {
     local -a lines out match mbegin mend
     local l
@@ -371,6 +376,9 @@ show_block()
                 print "${theme[pid]}${match[1]}${theme[error]}${match[2]}${theme[rst]}"
             fi
         elif [[ "$line" = "6-Info/"* ]]; then
+            if ! info_enabled; then
+                continue
+            fi
             if [[ "${line#*/}" = ${~filters[6-Info]} ]]; then
                 print "${theme[pid]}${match[1]}${theme[info]}${match[2]}${theme[rst]}"
             fi
