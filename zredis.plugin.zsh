@@ -34,7 +34,7 @@ zredis_compile() {
 
     (
         local build=1
-        zmodload zsh/system && { zsystem flock -t 1 "${ZREDIS_REPO_DIR}/module/configure" || build=0; }
+        zmodload zsh/system && { zsystem flock -t 1 "${ZREDIS_REPO_DIR}/module/configure.ac" || build=0; }
         if (( build )); then
             builtin cd "${ZREDIS_REPO_DIR}/module"
             CPPFLAGS="$cppf" CFLAGS="$cf" LDFLAGS="$ldf" ./configure
