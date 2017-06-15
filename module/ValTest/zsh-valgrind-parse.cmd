@@ -29,7 +29,7 @@ fi
 # Restart with proper binary (configuration is loaded)
 #
 
-[[ -z "$ZSH_VERSION" ]] && exec /usr/bin/env "$zsh_bin" -f -c "source \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\" \"$8\" \"$9\" \"$10\""
+[[ -z "$ZSH_VERSION" ]] && exec /usr/bin/env "$test_bin" -f -c "source \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\" \"$8\" \"$9\" \"$10\""
 
 #
 # Init
