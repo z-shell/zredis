@@ -31,10 +31,14 @@ fi
 
 [[ -z "$ZSH_VERSION" ]] && exec /usr/bin/env "$zsh_bin" -f -c "source \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\" \"$8\" \"$9\" \"$10\""
 
+#
+# Init
+#
+
 typeset -g ZERO="${(%):-%N}" # this gives immunity to functionargzero being unset
 typeset -g ZERO_DIR="${ZERO:h}"
 
-emulate zsh -o warncreateglobal -o extendedglob
+emulate zsh -o warncreateglobal -o extendedglob -o typesetsilent
 
 autoload colors; colors
 
