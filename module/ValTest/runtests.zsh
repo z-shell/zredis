@@ -55,14 +55,24 @@ elif [[ "${+tkind}" = "1" && "$tkind" = leak* ]]; then
   print "$fg[green]@@@$reset_color Test type: full leak check $fg[green]@@@$reset_color Test binary: $test_bin $fg[green]@@@$reset_color Control binary: $zsh_control_bin $ZSH_VERSION $fg[green]@@@$reset_color"
 fi
 
+local ctarg    # current arg
+local -a targs # evaluated test_bin args
 integer success failure skipped retval
+
 for file in "${(f)ZTST_testlist}"; do
+  # Prepare test_bin-args
+  targs=()
+  for ctarg in "${test_bin_args[@]}"; do
+    eval "targs+=( \"$ctarg\" )"
+  done
+
+  # Three possible valgrind invocations
   if [[ "${+tkind}" = "1" && "$tkind" = nopossiblylost* ]]; then
-    $cmd --leak-check=full --show-possibly-lost=no "$test_bin" +Z -f $ZTST_srcdir/ztst.zsh $file
+    $cmd --leak-check=full --show-possibly-lost=no "$test_bin" "${targs[@]}"
   elif [[ "${+tkind}" = "1" && "$tkind" = error* ]]; then
-    $cmd "$test_bin" +Z -f $ZTST_srcdir/ztst.zsh $file
+    $cmd "$test_bin" "${targs[@]}"
   elif [[ "${+tkind}" = "1" && "$tkind" = leak* ]]; then
-    $cmd --leak-check=full "$test_bin" +Z -f $ZTST_srcdir/ztst.zsh $file
+    $cmd --leak-check=full "$test_bin" "${targs[@]}"
   else
     print "Unknown test type \`$tkind\', supported are: error, leak, nopossiblylost"
     return 1
