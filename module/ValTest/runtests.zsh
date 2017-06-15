@@ -9,26 +9,26 @@
 # This barely works
 SH_ZERO_DIR=${0%/zsh-valgrind-parse.cmd}
 
-[[ -z "$ZSHV_TCONF_FILE" ]] && ZSHV_TCONF_FILE="vtest.conf"
-[[ "$1" = conf:* ]] && { ZSHV_TCONF_FILE="${1#conf:}"; shift; }
+[ -z "$ZSHV_TCONF_FILE" ] && ZSHV_TCONF_FILE="vtest.conf"
+[ "$1" != "${1#conf:}" ] && { ZSHV_TCONF_FILE="${1#conf:}"; shift; }
 
-if [[ -n "$ZSHV_TCONF_DIR" ]]; then
-  source "${ZSHV_TCONF_DIR}/${ZSHV_TCONF_FILE}"
-elif [[ -f "${SH_ZERO_DIR}/${ZSHV_TCONF_FILE}" ]]; then
-  source "${SH_ZERO_DIR}/${ZSHV_TCONF_FILE}"
-elif [[ -f "${PWD}/${ZSHV_TCONF_FILE}" ]]; then
-  source "${PWD}/${ZSHV_TCONF_FILE}"
-elif [[ -f "ValTest/${ZSHV_TCONF_FILE}" ]]; then
-  source "ValTest/${ZSHV_TCONF_FILE}"
+if [ -n "$ZSHV_TCONF_DIR" ]; then
+  . "${ZSHV_TCONF_DIR}/${ZSHV_TCONF_FILE}"
+elif [ -f "${SH_ZERO_DIR}/${ZSHV_TCONF_FILE}" ]; then
+  . "${SH_ZERO_DIR}/${ZSHV_TCONF_FILE}"
+elif [ -f "${PWD}/${ZSHV_TCONF_FILE}" ]; then
+  . "${PWD}/${ZSHV_TCONF_FILE}"
+elif [ -f "ValTest/${ZSHV_TCONF_FILE}" ]; then
+  . "ValTest/${ZSHV_TCONF_FILE}"
 fi
 
-[[ -z "$zsh_control_bin" ]] && zsh_control_bin="zsh"
+[ -z "$zsh_control_bin" ] && zsh_control_bin="zsh"
 
 #
 # Restart with zsh as interpreter
 #
 
-[[ -z "$ZSH_VERSION" ]] && exec /usr/bin/env "$zsh_control_bin" -f -c "source \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\" \"$8\" \"$9\""
+[ -z "$ZSH_VERSION" ] && exec /usr/bin/env "$zsh_control_bin" -f -c "source \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\" \"$8\" \"$9\""
 
 #
 # Init
@@ -78,7 +78,7 @@ integer success failure skipped retval
 for file in "${(f)ZTST_testlist}"; do
   # Prepare test_bin-args
   targs=()
-  for ctarg in "${test_bin_args[@]}"; do
+  for ctarg in "${=test_bin_args[@]}"; do
     eval "targs+=( \"$ctarg\" )"
   done
 
