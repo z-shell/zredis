@@ -13247,7 +13247,7 @@ DEFS_MK="Config/defs.mk"
 VERSION_MK="${srcdir}/Config/version.mk"
 
 
-ac_config_files="$ac_config_files Config/defs.mk Makefile Src/Makefile Test/Makefile ValTest/Makefile"
+ac_config_files="$ac_config_files Config/defs.mk Makefile Src/Makefile Test/Makefile VATS/Makefile"
 
 ac_config_commands="$ac_config_commands config.modules"
 
@@ -13954,7 +13954,7 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "Src/Makefile") CONFIG_FILES="$CONFIG_FILES Src/Makefile" ;;
     "Test/Makefile") CONFIG_FILES="$CONFIG_FILES Test/Makefile" ;;
-    "ValTest/Makefile") CONFIG_FILES="$CONFIG_FILES ValTest/Makefile" ;;
+    "VATS/Makefile") CONFIG_FILES="$CONFIG_FILES VATS/Makefile" ;;
     "config.modules") CONFIG_COMMANDS="$CONFIG_COMMANDS config.modules" ;;
     "stamp-h") CONFIG_COMMANDS="$CONFIG_COMMANDS stamp-h" ;;
 

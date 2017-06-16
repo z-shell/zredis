@@ -5,35 +5,35 @@
  module_path=( `pwd`/Modules )
  modname1="zdharma/db"
  modname2="zdharma/zredis"
- db1="127.0.0.1:6379/10"
- db2="127.0.0.1/11"
+ db1="127.0.0.1:6379/10/myhset"
+ db2="127.0.0.1/11/myhset"
  if ! zmodload $modname1 ; then
-   ZTST_unimplemented="can't load $modname1 module for testing"
+   VATS_unimplemented="can't load $modname1 module for testing"
  fi
  if ! zmodload $modname2 ; then
-   ZTST_unimplemented="can't load $modname2 module for testing"
+   VATS_unimplemented="can't load $modname2 module for testing"
  fi
- redis-cli -n 10 flushdb
- redis-cli -n 11 flushdb
+ redis-cli -n 10 flushdb >&| /dev/null || VATS_unimplemented="local redis database (with free indexes 10 and 11) not accessible"
+ redis-cli -n 11 flushdb >&| /dev/null || VATS_unimplemented="local redis database (with free indexes 10 and 11) not accessible"
 
 %test
 
  (zmodload -u $modname2 && zmodload $modname2)
 0:unload and reload the module without crashing
 
- ztie -d db/redis -f $db1 dbase
+ ztie -d db/redis -f $db1 -L hash dbase
  dbase[testkey]=testdata
  zuntie dbase
  unset dbase
- ztie -d db/redis -f $db1 dbase
+ ztie -r -d db/redis -f $db1 dbase
  echo $dbase[testkey]
- zuntie dbase
+ zuntie -u dbase
  echo $zredis_tied ${#zredis_tied}
 0:store key in database 1
 >testdata
 >0
 
- ztie -d db/redis -f $db2 dbase
+ ztie -d db/redis -f $db2 -L hash dbase
  dbase[testkey]=testdata
  zuntie dbase
  unset dbase
@@ -46,6 +46,7 @@
 >0
 
  ztie -d db/redis -f $db1 dbase2
+ dbase2[testkey2]=data
  unset 'dbase2[testkey]'
  zuntie dbase2
  ztie -d db/redis -f $db1 dbase
@@ -65,9 +66,9 @@
  ztie -d db/redis -f $db1 dbase
  unset 'dbase[testkey]'
  zuntie dbase
- ztie -d db/redis -f $db1 dbase
+ ztie -r -d db/redis -f $db1 dbase
  echo $dbase[testkey]
- zuntie dbase
+ zuntie -u dbase
  echo $zredis_tied ${#zredis_tied}
 0:store & remove key from database (the same variables)
 >testdata
@@ -107,7 +108,7 @@
  print -rl -- "${(o)result[@]}"
  zuntie dbase
  echo $zredis_tied ${#zredis_tied}
-0:scan tied hash, directly assign local -a
+0:scan read-only tied hash, directly assign local -a
 >testdata
 >testdataxtestdata
 >testkey
@@ -119,7 +120,7 @@
  print -rl -- "${(kv)dbase[@]}"
  zuntie dbase
  echo $zredis_tied ${#zredis_tied}
-0:Use scan right after overwrite of database
+0:Use scan directly after overwrite of database
 >a
 >a
 >0
@@ -128,12 +129,12 @@
  dbase=( a b c d )
  zuntie dbase
  unset dbase
- ztie -d db/redis -f $db1 dbase
+ ztie -r -d db/redis -f $db1 dbase
  result=( "${(kv)dbase[@]}" )
  print -rl -- "${(o)result[@]}"
- zuntie dbase
+ zuntie -u dbase
  echo $zredis_tied ${#zredis_tied}
-0:replace hash / database, scan
+0:replace hash / database with untie, scan
 >a
 >b
 >c
@@ -174,7 +175,7 @@
  ztie -d db/redis -f ${db1%/*}/1000 dbase 2>/dev/null; ret=$?
  echo $zredis_tied ${#zredis_tied}
  return $ret
-1:open non-existent database
+1:read-only open non-existent database
 >0
 
  ztie -d db/redis -f $db1 dbase
@@ -342,11 +343,11 @@
 
  ztie -d db/redis -f $db1 dbase
  ztaddress dbase
- [[ $REPLY = "127.0.0.1:6379/10" ]] && echo correct
+ [[ $REPLY = "127.0.0.1:6379/10/myhset" ]] && echo correct
  zuntie dbase
  ztie -d db/redis -f $db2 dbase
  ztaddress dbase
- [[ $REPLY = "127.0.0.1/11" ]] && echo correct
+ [[ $REPLY = "127.0.0.1/11/myhset" ]] && echo correct
  zuntie dbase
 0:ztaddress builtin
 >correct

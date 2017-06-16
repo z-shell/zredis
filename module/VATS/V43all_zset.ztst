@@ -5,24 +5,24 @@
  module_path=( `pwd`/Modules )
  modname1="zdharma/db"
  modname2="zdharma/zredis"
- db1="127.0.0.1:6379/10/myhset"
- db2="127.0.0.1/11/myhset"
+ db1="127.0.0.1:6379/10/myzset"
+ db2="127.0.0.1/11/myzset"
  if ! zmodload $modname1 ; then
-   ZTST_unimplemented="can't load $modname1 module for testing"
+   VATS_unimplemented="can't load $modname1 module for testing"
  fi
  if ! zmodload $modname2 ; then
-   ZTST_unimplemented="can't load $modname2 module for testing"
+   VATS_unimplemented="can't load $modname2 module for testing"
  fi
- redis-cli -n 10 flushdb >&| /dev/null || ZTST_unimplemented="local redis database (with free indexes 10 and 11) not accessible"
- redis-cli -n 11 flushdb >&| /dev/null || ZTST_unimplemented="local redis database (with free indexes 10 and 11) not accessible"
+ redis-cli -n 10 flushdb >&| /dev/null || VATS_unimplemented="local redis database (with free indexes 10 and 11) not accessible"
+ redis-cli -n 11 flushdb >&| /dev/null || VATS_unimplemented="local redis database (with free indexes 10 and 11) not accessible"
 
 %test
 
  (zmodload -u $modname2 && zmodload $modname2)
 0:unload and reload the module without crashing
 
- ztie -d db/redis -f $db1 -L hash dbase
- dbase[testkey]=testdata
+ ztie -d db/redis -f $db1 -L zset dbase
+ dbase[testkey]=1.0
  zuntie dbase
  unset dbase
  ztie -r -d db/redis -f $db1 dbase
@@ -30,11 +30,11 @@
  zuntie -u dbase
  echo $zredis_tied ${#zredis_tied}
 0:store key in database 1
->testdata
+>1
 >0
 
- ztie -d db/redis -f $db2 -L hash dbase
- dbase[testkey]=testdata
+ ztie -d db/redis -f $db2 -L zset dbase
+ dbase[testkey]=1.0
  zuntie dbase
  unset dbase
  ztie -d db/redis -f $db2 dbase
@@ -42,11 +42,11 @@
  zuntie dbase
  echo $zredis_tied ${#zredis_tied}
 0:store key in database 2
->testdata
+>1
 >0
 
  ztie -d db/redis -f $db1 dbase2
- dbase2[testkey2]=data
+ dbase2[testkey2]=2.0
  unset 'dbase2[testkey]'
  zuntie dbase2
  ztie -d db/redis -f $db1 dbase
@@ -58,7 +58,7 @@
 >0
 
  ztie -d db/redis -f $db1 dbase
- dbase[testkey]=testdata
+ dbase[testkey]=1.0
  zuntie dbase
  ztie -d db/redis -f $db1 dbase
  echo $dbase[testkey]
@@ -71,14 +71,14 @@
  zuntie -u dbase
  echo $zredis_tied ${#zredis_tied}
 0:store & remove key from database (the same variables)
->testdata
+>1
 >
 >0
 
  ztie -d db/redis -f $db1 dbase
- dbase[testkey]=testdata
+ dbase[testkey]=1.0
  dbase[testkey2]=$dbase[testkey]
- dbase[testkey3]=$dbase[testkey]x$dbase[testkey2]
+ dbase[testkey3]=$(( dbase[testkey] + $dbase[testkey2] ))
  zuntie dbase
  ztie -d db/redis -f $db1 dbase
  echo $dbase[testkey]
@@ -87,19 +87,21 @@
  zuntie dbase
  echo $zredis_tied ${#zredis_tied}
 0:store 2 keys fetching 1st
->testdata
->testdata
->testdataxtestdata
+>1
+>1
+>2
 >0
 
  ztie -d db/redis -f $db1 dbase
  val=$dbase[testkey2]
  unset 'dbase[testkey2]'
  echo $val
+ echo $dbase[testkey2]
  zuntie dbase
  echo $zredis_tied ${#zredis_tied}
 0:unset key that was fetched
->testdata
+>1
+>
 >0
 
  ztie -d db/redis -f $db1 dbase
@@ -109,24 +111,26 @@
  zuntie dbase
  echo $zredis_tied ${#zredis_tied}
 0:scan read-only tied hash, directly assign local -a
->testdata
->testdataxtestdata
+>1
+>2
 >testkey
 >testkey3
 >0
 
  ztie -d db/redis -f $db1 dbase
- dbase=( a a )
+ echo $dbase[testkey]
+ dbase=( a 1.0 )
  print -rl -- "${(kv)dbase[@]}"
  zuntie dbase
  echo $zredis_tied ${#zredis_tied}
 0:Use scan directly after overwrite of database
+>1
 >a
->a
+>1
 >0
 
  ztie -d db/redis -f $db1 dbase
- dbase=( a b c d )
+ dbase=( a 1.0 c 2.0 )
  zuntie dbase
  unset dbase
  ztie -r -d db/redis -f $db1 dbase
@@ -135,10 +139,10 @@
  zuntie -u dbase
  echo $zredis_tied ${#zredis_tied}
 0:replace hash / database with untie, scan
+>1
+>2
 >a
->b
 >c
->d
 >0
 
  ztie -d db/redis -f $db1 dbase
@@ -148,8 +152,8 @@
  zuntie dbase
  echo $zredis_tied ${#zredis_tied}
 0:scan with no (kv)
->b
->d
+>1
+>2
 >0
 
  ztie -d db/redis -f $db1 dbase
@@ -168,8 +172,8 @@
  zuntie dbase
  echo $zredis_tied ${#zredis_tied}
 0:scan with values only, explicit - (v)
->b
->d
+>1
+>2
 >0
 
  ztie -d db/redis -f ${db1%/*}/1000 dbase 2>/dev/null; ret=$?
@@ -180,7 +184,7 @@
 
  ztie -d db/redis -f $db1 dbase
  dbase=( )
- dbase+=( a b )
+ dbase+=( a 1 )
  echo $dbase[a]
  zuntie dbase
  ztie -d db/redis -f $db1 dbase
@@ -189,7 +193,7 @@
  print -rl -- "${(o)result[@]}"
  zuntie dbase
  ztie -d db/redis -f $db1 dbase
- dbase+=( c d )
+ dbase+=( c 2 )
  echo $dbase[a]
  echo $dbase[c]
  result=( "${(kv)dbase[@]}" )
@@ -202,22 +206,22 @@
  print -rl -- "${(o)result[@]}"
  zuntie dbase
 0:Append with +=( ), also with existing data, also (kv) scan
->b
->b
+>1
+>1
+>1
 >a
->b
->b
->d
+>1
+>2
+>1
+>2
 >a
->b
 >c
->d
->b
->d
+>1
+>2
+>1
+>2
 >a
->b
 >c
->d
 
  ztie -d db/redis -f $db1 dbase
  echo ${(t)dbase}
@@ -254,7 +258,7 @@
 0:Test of automatic untie (use of local scope) and of scoping
 >association-local-special
 >fromarray
->Can connect: b
+>Can connect: 1
 
  echo First $zredis_tied ${#zredis_tied}
  ztie -d db/redis -f $db1 dbase
@@ -276,37 +280,30 @@
 1:unset of read-only zgdbm_tied parameter
 
  ztie -d db/redis -f $db1 dbase
- dbase[漢字]=漢字
+ dbase[漢字]=1
  echo $dbase[漢字]
  zuntie dbase
  ztie -d db/redis -f $db1 dbase
  echo $dbase[漢字]
  zuntie -u dbase
 0:Unicode test
->漢字
->漢字
+>1
+>1
 
  key="ab"$'\0'"ef"
  ztie -d db/redis -f $db1 dbase
- dbase[$key]=value
+ dbase[$key]=1
  echo $dbase[$key]
  zuntie dbase
  ztie -d db/redis -f $db1 dbase
  echo $dbase[$key]
- zuntie dbase
- ztie -d db/redis -f $db1 dbase
- dbase[$key]=$key
- zuntie dbase
- ztie -d db/redis -f $db1 dbase
- [[ "$dbase[$key]" = "$key" ]] && echo correct
  zuntie dbase
 0:Metafication of $'\0'
->value
->value
->correct
+>1
+>1
 
  ztie -d db/redis -f $db1 dbase
- dbase=( 漢字 漢字 )
+ dbase=( 漢字 1 )
  echo $dbase[漢字]
  zuntie dbase
  ztie -d db/redis -f $db1 dbase
@@ -314,67 +311,67 @@
  zuntie dbase
  key="ab"$'\0'"ef"
  ztie -d db/redis -f $db1 dbase
- dbase+=( $key $key )
+ dbase+=( $key 1 )
  zuntie dbase
  ztie -d db/redis -f $db1 dbase
- [[ "$dbase[$key]" = "$key" ]] && echo correct
+ [[ "$dbase[$key]" = "1" ]] && echo correct
  zuntie dbase
 0:Unicode & metafication test, different hash access
->漢字
->漢字
+>1
+>1
 >correct
 
  ztie -d db/redis -f $db1 dbase
- dbase=( 漢字 漢字 )
+ dbase=( 漢字 1 )
  zuntie dbase
  ztie -d db/redis -f $db1 dbase
  noglob print -rl ${(kv)dbase[@]}
  zuntie dbase
 0:Hash scanning and metafication
 >漢字
->漢字
+>1
 
  ztie -d db/redis -f $db1 dbase
  noglob print -rl ${(okv)dbase[@]}
  zuntie dbase
 0:Sorted hash scanning and metafication
->漢字
+>1
 >漢字
 
  ztie -d db/redis -f $db1 dbase
  ztaddress dbase
- [[ $REPLY = "127.0.0.1:6379/10/myhset" ]] && echo correct
+ [[ $REPLY = "127.0.0.1:6379/10/myzset" ]] && echo correct
  zuntie dbase
  ztie -d db/redis -f $db2 dbase
  ztaddress dbase
- [[ $REPLY = "127.0.0.1/11/myhset" ]] && echo correct
+ [[ $REPLY = "127.0.0.1/11/myzset" ]] && echo correct
  zuntie dbase
 0:ztaddress builtin
 >correct
 >correct
 
  ztie -d db/redis -f $db1 dbase
- dbase[testkey]=value1
+ dbase[testkey]=1
  fun() { while read line; do echo $line; done }
- eval "dbase[testkey]=value2" | fun
+ eval "dbase[testkey]=2" | fun
  echo $dbase[testkey]
  ztclear dbase testkey
  echo $dbase[testkey]
  zuntie dbase
 0:Test store in forked Zsh
->value1
->value2
+>1
+>2
 
  ztie -z -d db/redis -f $db1 dbase
- dbase[testkey]=value1
+ dbase[testkey]=1
  echo $dbase[testkey]
  fun() { while read line; do echo $line; done }
- eval "dbase[testkey]=value2" | fun
+ eval "dbase[testkey]=2" | fun
  echo $dbase[testkey]
  zuntie dbase
 0:Test store in forked Zsh, with -z passthrough
->value1
->value2
+>1
+>2
 
  ztie -d db/redis -f $db1 dbase
  echo $dbase[a] $dbase[b] $dbase[c]
@@ -385,6 +382,13 @@
 0:Test references to not-existing elements
 >
 >
+
+ ztie -r -d db/redis -f $db1 dbase
+ zrzset dbase
+ print -rl -- "${reply[@]}"
+0:Test zrzset
+>漢字
+>testkey
 
 %clean
 

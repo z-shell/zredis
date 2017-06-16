@@ -8,10 +8,10 @@
  #modname2="zsh/db/gdbm"
  dbfile=db.gdbm
  if ! zmodload $modname1 ; then
-   ZTST_unimplemented="can't load $modname1 module for testing"
+   VATS_unimplemented="can't load $modname1 module for testing"
  fi
  if ! zmodload $modname2 ; then
-   ZTST_unimplemented="can't load $modname2 module for testing"
+   VATS_unimplemented="can't load $modname2 module for testing"
  fi
  rm -f db.gdbm
 
@@ -309,11 +309,11 @@
 
  ztie -d db/gdbm -f $dbfile dbase
  ztaddress dbase
- [[ $REPLY = */ValTest/db.gdbm ]] && echo correct
+ [[ $REPLY = */VATS/db.gdbm ]] && echo correct
  zuntie dbase
  ztie -r -d db/gdbm -f $dbfile dbase
  ztaddress dbase
- [[ $REPLY = */ValTest/db.gdbm ]] && echo correct
+ [[ $REPLY = */VATS/db.gdbm ]] && echo correct
  zuntie -u dbase
 0:ztaddress builtin
 >correct

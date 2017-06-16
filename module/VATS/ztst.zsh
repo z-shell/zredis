@@ -7,7 +7,7 @@
 # file will be processed each time ztst.zsh is run.  This is slower, but
 # much safer in terms of preserving the correct status.
 # To avoid namespace pollution, all functions and parameters used
-# only by the script begin with ZTST_.
+# only by the script begin with VATS_.
 #
 # Options (without arguments) may precede the test file argument; these
 # are interpreted as shell options to set.  -x is probably the most useful.
@@ -15,7 +15,7 @@
 # Produce verbose messages if non-zero.
 # If 1, produce reports of tests executed; if 2, also report on progress.
 # Defined in such a way that any value from the environment is used.
-: ${ZTST_verbose:=0}
+: ${VATS_verbose:=0}
 
 # We require all options to be reset, not just emulation options.
 # Unfortunately, due to the crud which may be in /etc/zshenv this might
@@ -46,7 +46,7 @@ zmodload zsh/parameter
 # Note that both the following are regular arrays, since we only use them
 # in whole array assignments to/from $options.
 # Options set in test code (i.e. by default all standard options)
-ZTST_testopts=(${(kv)options})
+VATS_testopts=(${(kv)options})
 
 setopt extendedglob nonomatch
 while [[ $1 = [-+]* ]]; do
@@ -54,13 +54,13 @@ while [[ $1 = [-+]* ]]; do
   shift
 done
 # Options set in main script
-ZTST_mainopts=(${(kv)options})
+VATS_mainopts=(${(kv)options})
 
 # We run in the current directory, so remember it.
-ZTST_testdir=$PWD
-ZTST_testname=$1
+VATS_testdir=$PWD
+VATS_testname=$1
 
-integer ZTST_testfailed
+integer VATS_testfailed
 
 # This is POSIX nonsense.  Because of the vague feeling someone, somewhere
 # may one day need to examine the arguments of "tail" using a standard
@@ -92,96 +92,96 @@ tail() {
 # The source directory is not necessarily the current directory,
 # but if $0 doesn't contain a `/' assume it is.
 if [[ $0 = */* ]]; then
-  ZTST_srcdir=${0%/*}
+  VATS_srcdir=${0%/*}
 else
-  ZTST_srcdir=$PWD
+  VATS_srcdir=$PWD
 fi
-[[ $ZTST_srcdir = /* ]] || ZTST_srcdir="$ZTST_testdir/$ZTST_srcdir"
+[[ $VATS_srcdir = /* ]] || VATS_srcdir="$VATS_testdir/$VATS_srcdir"
 
 # Set the function autoload paths to correspond to this build of zsh.
-fpath=( $ZTST_srcdir/../Functions/*~*/CVS(/)
-        $ZTST_srcdir/../Completion
-        $ZTST_srcdir/../Completion/*/*~*/CVS(/) )
+fpath=( $VATS_srcdir/../Functions/*~*/CVS(/)
+        $VATS_srcdir/../Completion
+        $VATS_srcdir/../Completion/*/*~*/CVS(/) )
 
 : ${TMPPREFIX:=/tmp/zsh}
-ZTST_tmp=${TMPPREFIX}.ztst.$$
-if ! rm -f $ZTST_tmp || ! mkdir -p $ZTST_tmp || ! chmod go-w $ZTST_tmp; then
-  print "Can't create $ZTST_tmp for exclusive use." >&2
+VATS_tmp=${TMPPREFIX}.ztst.$$
+if ! rm -f $VATS_tmp || ! mkdir -p $VATS_tmp || ! chmod go-w $VATS_tmp; then
+  print "Can't create $VATS_tmp for exclusive use." >&2
   exit 1
 fi
 # Temporary files for redirection inside tests.
-ZTST_in=${ZTST_tmp}/ztst.in
+VATS_in=${VATS_tmp}/ztst.in
 # hold the expected output
-ZTST_out=${ZTST_tmp}/ztst.out
-ZTST_err=${ZTST_tmp}/ztst.err
+VATS_out=${VATS_tmp}/ztst.out
+VATS_err=${VATS_tmp}/ztst.err
 # hold the actual output from the test
-ZTST_tout=${ZTST_tmp}/ztst.tout
-ZTST_terr=${ZTST_tmp}/ztst.terr
+VATS_tout=${VATS_tmp}/ztst.tout
+VATS_terr=${VATS_tmp}/ztst.terr
 
-ZTST_cleanup() {
-  cd $ZTST_testdir
-  rm -rf $ZTST_testdir/dummy.tmp $ZTST_testdir/*.tmp(N) ${ZTST_tmp}
+VATS_cleanup() {
+  cd $VATS_testdir
+  rm -rf $VATS_testdir/dummy.tmp $VATS_testdir/*.tmp(N) ${VATS_tmp}
 }
 
 # This cleanup always gets performed, even if we abort.  Later,
 # we should try and arrange that any test-specific cleanup
 # always gets called as well.
 ##trap 'print cleaning up...
-##ZTST_cleanup' INT QUIT TERM
+##VATS_cleanup' INT QUIT TERM
 # Make sure it's clean now.
 rm -rf dummy.tmp *.tmp
 
 # Report failure.  Note that all output regarding the tests goes to stdout.
 # That saves an unpleasant mixture of stdout and stderr to sort out.
-ZTST_testfailed() {
-  print -r "Test $ZTST_testname failed: $1"
-  if [[ -n $ZTST_message ]]; then
-    print -r "Was testing: $ZTST_message"
+VATS_testfailed() {
+  print -r "Test $VATS_testname failed: $1"
+  if [[ -n $VATS_message ]]; then
+    print -r "Was testing: $VATS_message"
   fi
-  print -r "$ZTST_testname: test failed."
-  if [[ -n $ZTST_failmsg ]]; then
+  print -r "$VATS_testname: test failed."
+  if [[ -n $VATS_failmsg ]]; then
     print -r "The following may (or may not) help identifying the cause:
-$ZTST_failmsg"
+$VATS_failmsg"
   fi
-  ZTST_testfailed=1
+  VATS_testfailed=1
   return 1
 }
 
-# Print messages if $ZTST_verbose is non-empty
-ZTST_verbose() {
+# Print messages if $VATS_verbose is non-empty
+VATS_verbose() {
   local lev=$1
   shift
-  if [[ -n $ZTST_verbose && $ZTST_verbose -ge $lev ]]; then
-    print -r -u $ZTST_fd -- $*
+  if [[ -n $VATS_verbose && $VATS_verbose -ge $lev ]]; then
+    print -r -u $VATS_fd -- $*
   fi
 }
-ZTST_hashmark() {
-  if [[ ZTST_verbose -le 0 && -t $ZTST_fd ]]; then
-    print -n -u$ZTST_fd -- ${(pl:SECONDS::\#::\#\r:)}
+VATS_hashmark() {
+  if [[ VATS_verbose -le 0 && -t $VATS_fd ]]; then
+    print -n -u$VATS_fd -- ${(pl:SECONDS::\#::\#\r:)}
   fi
   (( SECONDS > COLUMNS+1 && (SECONDS -= COLUMNS) ))
 }
 
-if [[ ! -r $ZTST_testname ]]; then
-  ZTST_testfailed "can't read test file."
+if [[ ! -r $VATS_testname ]]; then
+  VATS_testfailed "can't read test file."
   exit 1
 fi
 
-exec {ZTST_fd}>&1
-exec {ZTST_input}<$ZTST_testname
+exec {VATS_fd}>&1
+exec {VATS_input}<$VATS_testname
 
 # The current line read from the test file.
-ZTST_curline=''
+VATS_curline=''
 # The current section being run
-ZTST_cursect=''
+VATS_cursect=''
 
 # Get a new input line.  Don't mangle spaces; set IFS locally to empty.
 # We shall skip comments at this level.
-ZTST_getline() {
+VATS_getline() {
   local IFS=
   while true; do
-    read -u $ZTST_input -r ZTST_curline || return 1
-    [[ $ZTST_curline == \#* ]] || return 0
+    read -u $VATS_input -r VATS_curline || return 1
+    [[ $VATS_curline == \#* ]] || return 0
   done
 }
 
@@ -189,73 +189,73 @@ ZTST_getline() {
 # $curline, or we may have to skip some initial comments to find it.
 # If argument present, it's OK to skip the reset of the current section,
 # so no error if we find garbage.
-ZTST_getsect() {
+VATS_getsect() {
   local match mbegin mend
 
-  while [[ $ZTST_curline != '%'(#b)([[:alnum:]]##)* ]]; do
-    ZTST_getline || return 1
-    [[ $ZTST_curline = [[:blank:]]# ]] && continue
-    if [[ $# -eq 0 && $ZTST_curline != '%'[[:alnum:]]##* ]]; then
-      ZTST_testfailed "bad line found before or after section:
-$ZTST_curline"
+  while [[ $VATS_curline != '%'(#b)([[:alnum:]]##)* ]]; do
+    VATS_getline || return 1
+    [[ $VATS_curline = [[:blank:]]# ]] && continue
+    if [[ $# -eq 0 && $VATS_curline != '%'[[:alnum:]]##* ]]; then
+      VATS_testfailed "bad line found before or after section:
+$VATS_curline"
       exit 1
     fi
   done
   # have the next line ready waiting
-  ZTST_getline
-  ZTST_cursect=${match[1]}
-  ZTST_verbose 2 "ZTST_getsect: read section name: $ZTST_cursect"
+  VATS_getline
+  VATS_cursect=${match[1]}
+  VATS_verbose 2 "VATS_getsect: read section name: $VATS_cursect"
   return 0
 }
 
 # Read in an indented code chunk for execution
-ZTST_getchunk() {
+VATS_getchunk() {
   # Code chunks are always separated by blank lines or the
   # end of a section, so if we already have a piece of code,
   # we keep it.  Currently that shouldn't actually happen.
-  ZTST_code=''
+  VATS_code=''
   # First find the chunk.
-  while [[ $ZTST_curline = [[:blank:]]# ]]; do
-    ZTST_getline || break
+  while [[ $VATS_curline = [[:blank:]]# ]]; do
+    VATS_getline || break
   done
-  while [[ $ZTST_curline = [[:blank:]]##[^[:blank:]]* ]]; do
-    ZTST_code="${ZTST_code:+${ZTST_code}
-}${ZTST_curline}"
-    ZTST_getline || break
+  while [[ $VATS_curline = [[:blank:]]##[^[:blank:]]* ]]; do
+    VATS_code="${VATS_code:+${VATS_code}
+}${VATS_curline}"
+    VATS_getline || break
   done
-  ZTST_verbose 2 "ZTST_getchunk: read code chunk:
-$ZTST_code"
-  [[ -n $ZTST_code ]]
+  VATS_verbose 2 "VATS_getchunk: read code chunk:
+$VATS_code"
+  [[ -n $VATS_code ]]
 }
 
 # Read in a piece for redirection.
-ZTST_getredir() {
-  local char=${ZTST_curline[1]} fn
-  ZTST_redir=${ZTST_curline[2,-1]}
-  while ZTST_getline; do
-    [[ $ZTST_curline[1] = $char ]] || break
-    ZTST_redir="${ZTST_redir}
-${ZTST_curline[2,-1]}"
+VATS_getredir() {
+  local char=${VATS_curline[1]} fn
+  VATS_redir=${VATS_curline[2,-1]}
+  while VATS_getline; do
+    [[ $VATS_curline[1] = $char ]] || break
+    VATS_redir="${VATS_redir}
+${VATS_curline[2,-1]}"
   done
-  ZTST_verbose 2 "ZTST_getredir: read redir for '$char':
-$ZTST_redir"
+  VATS_verbose 2 "VATS_getredir: read redir for '$char':
+$VATS_redir"
 
   case $char in
-    ('<') fn=$ZTST_in
+    ('<') fn=$VATS_in
     ;;
-    ('>') fn=$ZTST_out
+    ('>') fn=$VATS_out
     ;;
-    ('?') fn=$ZTST_err
+    ('?') fn=$VATS_err
     ;;
-    (*)  ZTST_testfailed "bad redir operator: $char"
+    (*)  VATS_testfailed "bad redir operator: $char"
     return 1
     ;;
   esac
-  if [[ $ZTST_flags = *q* && $char = '<' ]]; then
+  if [[ $VATS_flags = *q* && $char = '<' ]]; then
     # delay substituting output until variables are set
-    print -r -- "${(e)ZTST_redir}" >>$fn
+    print -r -- "${(e)VATS_redir}" >>$fn
   else
-    print -r -- "$ZTST_redir" >>$fn
+    print -r -- "$VATS_redir" >>$fn
   fi
 
   return 0
@@ -263,36 +263,36 @@ $ZTST_redir"
 
 # Execute an indented chunk.  Redirections will already have
 # been set up, but we need to handle the options.
-ZTST_execchunk() {
+VATS_execchunk() {
   setopt localloops # don't let continue & break propagate out
-  options=($ZTST_testopts)
+  options=($VATS_testopts)
   () {
       unsetopt localloops
-      eval "$ZTST_code"
+      eval "$VATS_code"
   }
-  ZTST_status=$?
+  VATS_status=$?
   # careful... ksh_arrays may be in effect.
-  ZTST_testopts=(${(kv)options[*]})
-  options=(${ZTST_mainopts[*]})
-  ZTST_verbose 2 "ZTST_execchunk: status $ZTST_status"
-  return $ZTST_status
+  VATS_testopts=(${(kv)options[*]})
+  options=(${VATS_mainopts[*]})
+  VATS_verbose 2 "VATS_execchunk: status $VATS_status"
+  return $VATS_status
 }
 
 # Functions for preparation and cleaning.
 # When cleaning up (non-zero string argument), we ignore status.
-ZTST_prepclean() {
+VATS_prepclean() {
   # Execute indented code chunks.
-  while ZTST_getchunk; do
-    ZTST_execchunk >/dev/null || [[ -n $1 ]] || {
-      [[ -n "$ZTST_unimplemented" ]] ||
-      ZTST_testfailed "non-zero status from preparation code:
-$ZTST_code" && return 0
+  while VATS_getchunk; do
+    VATS_execchunk >/dev/null || [[ -n $1 ]] || {
+      [[ -n "$VATS_unimplemented" ]] ||
+      VATS_testfailed "non-zero status from preparation code:
+$VATS_code" && return 0
     }
   done
 }
 
 # diff wrapper
-ZTST_diff() {
+VATS_diff() {
   emulate -L zsh
   setopt extendedglob
 
@@ -308,7 +308,7 @@ ZTST_diff() {
     ;;
 
     (*)
-    print "Bad ZTST_diff code: d for diff, p for pattern match"
+    print "Bad VATS_diff code: d for diff, p for pattern match"
     ;;
   esac
   shift
@@ -344,26 +344,26 @@ ZTST_diff() {
   return "$diff_ret"
 }
     
-ZTST_test() {
+VATS_test() {
   local last match mbegin mend found substlines
   local diff_out diff_err
-  local ZTST_skip
+  local VATS_skip
 
   while true; do
-    rm -f $ZTST_in $ZTST_out $ZTST_err
-    touch $ZTST_in $ZTST_out $ZTST_err
-    ZTST_message=''
-    ZTST_failmsg=''
+    rm -f $VATS_in $VATS_out $VATS_err
+    touch $VATS_in $VATS_out $VATS_err
+    VATS_message=''
+    VATS_failmsg=''
     found=0
     diff_out=d
     diff_err=d
 
-    ZTST_verbose 2 "ZTST_test: looking for new test"
+    VATS_verbose 2 "VATS_test: looking for new test"
 
     while true; do
-      ZTST_verbose 2 "ZTST_test: examining line:
-$ZTST_curline"
-      case $ZTST_curline in
+      VATS_verbose 2 "VATS_test: examining line:
+$VATS_curline"
+      case $VATS_curline in
 	(%*) if [[ $found = 0 ]]; then
 	      break 2
 	    else
@@ -373,68 +373,68 @@ $ZTST_curline"
 	    ;;
 	([[:space:]]#)
 	    if [[ $found = 0 ]]; then
-	      ZTST_getline || break 2
+	      VATS_getline || break 2
 	      continue
 	    else
 	      break
 	    fi
 	    ;;
-	([[:space:]]##[^[:space:]]*) ZTST_getchunk
-	  if [[ $ZTST_curline == (#b)([-0-9]##)([[:alpha:]]#)(:*)# ]]; then
-	    ZTST_xstatus=$match[1]
-	    ZTST_flags=$match[2]
-	    ZTST_message=${match[3]:+${match[3][2,-1]}}
+	([[:space:]]##[^[:space:]]*) VATS_getchunk
+	  if [[ $VATS_curline == (#b)([-0-9]##)([[:alpha:]]#)(:*)# ]]; then
+	    VATS_xstatus=$match[1]
+	    VATS_flags=$match[2]
+	    VATS_message=${match[3]:+${match[3][2,-1]}}
 	  else
-	    ZTST_testfailed "expecting test status at:
-$ZTST_curline"
+	    VATS_testfailed "expecting test status at:
+$VATS_curline"
 	    return 1
 	  fi
-	  ZTST_getline
+	  VATS_getline
 	  found=1
 	  ;;
-	('<'*) ZTST_getredir || return 1
+	('<'*) VATS_getredir || return 1
 	  found=1
 	  ;;
 	('*>'*)
-	  ZTST_curline=${ZTST_curline[2,-1]}
+	  VATS_curline=${VATS_curline[2,-1]}
 	  diff_out=p
 	  ;&
 	('>'*)
-	  ZTST_getredir || return 1
+	  VATS_getredir || return 1
 	  found=1
 	  ;;
 	('*?'*)
-	  ZTST_curline=${ZTST_curline[2,-1]}
+	  VATS_curline=${VATS_curline[2,-1]}
 	  diff_err=p
 	  ;&
 	('?'*)
-	  ZTST_getredir || return 1
+	  VATS_getredir || return 1
 	  found=1
 	  ;;
-	('F:'*) ZTST_failmsg="${ZTST_failmsg:+${ZTST_failmsg}
-}  ${ZTST_curline[3,-1]}"
-	  ZTST_getline
+	('F:'*) VATS_failmsg="${VATS_failmsg:+${VATS_failmsg}
+}  ${VATS_curline[3,-1]}"
+	  VATS_getline
 	  found=1
           ;;
-	(*) ZTST_testfailed "bad line in test block:
-$ZTST_curline"
+	(*) VATS_testfailed "bad line in test block:
+$VATS_curline"
 	  return 1
           ;;
       esac
     done
 
     # If we found some code to execute...
-    if [[ -n $ZTST_code ]]; then
-      ZTST_hashmark
-      ZTST_verbose 1 "Running test: $ZTST_message"
-      ZTST_verbose 2 "ZTST_test: expecting status: $ZTST_xstatus"
-      ZTST_verbose 2 "Input: $ZTST_in, output: $ZTST_out, error: $ZTST_terr"
+    if [[ -n $VATS_code ]]; then
+      VATS_hashmark
+      VATS_verbose 1 "Running test: $VATS_message"
+      VATS_verbose 2 "VATS_test: expecting status: $VATS_xstatus"
+      VATS_verbose 2 "Input: $VATS_in, output: $VATS_out, error: $VATS_terr"
 
-      ZTST_execchunk <$ZTST_in >$ZTST_tout 2>$ZTST_terr
+      VATS_execchunk <$VATS_in >$VATS_tout 2>$VATS_terr
 
-      if [[ -n $ZTST_skip ]]; then
-	ZTST_verbose 0 "Test case skipped: $ZTST_skip"
-	ZTST_skip=
+      if [[ -n $VATS_skip ]]; then
+	VATS_verbose 0 "Test case skipped: $VATS_skip"
+	VATS_skip=
 	if [[ -n $last ]]; then
 	  break
 	else
@@ -443,105 +443,105 @@ $ZTST_curline"
       fi
 
       # First check we got the right status, if specified.
-      if [[ $ZTST_xstatus != - && $ZTST_xstatus != $ZTST_status ]]; then
-	ZTST_testfailed "bad status $ZTST_status, expected $ZTST_xstatus from:
-$ZTST_code${$(<$ZTST_terr):+
+      if [[ $VATS_xstatus != - && $VATS_xstatus != $VATS_status ]]; then
+	VATS_testfailed "bad status $VATS_status, expected $VATS_xstatus from:
+$VATS_code${$(<$VATS_terr):+
 Error output:
-$(<$ZTST_terr)}"
+$(<$VATS_terr)}"
 	return 1
       fi
 
-      ZTST_verbose 2 "ZTST_test: test produced standard output:
-$(<$ZTST_tout)
-ZTST_test: and standard error:
-$(<$ZTST_terr)"
+      VATS_verbose 2 "VATS_test: test produced standard output:
+$(<$VATS_tout)
+VATS_test: and standard error:
+$(<$VATS_terr)"
 
       # Now check output and error.
-      if [[ $ZTST_flags = *q* && -s $ZTST_out ]]; then
-	substlines="$(<$ZTST_out)"
-	rm -rf $ZTST_out
-	print -r -- "${(e)substlines}" >$ZTST_out
+      if [[ $VATS_flags = *q* && -s $VATS_out ]]; then
+	substlines="$(<$VATS_out)"
+	rm -rf $VATS_out
+	print -r -- "${(e)substlines}" >$VATS_out
       fi
-      if [[ $ZTST_flags != *d* ]] && ! ZTST_diff $diff_out -u $ZTST_out $ZTST_tout; then
-	ZTST_testfailed "output differs from expected as shown above for:
-$ZTST_code${$(<$ZTST_terr):+
+      if [[ $VATS_flags != *d* ]] && ! VATS_diff $diff_out -u $VATS_out $VATS_tout; then
+	VATS_testfailed "output differs from expected as shown above for:
+$VATS_code${$(<$VATS_terr):+
 Error output:
-$(<$ZTST_terr)}"
+$(<$VATS_terr)}"
 	return 1
       fi
-      if [[ $ZTST_flags = *q* && -s $ZTST_err ]]; then
-	substlines="$(<$ZTST_err)"
-	rm -rf $ZTST_err
-	print -r -- "${(e)substlines}" >$ZTST_err
+      if [[ $VATS_flags = *q* && -s $VATS_err ]]; then
+	substlines="$(<$VATS_err)"
+	rm -rf $VATS_err
+	print -r -- "${(e)substlines}" >$VATS_err
       fi
-      if [[ $ZTST_flags != *D* ]] && ! ZTST_diff $diff_err -u $ZTST_err $ZTST_terr; then
-	ZTST_testfailed "error output differs from expected as shown above for:
-$ZTST_code"
+      if [[ $VATS_flags != *D* ]] && ! VATS_diff $diff_err -u $VATS_err $VATS_terr; then
+	VATS_testfailed "error output differs from expected as shown above for:
+$VATS_code"
 	return 1
       fi
     fi
-    ZTST_verbose 1 "Test successful."
+    VATS_verbose 1 "Test successful."
     [[ -n $last ]] && break
   done
 
-  ZTST_verbose 2 "ZTST_test: all tests successful"
+  VATS_verbose 2 "VATS_test: all tests successful"
 
-  # reset message to keep ZTST_testfailed output correct
-  ZTST_message=''
+  # reset message to keep VATS_testfailed output correct
+  VATS_message=''
 }
 
 
 # Remember which sections we've done.
-typeset -A ZTST_sects
-ZTST_sects=(prep 0 test 0 clean 0)
+typeset -A VATS_sects
+VATS_sects=(prep 0 test 0 clean 0)
 
-print "$ZTST_testname: starting."
+print "$VATS_testname: starting."
 
 # Now go through all the different sections until the end.
-# prep section may set ZTST_unimplemented, in this case the actual
+# prep section may set VATS_unimplemented, in this case the actual
 # tests will be skipped
-ZTST_skipok=
-ZTST_unimplemented=
-while [[ -z "$ZTST_unimplemented" ]] && ZTST_getsect $ZTST_skipok; do
-  case $ZTST_cursect in
-    (prep) if (( ${ZTST_sects[prep]} + ${ZTST_sects[test]} + \
-	        ${ZTST_sects[clean]} )); then
-	    ZTST_testfailed "\`prep' section must come first"
+VATS_skipok=
+VATS_unimplemented=
+while [[ -z "$VATS_unimplemented" ]] && VATS_getsect $VATS_skipok; do
+  case $VATS_cursect in
+    (prep) if (( ${VATS_sects[prep]} + ${VATS_sects[test]} + \
+	        ${VATS_sects[clean]} )); then
+	    VATS_testfailed "\`prep' section must come first"
             exit 1
 	  fi
-	  ZTST_prepclean
-	  ZTST_sects[prep]=1
+	  VATS_prepclean
+	  VATS_sects[prep]=1
 	  ;;
     (test)
-	  if (( ${ZTST_sects[test]} + ${ZTST_sects[clean]} )); then
-	    ZTST_testfailed "bad placement of \`test' section"
+	  if (( ${VATS_sects[test]} + ${VATS_sects[clean]} )); then
+	    VATS_testfailed "bad placement of \`test' section"
 	    exit 1
 	  fi
-	  # careful here: we can't execute ZTST_test before || or &&
+	  # careful here: we can't execute VATS_test before || or &&
 	  # because that affects the behaviour of traps in the tests.
-	  ZTST_test
-	  (( $? )) && ZTST_skipok=1
-	  ZTST_sects[test]=1
+	  VATS_test
+	  (( $? )) && VATS_skipok=1
+	  VATS_sects[test]=1
 	  ;;
     (clean)
-	   if (( ${ZTST_sects[test]} == 0 || ${ZTST_sects[clean]} )); then
-	     ZTST_testfailed "bad use of \`clean' section"
+	   if (( ${VATS_sects[test]} == 0 || ${VATS_sects[clean]} )); then
+	     VATS_testfailed "bad use of \`clean' section"
 	   else
-	     ZTST_prepclean 1
-	     ZTST_sects[clean]=1
+	     VATS_prepclean 1
+	     VATS_sects[clean]=1
 	   fi
-	   ZTST_skipok=
+	   VATS_skipok=
 	   ;;
-    *) ZTST_testfailed "bad section name: $ZTST_cursect"
+    *) VATS_testfailed "bad section name: $VATS_cursect"
        ;;
   esac
 done
 
-if [[ -n "$ZTST_unimplemented" ]]; then
-  print "$ZTST_testname: skipped ($ZTST_unimplemented)"
-  ZTST_testfailed=2
-elif (( ! $ZTST_testfailed )); then
-  print "$ZTST_testname: all tests successful."
+if [[ -n "$VATS_unimplemented" ]]; then
+  print "$VATS_testname: skipped ($VATS_unimplemented)"
+  VATS_testfailed=2
+elif (( ! $VATS_testfailed )); then
+  print "$VATS_testname: all tests successful."
 fi
-ZTST_cleanup
-exit $(( ZTST_testfailed ))
+VATS_cleanup
+exit $(( VATS_testfailed ))

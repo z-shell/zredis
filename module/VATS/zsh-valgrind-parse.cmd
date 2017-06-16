@@ -21,10 +21,10 @@ elif [ -f "${SH_ZERO_DIR}/${ZSHV_TCONF_FILE}" ]; then
     . "${SH_ZERO_DIR}/${ZSHV_TCONF_FILE}"
 elif [ -f "${PWD}/${ZSHV_TCONF_FILE}" ]; then
     . "${PWD}/${ZSHV_TCONF_FILE}"
-elif [ -f "ValTest/${ZSHV_TCONF_FILE}" ]; then
-    . "ValTest/${ZSHV_TCONF_FILE}"
+elif [ -f "VATS/${ZSHV_TCONF_FILE}" ]; then
+    . "VATS/${ZSHV_TCONF_FILE}"
 else
-    echo "Couldn't find ${ZSHV_TCONF_FILE} (searched paths: \$ZSHV_TCONF_DIR=\`$ZSHV_TCONF_DIR', ${SH_ZERO_DIR}/, \$PWD,  ValTest/)"
+    echo "Couldn't find ${ZSHV_TCONF_FILE} (searched paths: \$ZSHV_TCONF_DIR=\`$ZSHV_TCONF_DIR', ${SH_ZERO_DIR}/, \$PWD,  VATS/)"
     exit 1
 fi
 # }}}
@@ -47,7 +47,7 @@ trap "coproc exit; return" TERM INT QUIT
 source "${ZERO_DIR}/"__error*.def
 
 # Some fallbacks (currently unused)
-[[ "$test_bin" = "local-zsh" ]] && test_bin="${ZTST_exe}"
+[[ "$test_bin" = "local-zsh" ]] && test_bin="${VATS_exe}"
 [[ -z "$test_bin" ]] && test_bin="../Src/zsh"
 # }}}
 # Set of filters, applied in order {{{

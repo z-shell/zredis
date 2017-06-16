@@ -1,5 +1,5 @@
 #
-# Makefile for ValTest subdirectory
+# Makefile for VATS subdirectory
 #
 # Copyright (c) 1999 Peter Stephensons
 # All rights reserved.
@@ -24,7 +24,7 @@
 # support, updates, enhancements, or modifications.
 #
 
-subdir = ValTest
+subdir = VATS
 dir_top = ..
 SUBDIRS = 
 
@@ -45,10 +45,10 @@ check test:
 	  cd $(dir_top) && DESTDIR= \
 	  $(MAKE) MODDIR=`pwd`/$(subdir)/Modules install.modules > /dev/null; \
 	fi
-	if ZTST_testlist="`for f in $(sdir)/$(TESTNUM)*.ztst; \
+	if VATS_testlist="`for f in $(sdir)/$(TESTNUM)*.ztst; \
            do echo $$f; done`" \
-	 ZTST_srcdir="$(sdir)" \
-	 ZTST_exe=$(dir_top)/Src/zsh@EXEEXT@ \
+	 VATS_srcdir="$(sdir)" \
+	 VATS_exe=$(dir_top)/Src/zsh@EXEEXT@ \
 	 /bin/sh $(sdir)/runtests.zsh; then \
 	 stat=0; \
 	else \

@@ -18,8 +18,8 @@ elif [ -f "${SH_ZERO_DIR}/${ZSHV_TCONF_FILE}" ]; then
   . "${SH_ZERO_DIR}/${ZSHV_TCONF_FILE}"
 elif [ -f "${PWD}/${ZSHV_TCONF_FILE}" ]; then
   . "${PWD}/${ZSHV_TCONF_FILE}"
-elif [ -f "ValTest/${ZSHV_TCONF_FILE}" ]; then
-  . "ValTest/${ZSHV_TCONF_FILE}"
+elif [ -f "VATS/${ZSHV_TCONF_FILE}" ]; then
+  . "VATS/${ZSHV_TCONF_FILE}"
 fi
 
 [ -z "$zsh_control_bin" ] && zsh_control_bin="zsh"
@@ -51,11 +51,11 @@ test_type_msg()
 # protect from catastrophic failure of an individual test.
 # We could probably do that with subshells instead.
 
-export ZTST_exe
+export VATS_exe
 local cmd="valgrind"
 local -a valargs
 [[ -x "${ZERO_DIR}/zsh-valgrind-parse.cmd" ]] && cmd="${ZERO_DIR}/zsh-valgrind-parse.cmd"
-[[ "$test_bin" = "local-zsh" ]] && test_bin="${ZTST_exe}"
+[[ "$test_bin" = "local-zsh" ]] && test_bin="${VATS_exe}"
 
 if [[ "$tkind" = nopossiblylost* ]]; then
   valargs=( "--leak-check=full" "--show-possibly-lost=no" )
@@ -75,7 +75,7 @@ local ctarg    # current arg
 local -a targs # evaluated test_bin args, non-evaluated Valgrind args
 integer success failure skipped retval
 
-for file in "${(f)ZTST_testlist}"; do
+for file in "${(f)VATS_testlist}"; do
   # Prepare test_bin-args
   targs=()
   for ctarg in "${=test_bin_args[@]}"; do

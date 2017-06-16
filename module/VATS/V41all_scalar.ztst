@@ -8,10 +8,10 @@
  db1="127.0.0.1:6379/10/key"
  db2="127.0.0.1/11/key"
  if ! zmodload $modname1 ; then
-   ZTST_unimplemented="can't load $modname1 module for testing"
+   VATS_unimplemented="can't load $modname1 module for testing"
  fi
  if ! zmodload $modname2 ; then
-   ZTST_unimplemented="can't load $modname2 module for testing"
+   VATS_unimplemented="can't load $modname2 module for testing"
  fi
  redis-cli -n 10 flushdb
  redis-cli -n 11 flushdb
