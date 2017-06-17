@@ -57,6 +57,8 @@ local -a valargs
 [[ -x "${ZERO_DIR}/zsh-valgrind-parse.cmd" ]] && cmd="${ZERO_DIR}/zsh-valgrind-parse.cmd"
 [[ "$test_bin" = "local-zsh" ]] && test_bin="${VATS_exe}"
 
+[[ ! -f "$test_bin" ]] && { print "VATS: Test binary ($test_bin) doesn't exist, aborting"; exit 1; }
+
 if [[ "$tkind" = nopossiblylost* ]]; then
   valargs=( "--leak-check=full" "--show-possibly-lost=no" )
   test_type_msg "leaks, nopossiblylost"
@@ -67,36 +69,29 @@ elif [[ "$tkind" = leak* ]]; then
   valargs=( "--leak-check=full" )
   test_type_msg "full leak check"
 else
-  print "Unknown test type \`$tkind\', supported are: error, leak, nopossiblylost. Aborting."
+  print "VATS: Unknown test type \`$tkind\', supported are: error, leak, nopossiblylost. Aborting."
   exit 1
 fi
 
 local ctarg    # current arg
 local -a targs # evaluated test_bin args, non-evaluated Valgrind args
-integer success failure skipped retval
+integer success failure skipped count=0
 
 for file in "${(f)VATS_testlist}"; do
   # Prepare test_bin-args
   targs=()
-  for ctarg in "${=test_bin_args[@]}"; do
-    eval "targs+=( \"$ctarg\" )"
+  for ctarg in "${(z@)test_bin_args}"; do
+    eval "print -rl -- $ctarg | while read line; do targs+=( \"\${(Q)line}\" ); done"
   done
+
+  (( ++ count ))
 
   # Invoke Valgrind (through zsh-valgrind-parse.cmd)
   $cmd "${valargs[@]}" "$test_bin" "${targs[@]}"
-
-  retval=$?
-  if (( $retval == 2 )); then
-    (( skipped++ ))
-  elif (( $retval )); then
-    (( failure++ ))
-  else
-    (( success++ ))
-  fi
 done
-print "**************************************
-$success successful test script${${success:#1}:+s}, \
-$failure failure${${failure:#1}:+s}, \
-$skipped skipped
-**************************************"
-return $(( failure ? 1 : 0 ))
+
+print "**************************************"
+print "$count test file(s) were ran"
+print "**************************************"
+
+return 0
