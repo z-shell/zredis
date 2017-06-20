@@ -65,8 +65,8 @@ elif [[ ! -f "${ZREDIS_REPO_DIR}/module/COMPILED_AT" || ( "${ZREDIS_REPO_DIR}/mo
 fi
 
 # Finally load the module - if it has compiled
+MODULE_PATH="${ZREDIS_REPO_DIR}/module/Src":"$MODULE_PATH"
 if [[ -e "${ZREDIS_REPO_DIR}/module/Src/zdharma/zredis.so" ]]; then
-    MODULE_PATH="${ZREDIS_REPO_DIR}/module/Src":"$MODULE_PATH"
     #zmodload -u zdharma/db 2>/dev/null
     zmodload -d zdharma/zredis zdharma/db
     zmodload zdharma/zredis
