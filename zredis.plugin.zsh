@@ -50,7 +50,7 @@ zredis_compile() {
     )
 }
 
-if [ ! -e "${ZREDIS_REPO_DIR}/module/Src/zdharma/zredis.so" ]; then
+if [ ! -e "${ZREDIS_REPO_DIR}/module/Src/zdharma/db.so" ]; then
     builtin print "${fg_bold[magenta]}zdharma${reset_color}/${fg_bold[yellow]}zredis${reset_color} is building..."
     zredis_compile
 elif [[ ! -f "${ZREDIS_REPO_DIR}/module/COMPILED_AT" || ( "${ZREDIS_REPO_DIR}/module/COMPILED_AT" -ot "${ZREDIS_REPO_DIR}/module/RECOMPILE_REQUEST" ) ]]; then
