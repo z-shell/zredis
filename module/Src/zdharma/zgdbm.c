@@ -633,11 +633,14 @@ gdbmhashsetfn(Param pm, HashTable ht)
         key = gdbm_firstkey(dbf);
     }
 
-    /* just deleted everything, clean up */
-    if (GDBM_VERSION_MAJOR > 1 || (GDBM_VERSION_MAJOR == 1 && GDBM_VERSION_MINOR > 11) ) {
-        /* dbf gets corrupted on 1.11 */
+    /* Just deleted everything, clean up.
+     * Turned off waiting for gdbm to fix NFS problem.
+     * User can reorganize via gdbmtool. */
+#if 0
+    if (GDBM_VERSION_MAJOR > 1 || (GDBM_VERSION_MAJOR == 1 && GDBM_VERSION_MINOR > 13) ) {
         (void)gdbm_reorganize(dbf);
     }
+#endif
 
     no_database_action = 1;
     emptyhashtable(pm->u.hash);
