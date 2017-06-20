@@ -634,7 +634,10 @@ gdbmhashsetfn(Param pm, HashTable ht)
     }
 
     /* just deleted everything, clean up */
-    (void)gdbm_reorganize(dbf);
+    if (GDBM_VERSION_MAJOR > 1 || (GDBM_VERSION_MAJOR == 1 && GDBM_VERSION_MINOR > 11) ) {
+        /* dbf gets corrupted on 1.11 */
+        (void)gdbm_reorganize(dbf);
+    }
 
     no_database_action = 1;
     emptyhashtable(pm->u.hash);
