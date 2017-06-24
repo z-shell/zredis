@@ -7,10 +7,10 @@
  modname2="zdharma/zgdbm"
  #modname2="zsh/db/gdbm"
  dbfile=db.gdbm
- if ! zmodload $modname1 ; then
+ if ! zmodload $modname1 2>/dev/null; then
    ZTST_unimplemented="can't load $modname1 module for testing"
  fi
- if ! zmodload $modname2 ; then
+ if ! zmodload $modname2 2>/dev/null; then
    ZTST_unimplemented="can't load $modname2 module for testing"
  fi
  rm -f db.gdbm
