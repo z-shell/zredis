@@ -356,7 +356,7 @@ zgdbmpath_cmd(char *pmname)
     return 0;
 }
 /* }}} */
-/* FUNCTION: bin_zgdbmclear {{{ */
+/* FUNCTION: zgdbmclear_cmd {{{ */
 
 /**/
 static int
@@ -394,6 +394,7 @@ zgdbmclear_cmd(char *pmname, char *key)
     return 0;
 }
 /* }}} */
+
 /* FUNCTION: gdbmgetfn {{{ */
 
 /*
@@ -534,6 +535,7 @@ gdbmunsetfn(Param pm, UNUSED(int um))
     gdbmsetfn(pm, NULL);
 }
 /* }}} */
+
 /* FUNCTION: getgdbmnode {{{ */
 
 /**/
@@ -603,6 +605,7 @@ scangdbmkeys(HashTable ht, ScanFunc func, int flags)
 
 }
 /* }}} */
+
 /* FUNCTION: gdbmhashsetfn {{{ */
 
 /*
@@ -745,6 +748,7 @@ gdbmhashunsetfn(Param pm, UNUSED(int exp))
     pm->node.flags |= PM_UNSET;
 }
 /* }}} */
+
 /* ARRAY: module_features {{{ */
 static struct features module_features =
     {
