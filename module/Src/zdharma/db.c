@@ -106,7 +106,7 @@ static void update_user_hash(char *id, int is_loading) {
         } else {
             val_pm->u.str = ztrdup("unloaded");
         }
-        addhashnode(ht, ztrdup(id), val_pm); // sets pm->node.nam
+        addhashnode(ht, ztrdup(id), val_pm); /* sets pm->node.nam */
     }
 }
 /* }}} */
@@ -622,7 +622,7 @@ zsh_db_unmetafy_zalloc(const char *to_copy, int *new_len)
 
     /* This string can be correctly zsfree()-d */
     to_return = (char *) zalloc((my_new_len+1)*sizeof(char));
-    memcpy(to_return, work, sizeof(char)*my_new_len); // memcpy handles $'\0'
+    memcpy(to_return, work, sizeof(char)*my_new_len); /* memcpy handles $'\0' */
     to_return[my_new_len]='\0';
 
     /* Restore original strlen and correctly free */

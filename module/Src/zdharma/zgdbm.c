@@ -567,7 +567,7 @@ getgdbmnode(HashTable ht, const char *name)
         val_pm = (Param) zshcalloc( sizeof (*val_pm) );
         val_pm->node.flags = PM_SCALAR | PM_HASHELEM; /* no PM_UPTODATE */
         val_pm->gsu.s = (GsuScalar) ht->tmpdata;
-        ht->addnode( ht, ztrdup( name ), val_pm ); // sets pm->node.nam
+        ht->addnode( ht, ztrdup( name ), val_pm ); /* sets pm->node.nam */
     }
 
     return (HashNode) val_pm;
