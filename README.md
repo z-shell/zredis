@@ -52,7 +52,7 @@ The `"${(kv)hset1[@]}"` construct guarantees that empty elements (keys or values
 be preserved, thanks to quoting and `@` operator. `(kv)` means keys and values, alternating.
  
 Or, for example, if one needs a large sorted set (`zset`), how to accomplish this with
-`redis-cli`? With `zredis`, this is as always simple:
+`redis-cli`? With `zredis`, one can do:
 
 ```SystemVerilog
 % redis-cli -n 3 zadd NEWZSET 1.0 a
@@ -74,10 +74,17 @@ Output: $reply array, to hold elements of the sorted set
 a b c d e f g h i j k l m n o p q r s t u v w x y z A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
 ```
 
-## Mapping of redis types to Zsh data structures
+## Deleting From Database
+
+Unsetting the first type of mapping (Zsh hash -> whole database) doesn't cause a deletion from
+database. Other parameter unsets, also caused by automatic scoping actions, cause the corresponding
+key to be deleted. In order to avoid deletion, `untie` the parameter.
+
+## Mapping Of Redis Types To Zsh Data Structures
 ### Database string keys -> Zsh hash
 
-Redis can store strings at given keys, using `SET` command. `Zredis` maps those to hash array:
+Redis can store strings at given keys, using `SET` command. `Zredis` maps those to hash array
+(like Zsh `gdbm` module):
 
 ```SystemVerilog
 % redis-cli -n 4 SET key1 value1
