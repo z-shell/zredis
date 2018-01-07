@@ -305,8 +305,12 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             if (size > 0) {
                 if (size > 1024)
                     size = 1024;
-                while( buf[size-1] == '\r' || buf[size-1] == '\n' ) {
+                while (buf[size-1] == '\r' || buf[size-1] == '\n') {
                     --size;
+                    if (size <= 0) {
+                        zwarn("Couldn't read password file: `%s', it contains only newlines, aborting", pfile);
+                        return 1;
+                    }
                 }
                 buf[size] = '\0';
                 pass = buf;
