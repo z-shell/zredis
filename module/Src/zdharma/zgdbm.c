@@ -118,7 +118,7 @@ gdbm_main_entry(VA_ALIST1(int cmd))
     VA_DCL
 {
     char *address = NULL, *pass = NULL, *pfile = NULL, *pmname = NULL, *key = NULL, *lazy = NULL;
-    int rdonly = 0, zcache = 0, pprompt = 0, rountie = 0;
+    int rdonly = 0, zcache = 0, pprompt = 0, rountie = 0, delete = 0;
 
     va_list ap;
     VA_DEF_ARG(int cmd);
@@ -135,8 +135,9 @@ gdbm_main_entry(VA_ALIST1(int cmd))
          * -p password, char *
          * -P file with password, char *
          * -l prompt for password, int
-         * -L lazy binding type, char *
          * parameter name, char *
+         * -L lazy binding type, char *
+         * -D should delete on unset, int
          */
         address = va_arg(ap, char *);
         rdonly = va_arg(ap, int);
@@ -146,7 +147,8 @@ gdbm_main_entry(VA_ALIST1(int cmd))
         pprompt = va_arg(ap, int);
         pmname = va_arg(ap, char *);
         lazy = va_arg(ap, char *);
-        return zgtie_cmd(address, rdonly, zcache, pass, pfile, pprompt, pmname, lazy);
+        delete = va_arg(ap, int);
+        return zgtie_cmd(address, rdonly, zcache, pass, pfile, pprompt, pmname, lazy, delete);
 
     case DB_UNTIE:
         /* Order is:
@@ -196,7 +198,7 @@ gdbm_main_entry(VA_ALIST1(int cmd))
 
 /**/
 static int
-zgtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pprompt, char *pmname, char *lazy)
+zgtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pprompt, char *pmname, char *lazy, int delete)
 {
     GDBM_FILE dbf = NULL;
     int read_write = GDBM_SYNC, pmflags = PM_REMOVABLE;

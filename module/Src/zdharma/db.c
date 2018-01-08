@@ -57,8 +57,8 @@ DbBackendEntryPoint Out_FoundBe = NULL;
 static struct builtin bintab[] = {
                                   /* h - help, d - backend type, r - read-only, a/f - address/file,
                                    * l - load password from terminal, p - password as argument,
-                                   * P - password from file, z - zero read-cache */
-                                  BUILTIN("ztie", 0, bin_ztie, 0, -1, 0, "hrlzf:d:a:p:P:L:", NULL),
+                                   * P - password from file, z - zero read-cache, D - delete on unset */
+                                  BUILTIN("ztie", 0, bin_ztie, 0, -1, 0, "hrlzDf:d:a:p:P:L:", NULL),
                                   BUILTIN("zuntie", 0, bin_zuntie, 0, -1, 0, "uh", NULL),
                                   BUILTIN("ztaddress", 0, bin_ztaddress, 0, -1, 0, "h", NULL),
                                   BUILTIN("ztclear", 0, bin_ztclear, 0, -1, 0, "h", NULL),
@@ -224,6 +224,13 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
         lazy = OPT_ARG(ops,'L');
     }
 
+    /* Delete on unset */
+    if (OPT_ISSET(ops,'D')) {
+        delete = 1;
+    } else {
+        delete = 0;
+    }
+
     BackendNode node = NULL;
     DbBackendEntryPoint be = NULL;
 
@@ -238,7 +245,7 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
         return 1;
     }
 
-    return be(DB_TIE, address, rdonly, zcache, pass, pfile, pprompt, pmname, lazy);
+    return be(DB_TIE, address, rdonly, zcache, pass, pfile, pprompt, pmname, lazy, delete);
 }
 /* }}} */
 /* FUNCTION: bin_zuntie {{{ */
@@ -768,16 +775,18 @@ ztie_usage()
 {
     fprintf(stdout, "Usage: ztie -d db/... [-z] [-r] [-p password] [-P password_file] [-L type]"
             "-f/-a {db_address} {parameter_name}\n");
-    fprintf(stdout, "Options:\n");
+    fprintf(stdout, "Options for all backends:\n");
     fprintf(stdout, " -d:       select database type: \"db/gdbm\", \"db/redis\"\n");
     fprintf(stdout, " -z:       zero-cache for read operations (always access database)\n");
     fprintf(stdout, " -r:       create read-only parameter\n" );
     fprintf(stdout, " -f or -a: database-address in format {host}[:port][/[db_idx][/key]] or a file path\n");
+    fprintf(stdout, "Options for db/redis backend:\n");
     fprintf(stdout, " -p:       database-password to be used for authentication\n");
     fprintf(stdout, " -P:       path to file with database-password\n");
     fprintf(stdout, " -L:       lazy binding - provide type of key to create if it doesn't exist "
                     "(string, set, zset, hash, list)\n");
-    fprintf(stdout, "The {parameter_name} - choose name for the created database-bound parameter\n");
+    fprintf(stdout, " -D:       delete key on unset of the parameter ([/key] in the address has to be used)\n");
+    fprintf(stdout, "\nThe {parameter_name} - choose name for the created database-bound parameter\n");
     fflush(stdout);
 }
 /* }}} */

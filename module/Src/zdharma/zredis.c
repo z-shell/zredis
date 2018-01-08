@@ -52,6 +52,7 @@ static void deletehashparam(Param tied_param, const char *pmname);
 
 static char *my_nullarray = NULL;
 static int no_database_action = 0;
+static int yes_unsetting = 0;
 /* }}} */
 /* ARRAY: GSU {{{ */
 
@@ -86,6 +87,7 @@ struct gsu_scalar_ext {
     char *password;
     int fdesc;
     redisContext *rc;
+    int unset_deletes;
 };
 
 /* Used by sets */
@@ -100,6 +102,7 @@ struct gsu_array_ext {
     char *password;
     int fdesc;
     redisContext *rc;
+    int unset_deletes;
 };
 
 /* Source structure - will be copied to allocated one,
@@ -163,7 +166,7 @@ redis_main_entry(VA_ALIST1(int cmd))
 VA_DCL
 {
     char *address = NULL, *pass = NULL, *pfile = NULL, *pmname = NULL, *key = NULL, *lazy = NULL;
-    int rdonly = 0, zcache = 0, pprompt = 0, rountie = 0;
+    int rdonly = 0, zcache = 0, pprompt = 0, rountie = 0, delete = 0;
 
     va_list ap;
     VA_DEF_ARG(int cmd);
@@ -181,6 +184,8 @@ VA_DCL
          * -P file with password, char *
          * -l prompt for password, int
          * parameter name, char *
+         * -L lazy type, char *
+         * -D should delete on unset, int
          */
         address = va_arg(ap, char *);
         rdonly = va_arg(ap, int);
@@ -190,7 +195,8 @@ VA_DCL
         pprompt = va_arg(ap, int);
         pmname = va_arg(ap, char *);
         lazy = va_arg(ap, char *);
-        return zrtie_cmd(address, rdonly, zcache, pass, pfile, pprompt, pmname, lazy);
+        delete = va_arg(ap, int);
+        return zrtie_cmd(address, rdonly, zcache, pass, pfile, pprompt, pmname, lazy, delete);
 
     case DB_UNTIE:
         /* Order is:
@@ -240,7 +246,7 @@ VA_DCL
 
 /**/
 static int
-zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pprompt, char *pmname, char *lazy)
+zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pprompt, char *pmname, char *lazy, int delete)
 {
     redisContext *rc = NULL;
     int pmflags = PM_REMOVABLE;
@@ -360,6 +366,8 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
             rc_carrier->use_cache = 0;
         if (lazy)
             rc_carrier->is_lazy = 1;
+        if (delete)
+            rc_carrier->unset_deletes = 1;
 
         rc_carrier->rc = rc;
         rc_carrier->fdesc = rc->fd;
@@ -404,6 +412,8 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 rc_carrier->use_cache = 0;
             if (lazy)
                 rc_carrier->is_lazy = 1;
+            if (delete)
+                rc_carrier->unset_deletes = 1;
 
             rc_carrier->rc = rc;
             rc_carrier->fdesc = rc->fd;
@@ -436,6 +446,8 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 rc_carrier->use_cache = 0;
             if (lazy)
                 rc_carrier->is_lazy = 1;
+            if (delete)
+                rc_carrier->unset_deletes = 1;
 
             rc_carrier->rc = rc;
             rc_carrier->fdesc = rc->fd;
@@ -477,6 +489,8 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 rc_carrier->use_cache = 0;
             if (lazy)
                 rc_carrier->is_lazy = 1;
+            if (delete)
+                rc_carrier->unset_deletes = 1;
 
             rc_carrier->rc = rc;
             rc_carrier->fdesc = rc->fd;
@@ -519,6 +533,8 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 rc_carrier->use_cache = 0;
             if (lazy)
                 rc_carrier->is_lazy = 1;
+            if (delete)
+                rc_carrier->unset_deletes = 1;
 
             rc_carrier->rc = rc;
             rc_carrier->fdesc = rc->fd;
@@ -552,6 +568,8 @@ zrtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
                 rc_carrier->use_cache = 0;
             if (lazy)
                 rc_carrier->is_lazy = 1;
+            if (delete)
+                rc_carrier->unset_deletes = 1;
 
             rc_carrier->rc = rc;
             rc_carrier->fdesc = rc->fd;
@@ -1460,7 +1478,7 @@ redis_str_setfn(Param pm, char *val)
             /* Free */
             zsh_db_set_length(umval, content_len);
             zsfree(umval);
-        } else {
+        } else if (!yes_unsetting || gsu_ext->unset_deletes) {
             reply = redisCommand(rc, "DEL %b", key, (size_t) key_len);
             if (reply)
                 freeReplyObject(reply);
@@ -1482,8 +1500,10 @@ redis_str_setfn(Param pm, char *val)
 static void
 redis_str_unsetfn(Param pm, UNUSED(int um))
 {
+    yes_unsetting = 1;
     /* Will clear the database */
     redis_str_setfn(pm, NULL);
+    yes_unsetting = 0;
 
     /* Will detach from database and free custom memory */
     redis_str_untie(pm);
@@ -1659,6 +1679,9 @@ redis_arrset_setfn(Param pm, char **val)
     key = gsu_ext->key;
     key_len = gsu_ext->key_len;
 
+    if (!val && yes_unsetting && !gsu_ext->unset_deletes)
+        return;
+
     if (rc) {
 
         int retry = 0;
@@ -1733,8 +1756,10 @@ redis_arrset_setfn(Param pm, char **val)
 void
 redis_arrset_unsetfn(Param pm, UNUSED(int exp))
 {
+    yes_unsetting = 1;
     /* Will clear the database */
     redis_arrset_setfn(pm, NULL);
+    yes_unsetting = 0;
 
     /* Will detach from database and free custom memory */
     redis_arrset_untie(pm);
@@ -2215,17 +2240,23 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
 static void
 redis_hash_zset_unsetfn(Param pm, UNUSED(int exp))
 {
-    /* This will make database contents survive the
-     * unset, as standard GSU will be put in place */
-    redis_hash_zset_untie(pm);
-
     /* Remember custom GSU structure assigned to
      * u.hash->tmpdata before hash gets deleted */
     struct gsu_scalar_ext * gsu_ext = pm->u.hash->tmpdata;
 
+    if (!gsu_ext->unset_deletes) {
+        /* This will make database contents survive the
+        * unset, as standard GSU will be put in place */
+        redis_hash_zset_untie(pm);
+    }
+
     /* Uses normal unsetter (because gdbmuntie is called above).
      * Will delete all owned field-parameters and also hashtable. */
     pm->gsu.h->setfn(pm, NULL);
+
+    if (gsu_ext->unset_deletes) {
+        redis_hash_zset_untie(pm);
+    }
 
     /* Don't need custom GSU structure with its
      * redisContext pointer anymore */
@@ -2823,17 +2854,23 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
 static void
 redis_hash_hset_unsetfn(Param pm, UNUSED(int exp))
 {
-    /* This will make database contents survive the
-     * unset, as standard GSU will be put in place */
-    redis_hash_hset_untie(pm);
-
     /* Remember custom GSU structure assigned to
      * u.hash->tmpdata before hash gets deleted */
     struct gsu_scalar_ext * gsu_ext = pm->u.hash->tmpdata;
 
+    if (!gsu_ext->unset_deletes) {
+        /* This will make database contents survive the
+        * unset, as standard GSU will be put in place */
+        redis_hash_hset_untie(pm);
+    }
+
     /* Uses normal unsetter (because gdbmuntie is called above).
      * Will delete all owned field-parameters and also hashtable. */
     pm->gsu.h->setfn(pm, NULL);
+
+    if (gsu_ext->unset_deletes) {
+        redis_hash_hset_untie(pm);
+    }
 
     /* Don't need custom GSU structure with its
      * redisContext pointer anymore */
@@ -3014,6 +3051,9 @@ redis_arrlist_setfn(Param pm, char **val)
     key = gsu_ext->key;
     key_len = gsu_ext->key_len;
 
+    if (!val && yes_unsetting && !gsu_ext->unset_deletes)
+        return;
+
     if (rc) {
         int retry = 0;
     retry:
@@ -3087,8 +3127,10 @@ redis_arrlist_setfn(Param pm, char **val)
 void
 redis_arrlist_unsetfn(Param pm, UNUSED(int exp))
 {
+    yes_unsetting = 1;
     /* Will clear the database */
     redis_arrlist_setfn(pm, NULL);
+    yes_unsetting = 0;
 
     /* Will detach from database and free custom memory */
     redis_arrlist_untie(pm);
