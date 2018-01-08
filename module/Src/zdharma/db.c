@@ -146,6 +146,8 @@ static int
 bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
 {
     char *pmname;
+    char *address = NULL, *pass = NULL, *pfile = NULL, *lazy = NULL;
+    int rdonly = 0, zcache = 0, pprompt = 0, delete = 0;
 
     /* Check options */
 
@@ -178,9 +180,6 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
     }
 
     /* Prepare arguments for backend */
-
-    char *address = NULL, *pass = NULL, *pfile = NULL, *lazy = NULL;
-    int rdonly = 0, zcache = 0, pprompt = 0;
 
     /* Address */
     if (OPT_ISSET(ops,'f')) {

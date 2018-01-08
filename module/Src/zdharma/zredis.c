@@ -847,10 +847,11 @@ static char *
 redis_getfn(Param pm)
 {
     struct gsu_scalar_ext *gsu_ext;
-    char *key;
+    char *key, *umkey;
     size_t key_len;
     redisContext *rc;
     redisReply *reply;
+    int retry, umlen;
 
     gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
 
@@ -861,13 +862,13 @@ redis_getfn(Param pm)
 
     /* Unmetafy key. Redis fits nice into this
      * process, as it can use length of data */
-    int umlen = 0;
-    char *umkey = zsh_db_unmetafy_zalloc(pm->node.nam, &umlen);
+    umlen = 0;
+    umkey = zsh_db_unmetafy_zalloc(pm->node.nam, &umlen);
 
     key = umkey;
     key_len = umlen;
 
-    int retry = 0;
+    retry = 0;
  retry:
     rc = gsu_ext->rc;
 
@@ -932,6 +933,7 @@ redis_setfn(Param pm, char *val)
     redisContext *rc;
     redisReply *reply;
     struct gsu_scalar_ext *gsu_ext;
+    int retry;
 
     gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
 
@@ -949,7 +951,7 @@ redis_setfn(Param pm, char *val)
         pm->node.flags |= PM_UPTODATE;
     }
 
-    int retry = 0;
+    retry = 0;
  retry:
 
     /* Database */
@@ -1146,13 +1148,14 @@ redis_hash_setfn(Param pm, HashTable ht)
     redisContext *rc;
     redisReply *reply, *entry, *reply2;
     struct gsu_scalar_ext *gsu_ext;
+    int retry;
 
     if (!pm->u.hash || pm->u.hash == ht)
         return;
 
     gsu_ext = (struct gsu_scalar_ext *)pm->u.hash->tmpdata;
 
-    int retry = 0;
+    retry = 0;
  retry:
     rc = gsu_ext->rc;
 
@@ -1226,6 +1229,8 @@ redis_hash_setfn(Param pm, HashTable ht)
     for (i = 0; i < ht->hsize; i++) {
         for (hn = ht->nodes[i]; hn; hn = hn->next) {
             struct value v;
+            int umlen;
+            char *umkey, *umval;
 
             v.isarr = v.flags = v.start = 0;
             v.end = -1;
@@ -1233,8 +1238,8 @@ redis_hash_setfn(Param pm, HashTable ht)
             v.pm = (Param) hn;
 
             /* Unmetafy key */
-            int umlen = 0;
-            char *umkey = zsh_db_unmetafy_zalloc(v.pm->node.nam, &umlen);
+            umlen = 0;
+            umkey = zsh_db_unmetafy_zalloc(v.pm->node.nam, &umlen);
 
             key = umkey;
             key_len = umlen;
@@ -1242,7 +1247,7 @@ redis_hash_setfn(Param pm, HashTable ht)
             queue_signals();
 
             /* Unmetafy data */
-            char *umval = zsh_db_unmetafy_zalloc(getstrvalue(&v), &umlen);
+            umval = zsh_db_unmetafy_zalloc(getstrvalue(&v), &umlen);
 
             content = umval;
             content_len = umlen;
@@ -1348,6 +1353,7 @@ redis_str_getfn(Param pm)
     size_t key_len;
     redisContext *rc;
     redisReply *reply;
+    int retry;
 
     gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
     /* Key already retrieved? */
@@ -1358,7 +1364,7 @@ redis_str_getfn(Param pm)
     key = gsu_ext->key;
     key_len = gsu_ext->key_len;
 
-    int retry = 0;
+    retry = 0;
  retry:
     rc = gsu_ext->rc;
 
@@ -1412,6 +1418,8 @@ redis_str_setfn(Param pm, char *val)
     size_t key_len, content_len;
     redisContext *rc;
     redisReply *reply;
+    struct gsu_scalar_ext *gsu_ext;
+    int retry;
 
     /* Set is done on parameter and on database. */
 
@@ -1428,11 +1436,11 @@ redis_str_setfn(Param pm, char *val)
     }
 
     /* Database */
-    struct gsu_scalar_ext *gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
+    gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
     key = gsu_ext->key;
     key_len = gsu_ext->key_len;
 
-    int retry = 0;
+    retry = 0;
  retry:
     rc = gsu_ext->rc;
 
@@ -1525,7 +1533,7 @@ redis_arrset_getfn(Param pm)
     size_t key_len;
     redisContext *rc;
     redisReply *reply;
-    int j;
+    int j, retry;
 
     gsu_ext = (struct gsu_array_ext *) pm->gsu.a;
     /* Key already retrieved? */
@@ -1536,7 +1544,7 @@ redis_arrset_getfn(Param pm)
     key = gsu_ext->key;
     key_len = gsu_ext->key_len;
 
-    int retry = 0;
+    retry = 0;
  retry:
     rc = gsu_ext->rc;
 
@@ -1627,6 +1635,7 @@ redis_arrset_setfn(Param pm, char **val)
     int alen = 0, j;
     redisContext *rc;
     redisReply *reply;
+    struct gsu_array_ext *gsu_ext;
 
     /* Set is done on parameter and on database. */
 
@@ -1645,7 +1654,7 @@ redis_arrset_setfn(Param pm, char **val)
     }
 
     /* Database */
-    struct gsu_array_ext *gsu_ext = (struct gsu_array_ext *) pm->gsu.a;
+    gsu_ext = (struct gsu_array_ext *) pm->gsu.a;
     rc = gsu_ext->rc;
     key = gsu_ext->key;
     key_len = gsu_ext->key_len;
@@ -1782,10 +1791,11 @@ static char *
 redis_zset_getfn(Param pm)
 {
     struct gsu_scalar_ext *gsu_ext;
-    char *main_key, *key;
+    char *main_key, *key, *umkey;
     size_t main_key_len, key_len;
     redisContext *rc;
     redisReply *reply;
+    int retry, umlen;
 
     gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
 
@@ -1796,8 +1806,8 @@ redis_zset_getfn(Param pm)
 
     /* Unmetafy key. Redis fits nice into this
      * process, as it can use length of data */
-    int umlen = 0;
-    char *umkey = zsh_db_unmetafy_zalloc(pm->node.nam, &umlen);
+    umlen = 0;
+    umkey = zsh_db_unmetafy_zalloc(pm->node.nam, &umlen);
 
     key = umkey;
     key_len = umlen;
@@ -1805,7 +1815,7 @@ redis_zset_getfn(Param pm)
     main_key = gsu_ext->key;
     main_key_len = gsu_ext->key_len;
 
-    int retry = 0;
+    retry = 0;
  retry:
     rc = gsu_ext->rc;
 
@@ -1863,6 +1873,7 @@ redis_zset_setfn(Param pm, char *val)
     struct gsu_scalar_ext *gsu_ext;
     redisContext *rc;
     redisReply *reply;
+    int retry;
 
     /* Set is done on parameter and on database. */
 
@@ -1881,7 +1892,7 @@ redis_zset_setfn(Param pm, char *val)
     /* Database */
     gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
 
-    int retry = 0;
+    retry = 0;
  retry:
     rc = gsu_ext->rc;
 
@@ -2083,13 +2094,14 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
     redisContext *rc;
     redisReply *reply;
     struct gsu_scalar_ext *gsu_ext;
+    int retry;
 
     if (!pm->u.hash || pm->u.hash == ht)
         return;
 
     gsu_ext = (struct gsu_scalar_ext *) pm->u.hash->tmpdata;
 
-    int retry = 0;
+    retry = 0;
  retry:
     rc = gsu_ext->rc;
     if (!rc) {
@@ -2138,6 +2150,8 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
     for (i = 0; i < ht->hsize; i++) {
         for (hn = ht->nodes[i]; hn; hn = hn->next) {
             struct value v;
+            int umlen;
+            char *umkey, *umval;
 
             v.isarr = v.flags = v.start = 0;
             v.end = -1;
@@ -2145,8 +2159,8 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
             v.pm = (Param) hn;
 
             /* Unmetafy key */
-            int umlen = 0;
-            char *umkey = zsh_db_unmetafy_zalloc(v.pm->node.nam, &umlen);
+            umlen = 0;
+            umkey = zsh_db_unmetafy_zalloc(v.pm->node.nam, &umlen);
 
             key = umkey;
             key_len = umlen;
@@ -2154,7 +2168,7 @@ redis_hash_zset_setfn(Param pm, HashTable ht)
             queue_signals();
 
             /* Unmetafy data */
-            char *umval = zsh_db_unmetafy_zalloc(getstrvalue(&v), &umlen);
+            umval = zsh_db_unmetafy_zalloc(getstrvalue(&v), &umlen);
 
             content = umval;
             content_len = umlen;
@@ -2357,10 +2371,11 @@ static char *
 redis_hset_getfn(Param pm)
 {
     struct gsu_scalar_ext *gsu_ext;
-    char *main_key, *key;
+    char *main_key, *key, *umkey;
     size_t main_key_len, key_len;
     redisContext *rc;
     redisReply *reply;
+    int retry, umlen;
 
     gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
 
@@ -2371,8 +2386,8 @@ redis_hset_getfn(Param pm)
 
     /* Unmetafy key. Redis fits nice into this
      * process, as it can use length of data */
-    int umlen = 0;
-    char *umkey = zsh_db_unmetafy_zalloc(pm->node.nam, &umlen);
+    umlen = 0;
+    umkey = zsh_db_unmetafy_zalloc(pm->node.nam, &umlen);
 
     key = umkey;
     key_len = umlen;
@@ -2380,7 +2395,7 @@ redis_hset_getfn(Param pm)
     main_key = gsu_ext->key;
     main_key_len = gsu_ext->key_len;
 
-    int retry = 0;
+    retry = 0;
  retry:
     rc = gsu_ext->rc;
 
@@ -2438,6 +2453,7 @@ redis_hset_setfn(Param pm, char *val)
     struct gsu_scalar_ext *gsu_ext;
     redisContext *rc;
     redisReply *reply;
+    int retry;
 
     /* Set is done on parameter and on database. */
 
@@ -2456,7 +2472,7 @@ redis_hset_setfn(Param pm, char *val)
     /* Database */
     gsu_ext = (struct gsu_scalar_ext *) pm->gsu.s;
 
-    int retry = 0;
+    retry = 0;
  retry:
     rc = gsu_ext->rc;
 
@@ -2660,13 +2676,14 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
     redisContext *rc;
     redisReply *reply, *reply2, *entry;
     struct gsu_scalar_ext *gsu_ext;
+    int retry;
 
     if (!pm->u.hash || pm->u.hash == ht)
         return;
 
     gsu_ext = (struct gsu_scalar_ext *) pm->u.hash->tmpdata;
 
-    int retry = 0;
+    retry = 0;
  retry:
     rc = gsu_ext->rc;
     if (!rc) {
@@ -2745,6 +2762,8 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
     for (i = 0; i < ht->hsize; i++) {
         for (hn = ht->nodes[i]; hn; hn = hn->next) {
             struct value v;
+            int umlen;
+            char *umkey, *umval;
 
             v.isarr = v.flags = v.start = 0;
             v.end = -1;
@@ -2752,8 +2771,8 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
             v.pm = (Param) hn;
 
             /* Unmetafy key */
-            int umlen = 0;
-            char *umkey = zsh_db_unmetafy_zalloc(v.pm->node.nam, &umlen);
+            umlen = 0;
+            umkey = zsh_db_unmetafy_zalloc(v.pm->node.nam, &umlen);
 
             key = umkey;
             key_len = umlen;
@@ -2761,7 +2780,7 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
             queue_signals();
 
             /* Unmetafy data */
-            char *umval = zsh_db_unmetafy_zalloc(getstrvalue(&v), &umlen);
+            umval = zsh_db_unmetafy_zalloc(getstrvalue(&v), &umlen);
 
             content = umval;
             content_len = umlen;
@@ -2870,7 +2889,7 @@ redis_arrlist_getfn(Param pm)
     size_t key_len;
     redisContext *rc;
     redisReply *reply;
-    int j;
+    int j, retry;
 
     gsu_ext = (struct gsu_array_ext *) pm->gsu.a;
     /* Key already retrieved? */
@@ -2881,7 +2900,7 @@ redis_arrlist_getfn(Param pm)
     key = gsu_ext->key;
     key_len = gsu_ext->key_len;
 
-    int retry = 0;
+    retry = 0;
  retry:
     rc = gsu_ext->rc;
 
@@ -2972,6 +2991,7 @@ redis_arrlist_setfn(Param pm, char **val)
     int alen = 0, j;
     redisContext *rc;
     redisReply *reply;
+    struct gsu_array_ext *gsu_ext;
 
     /* Set is done on parameter and on database. */
 
@@ -2989,7 +3009,7 @@ redis_arrlist_setfn(Param pm, char **val)
     }
 
     /* Database */
-    struct gsu_array_ext *gsu_ext = (struct gsu_array_ext *) pm->gsu.a;
+    gsu_ext = (struct gsu_array_ext *) pm->gsu.a;
     rc = gsu_ext->rc;
     key = gsu_ext->key;
     key_len = gsu_ext->key_len;
