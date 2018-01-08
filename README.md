@@ -76,9 +76,10 @@ a b c d e f g h i j k l m n o p q r s t u v w x y z A B C D E F G H I J K L M N 
 
 ## Deleting From Database
 
-Unsetting the first type of mapping (Zsh hash -> whole database) doesn't cause a deletion from
-database. Other parameter unsets, also caused by automatic scoping actions, cause the corresponding
-key to be deleted. In order to avoid deletion, `untie` the parameter.
+Unsetting the first type of mapped variable (Zsh hash -> whole database) doesn't cause a deletion from
+database. If option `-D` is given to ztie when binding to concrete key in database, then unsets, also
+caused by automatic scoping actions, cause the corresponding key to be deleted. `zuntie` never deletes
+from database.
 
 ## Mapping Of Redis Types To Zsh Data Structures
 ### Database string keys -> Zsh hash
