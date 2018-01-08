@@ -2,33 +2,53 @@
 ![ZSH 5.0.0](https://img.shields.io/badge/zsh-v5.0.0-orange.svg?style=flat-square)
 [![Zredis](https://img.shields.io/badge/zredis-0.93-green.svg)](https://github.com/zdharma/zredis/releases)
 
-[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=D6XDCHDSBDSDG)
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Zredis](#zredis)
+  - [Rationale](#rationale)
+  - [Deleting From Database](#deleting-from-database)
+  - [Compiling modules](#compiling-modules)
+  - [Cache](#cache)
+  - [Mapping Of Redis Types To Zsh Data Structures](#mapping-of-redis-types-to-zsh-data-structures)
+    - [Database string keys -> Zsh hash](#database-string-keys---zsh-hash)
+    - [Redis hash -> Zsh hash](#redis-hash---zsh-hash)
+    - [Redis set -> Zsh array](#redis-set---zsh-array)
+    - [Redis sorted set -> Zsh hash](#redis-sorted-set---zsh-hash)
+    - [Redis list -> Zsh array](#redis-list---zsh-array)
+    - [Redis string key -> Zsh string](#redis-string-key---zsh-string)
+- [Installation](#installation)
+    - [Zplugin](#zplugin)
+    - [Antigen](#antigen)
+    - [Oh-My-Zsh](#oh-my-zsh)
+    - [Zgen](#zgen)
+- [Zredis Zstyles](#zredis-zstyles)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 # Zredis
 
 Module interfacing with `redis` database via `Zshell` `variables` mapped to `keys` or whole `database`.
 
 ```SystemVerilog
-% redis-cli -n 3 hmset HASHSET field1 value1 fld2 val2
-% ztie -d db/redis -f "127.0.0.1/3/HASHSET" hset
-% echo ${(kv)hset}
-field1 value1 fld2 val2
+% redis-cli -n 3 hmset HASHSET field1 value1 field2 value2
+% ztie -d db/redis -a "127.0.0.1/3/HASHSET" hset
+% echo ${(kv)hset}  # (kv) – keys and values of Zsh hash
+field1 value1 field2 value2
 % echo ${(k)hset}
-field1 fld2
-% echo ${(v)hset}
-value1 val2
-% ztie -d db/redis -f "127.0.0.1/3/LIST" -L list list  % lazy binding, will create list-key on write
-% echo ${(t)list}
+field1 field2
+% echo $hset  # values are output by default
+value1 value2
+% ztie -d db/redis -a "127.0.0.1/3/LIST" -L list lst # Lazy binding, will create list-key on write
+% echo ${(t)lst}  # (t) – display type of Zsh variable
 array-special
-% list=( ${(k)hset} )  % Copying hash keys into list
-% echo $list
-field1 fld2
+% lst=( ${(k)hset} )  # Copying hash keys into list
+% echo $lst
+field1 field2
 % redis-cli -n 3 lrange LIST 0 -1
 1) "field1"
-2) "fld2"
-% for (( i=1; i <= 2000; i ++ )); do; hset[$i]=$i; done
-% echo ${#hset}
-2002
+2) "field2"
 ```
 ## Rationale
 
@@ -36,16 +56,16 @@ Building commands for `redis-cli` quickly becomes inadequate. For example, if co
 of one hash to another one is needed, what `redis-cli` invocations are needed? With
 `zredis`, this task is simple:
 
-```SystemVerilog
-% ztie -r -d db/redis -f "127.0.0.1/3/HASHSET1" hset1 # -r - read-only
-% ztie -d db/redis -f "127.0.0.1/3/HASHSET2" hset2
+```zsh
+% ztie -r -d db/redis -a "127.0.0.1/3/HASHSET1" hset1 # -r - read-only
+% ztie -d db/redis -a "127.0.0.1/3/HASHSET2" hset2
 % echo ${(kv)hset2}
 other data
 % echo ${(kv)hset1}
-fld2 val2 field1 value1
+field1 value1 field2 value2
 % hset2=( "${(kv)hset1[@]}" )
 % echo ${(kv)hset2}
-fld2 val2 field1 value1
+field1 value1 field2 value2
 ```
 
 The `"${(kv)hset1[@]}"` construct guarantees that empty elements (keys or values) will
@@ -54,16 +74,13 @@ be preserved, thanks to quoting and `@` operator. `(kv)` means keys and values, 
 Or, for example, if one needs a large sorted set (`zset`), how to accomplish this with
 `redis-cli`? With `zredis`, one can do:
 
-```SystemVerilog
+```zsh
 % redis-cli -n 3 zadd NEWZSET 1.0 a
-% ztie -d db/redis -f "127.0.0.1/3/NEWZSET" zset
+% ztie -d db/redis -a "127.0.0.1/3/NEWZSET" zset
 % echo ${(kv)zset}
 a 1
 % count=0
-% for i in {a..z} {A..Z}; do
-> (( count ++ ))
-> zset[$i]=$count;
-> done
+% for i in {a..z} {A..Z}; do (( count ++ )); zset[$i]=$count; done
 % echo ${(kv)zset}
 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j 10 k 11 l 12 m 13 n 14 o 15 p 16 q 17 r 18 s 19 t 20 u 21 v 22 w 23 x 24 y 25 z 26 A 27 B 28 C 29 D 30 E 31 F 32 G 33 H 34 I 35 J 36 K 37 L 38 M 39 N 40 O 41 P 42 Q 43 R 44 S 45 T 46 U 47 V 48 W 49 X 50 Y 51 Z 52
 % zrzset -h
@@ -83,11 +100,26 @@ from database.
 
 ## Compiling modules
 
-The Zsh modules the plugin provides will build automatically (`hiredis` library is needed). You can
-start more than 1 shell, only the first one will be compiling. If I commit a new timestamp to
+The Zsh modules provided by the plugin will build automatically (`hiredis` library is needed). You can
+start more than 1 shell, only the first one will be compiling. If a developer commits a new timestamp to
 `module/RECOMPILE_REQUEST`, the module will recompile (don't worry, at startup, `mtime` is checked
-first, so check for recompilation is fast). I do this when I add features or fixes and test them.
-You can recompile the modules yourself by invoking Zsh function `zredis_compile`.
+first, so check for recompilation is fast). I do this when I add tested features or fixes. You can
+recompile the modules yourself by invoking Zsh function `zredis_compile`.
+
+## Cache
+
+By default, reads are cached. If a tied variable is read for the first time,
+then database is accessed. For the second read there's no database access.
+Writes aren't cached in any way.
+
+To clear the cache, invoke:
+
+```zsh
+ztclear my_string_var       # Also for types: list, set
+ztclear my_hashset_var key  # Also for types: whole-db mapping, zset
+```
+
+To disable the cache, pass `-z` ("zero-cache") option to ztie.
 
 ## Mapping Of Redis Types To Zsh Data Structures
 ### Database string keys -> Zsh hash
@@ -95,10 +127,10 @@ You can recompile the modules yourself by invoking Zsh function `zredis_compile`
 Redis can store strings at given keys, using `SET` command. `Zredis` maps those to hash array
 (like Zsh `gdbm` module):
 
-```SystemVerilog
+```
 % redis-cli -n 4 SET key1 value1
 % redis-cli -n 4 SET key2 value2
-% ztie -d db/redis -f "127.0.0.1/4" redis
+% ztie -d db/redis -a "127.0.0.1/4" redis
 % echo $zredis_tied
 redis
 % echo ${(kv)redis}
@@ -110,9 +142,9 @@ key1 value1 key2 value2
 By appending `/NAME` to the `host-spec` (`-f` option), one can select single
 key of type `HASH` and map it to `Zsh` hash:
 
-```SystemVerilog
+```
 % redis-cli -n 4 hmset HASH key1 value1 key2 value2
-% ztie -d db/redis -f "127.0.0.1/4/HASH" hset
+% ztie -d db/redis -a "127.0.0.1/4/HASH" hset
 % echo $zredis_tied
 hset
 % echo ${(kv)hset}
@@ -131,12 +163,12 @@ whole set by assigning via `=( ... )` to set, and delete set from database
 by use of `unset`. Use `zuntie` to only detach variable from database without
 deleting any data.
 
-```SystemVerilog
+```
 % redis-cli -n 4 sadd SET value1 value2 value3 ''
-% ztie -d db/redis -f "127.0.0.1/4/SET" myset
+% ztie -d db/redis -a "127.0.0.1/4/SET" myset
 % echo ${myset[@]}
 value2 value3 value1
-% echo -E ${(qq)myset[@]}  # Quote with '', use to see empty elements
+% echo -E ${(qq)myset[@]}  # (qq) – quote with '', use to see empty elements
 'value2' 'value3' '' 'value1'
 % myset=( 1 2 3 )
 % myset[2]=()
@@ -153,9 +185,9 @@ value2 value3 value1
 This variant maps `zset` as hash - keys are set elements, values are ranks.
 `zrzset` call outputs elements sorted according to the rank:
 
-```SystemVerilog
+```
 % redis-cli -n 4 zadd NEWZSET 1.0 a
-% ztie -d db/redis -f "127.0.0.1/4/NEWZSET" zset
+% ztie -d db/redis -a "127.0.0.1/4/NEWZSET" zset
 % echo ${(kv)zset}
 a 1
 % zset[a]=2.5
@@ -169,9 +201,9 @@ b a
 
 There is no analogue of `zrzset` call because `Zsh` array already has correct order:
 
-```SystemVerilog
+```zsh
 % redis-cli -n 4 rpush LIST value1 value2 value3
-% ztie -d db/redis -f "127.0.0.1/4/LIST" mylist
+% ztie -d db/redis -a "127.0.0.1/4/LIST" mylist
 % echo $mylist
 value1 value2 value3
 % mylist=( 1 2 3 )
@@ -189,7 +221,7 @@ value1 value2 value3
 
 Single keys in main Redis storage are bound to `Zsh` string variables:
 
-```SystemVerilog
+```zsh
 % redis-cli -n 4 KEYS "*"
 1) "key1"
 2) "SET"
@@ -197,14 +229,14 @@ Single keys in main Redis storage are bound to `Zsh` string variables:
 4) "HASH"
 5) "NEWZSET"
 6) "key2"
-% ztie -d db/redis -f "127.0.0.1/4/key1" key1
+% ztie -d db/redis -a "127.0.0.1/4/key1" key1
 % echo $key1
 value1
-% key1=valueB
+% key1=value2
 % echo $key1
-valueB
+value2
 % redis-cli -n 4 get key1
-"valueB"
+"value2"
 ```
 
 # Installation
