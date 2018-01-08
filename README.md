@@ -1,6 +1,6 @@
 [![Built with Spacemacs](https://cdn.rawgit.com/syl20bnr/spacemacs/442d025779da2f62fc86c2082703697714db6514/assets/spacemacs-badge.svg)](http://spacemacs.org)
 ![ZSH 5.0.0](https://img.shields.io/badge/zsh-v5.0.0-orange.svg?style=flat-square)
-[![Zredis](https://img.shields.io/badge/zredis-0.92-green.svg)](https://github.com/zdharma/zredis/releases)
+[![Zredis](https://img.shields.io/badge/zredis-0.93-green.svg)](https://github.com/zdharma/zredis/releases)
 
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=D6XDCHDSBDSDG)
 
@@ -77,8 +77,8 @@ a b c d e f g h i j k l m n o p q r s t u v w x y z A B C D E F G H I J K L M N 
 ## Deleting From Database
 
 Unsetting the first type of mapped variable (Zsh hash -> whole database) doesn't cause a deletion from
-database. If option `-D` is given to ztie when binding to concrete key in database, then unsets, also
-caused by automatic scoping actions, cause the corresponding key to be deleted. `zuntie` never deletes
+database. If option `-D` is given to `ztie` when binding to concrete key in database, then unsets, also
+caused by automatic Zsh scoping actions, cause the corresponding key to be deleted. `zuntie` never deletes
 from database.
 
 ## Compiling modules
@@ -86,8 +86,8 @@ from database.
 The Zsh modules the plugin provides will build automatically (`hiredis` library is needed). You can
 start more than 1 shell, only the first one will be compiling. If I commit a new timestamp to
 `module/RECOMPILE_REQUEST`, the module will recompile (don't worry, at startup, `mtime` is checked
-first, so check for recompilation is fast). You can recompile the modules yourself by invoking Zsh
-function `zredis_compile`.
+first, so check for recompilation is fast). I do this when I add features or fixes and test them.
+You can recompile the modules yourself by invoking Zsh function `zredis_compile`.
 
 ## Mapping Of Redis Types To Zsh Data Structures
 ### Database string keys -> Zsh hash
