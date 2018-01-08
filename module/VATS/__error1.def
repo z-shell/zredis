@@ -18,29 +18,43 @@ errors1+=(
     # The zredis_tied array is to be collected by OS
     # 278 bytes in 46 blocks are definitely lost in loss record 551 of 624
     "* / bin_ztie / redis_main_entry / zrtie_cmd* / zsh_db_arr_append / ztrdup / *"
+    # Strange (optimization?), but report can be without zrtie_cmd
+    "* / bin_ztie / redis_main_entry / * / zsh_db_arr_append / ztrdup / *"
 
     # As above
     # 23 (16 direct, 7 indirect) bytes in 1 blocks are definitely lost in loss record 187 of 575
     "* / bin_ztie / redis_main_entry / zrtie_cmd* / zsh_db_arr_append / zshcalloc / *"
+    # Strange (optimization?), but report can be without zrtie_cmd
+    "* / bin_ztie / redis_main_entry / * / zsh_db_arr_append / zshcalloc / *"
 
     # TODO Strong thesis, checked this, redisFree() would have to not work completely
     "* / bin_ztie / redis_main_entry / zrtie_cmd* / connect / redisConnectWithTimeout / *"
+    # Strange (optimization?), but report can be without zrtie_cmd
+    "* / bin_ztie / redis_main_entry / * / connect / redisConnectWithTimeout / *"
 
     # Initial empty zredis_tied array, to be collected by OS
     # 8 bytes in 1 blocks are definitely lost in loss record 71 of 587
     "* / bin_zmodload / * / load_module / do_boot_module / * / boot_ / zshcalloc / *"
+    # Strange (optimization?), but report can be without do_boot_module
+    "* / bin_zmodload / * / load_module / * / boot_ / zshcalloc / *"
 
     # Looks like for-OS to collect builtin entry
     # 80 (64 direct, 16 indirect) bytes in 1 blocks are definitely lost in loss record 422 of 587
     "main / zsh_main / init_bltinmods / autofeatures / add_autobin / zshcalloc / *"
+    # Report can be without "main"
+    "* / zsh_main / init_bltinmods / autofeatures / add_autobin / zshcalloc / *"
 
     # Backends-registry in hash, to be collected by OS
     # 241 (136 direct, 105 indirect) bytes in 1 blocks are definitely lost in loss record 505 of 587
     "* / bin_zmodload / * / load_module / * / setup_ / createhashtable / newhashtable / zshcalloc / *"
+    # Strange (optimization?), but report can be without createhashtable
+    "* / bin_zmodload / * / load_module / * / setup_ / * / newhashtable / zshcalloc / *"
 
     # Reallocation of zredis_tied array, which is to be collected by OS
     # 8 bytes in 1 blocks are definitely lost in loss record 72 of 571
     "* / execbuiltin / bin_zuntie / redis_main_entry / * / unsetparam_pm / * / redis_hash_untie / zsh_db_filter_arr / *"
+    # Strange (optimization?), but report can be without redis_hash_untie
+    "* / execbuiltin / bin_zuntie / redis_main_entry / * / unsetparam_pm / redis_hash_unsetfn / zsh_db_filter_arr / *"
 
     #
     # Possibly lost
