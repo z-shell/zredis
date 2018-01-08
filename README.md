@@ -81,6 +81,14 @@ database. If option `-D` is given to ztie when binding to concrete key in databa
 caused by automatic scoping actions, cause the corresponding key to be deleted. `zuntie` never deletes
 from database.
 
+## Compiling modules
+
+The Zsh modules the plugin provides will build automatically (`hiredis` library is needed). You can
+start more than 1 shell, only the first one will be compiling. If I commit a new timestamp to
+`module/RECOMPILE_REQUEST`, the module will recompile (don't worry, at startup, `mtime` is checked
+first, so check for recompilation is fast). You can recompile the modules yourself by invoking Zsh
+function `zredis_compile`.
+
 ## Mapping Of Redis Types To Zsh Data Structures
 ### Database string keys -> Zsh hash
 
