@@ -211,7 +211,6 @@
      local -a dbase
      ztie -d db/gdbm -f $dbfile dbase
      echo ${(t)dbase}
-     zuntie dbase
  }
  echo $dbase[1]
  ztie -d db/gdbm -f $dbfile dbase2

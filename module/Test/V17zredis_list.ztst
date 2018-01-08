@@ -47,7 +47,7 @@
 >testdata
 >0
 
- ztie -d db/redis -f $db1 alist2
+ ztie -d db/redis -f $db1 -D alist2
  unset 'alist2'
  ztie -d db/redis -f $db1 alist 2>&1
  echo $alist
@@ -62,8 +62,8 @@
  zuntie alist
  ztie -d db/redis -f $db1 alist
  echo $alist
- zuntie alist
- ztie -d db/redis -f $db1 alist
+ unset alist
+ ztie -d db/redis -f $db1 -D alist
  unset 'alist'
  ztie -r -d db/redis -f $db1 alist 2>&1
  echo $zredis_tied ${#zredis_tied}
@@ -93,7 +93,7 @@
 >'first' 'second'
 >0
 
- ztie -d db/redis -f $db2 alist2
+ ztie -d db/redis -f $db2 -D alist2
  val=( $alist2 )
  unset alist2
  echo $val
@@ -136,7 +136,6 @@
      local alist
      ztie -d db/redis -f $db1 alist
      echo ${(t)alist}
-     zuntie alist
  }
  echo $alist
  ztie -d db/redis -f $db1 alist

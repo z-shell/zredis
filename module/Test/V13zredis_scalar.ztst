@@ -45,7 +45,7 @@
 >testdata
 >0
 
- ztie -d db/redis -f $db1 string2
+ ztie -d db/redis -f $db1 -D string2
  unset 'string2'
  ztie -d db/redis -f $db1 string 2>&1
  echo $string
@@ -61,7 +61,7 @@
  ztie -d db/redis -f $db1 string
  echo $string
  zuntie string
- ztie -d db/redis -f $db1 string
+ ztie -d db/redis -f $db1 -D string
  unset 'string'
  ztie -r -d db/redis -f $db1 string 2>&1
  echo $zredis_tied ${#zredis_tied}
@@ -131,7 +131,6 @@
      local string
      ztie -d db/redis -f $db1 string
      echo ${(t)string}
-     zuntie string
  }
  echo $string
  ztie -d db/redis -f $db1 string

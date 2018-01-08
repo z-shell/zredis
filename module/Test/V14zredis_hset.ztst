@@ -245,7 +245,6 @@
      local -a dbase
      ztie -d db/redis -f $db1 dbase
      echo ${(t)dbase}
-     zuntie dbase
  }
  echo $dbase[1]
  ztie -d db/redis -f $db1 dbase

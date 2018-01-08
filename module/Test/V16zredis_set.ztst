@@ -47,7 +47,7 @@
 >testdata
 >0
 
- ztie -d db/redis -f $db1 aset2
+ ztie -d db/redis -f $db1 -D aset2
  unset 'aset2'
  ztie -d db/redis -f $db1 aset 2>&1
  echo $aset
@@ -63,7 +63,7 @@
  ztie -d db/redis -f $db1 aset
  echo $aset
  zuntie aset
- ztie -d db/redis -f $db1 aset
+ ztie -d db/redis -f $db1 -D aset
  unset 'aset'
  ztie -r -d db/redis -f $db1 aset 2>&1
  echo $zredis_tied ${#zredis_tied}
@@ -93,7 +93,7 @@
 >'first' 'second'
 >0
 
- ztie -d db/redis -f $db2 aset2
+ ztie -d db/redis -f $db2 -D aset2
  val=( $aset2 )
  unset aset2
  echo ${(o)val}
@@ -136,7 +136,6 @@
      local aset
      ztie -d db/redis -f $db1 aset
      echo ${(t)aset}
-     zuntie aset
  }
  echo $aset
  ztie -d db/redis -f $db1 aset
