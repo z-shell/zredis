@@ -118,7 +118,7 @@ gdbm_main_entry(VA_ALIST1(int cmd))
     VA_DCL
 {
     char *address = NULL, *pass = NULL, *pfile = NULL, *pmname = NULL, *key = NULL, *lazy = NULL;
-    int rdonly = 0, zcache = 0, pprompt = 0, rountie = 0, delete = 0;
+    int flags = 0, rountie = 0;
 
     va_list ap;
     VA_DEF_ARG(int cmd);
@@ -129,26 +129,20 @@ gdbm_main_entry(VA_ALIST1(int cmd))
     switch (cmd) {
     case DB_TIE:
         /* Order is:
+         * flags -r, -z, -l, -D
          * -a/f address, char *
-         * -r read-only, int
-         * -z zero-cache, int
          * -p password, char *
          * -P file with password, char *
-         * -l prompt for password, int
          * parameter name, char *
          * -L lazy binding type, char *
-         * -D should delete on unset, int
          */
+        flags = va_arg(ap, int);
         address = va_arg(ap, char *);
-        rdonly = va_arg(ap, int);
-        zcache = va_arg(ap, int);
         pass = va_arg(ap, char *);
         pfile = va_arg(ap, char *);
-        pprompt = va_arg(ap, int);
         pmname = va_arg(ap, char *);
         lazy = va_arg(ap, char *);
-        delete = va_arg(ap, int);
-        return zgtie_cmd(address, rdonly, zcache, pass, pfile, pprompt, pmname, lazy, delete);
+        return zgtie_cmd(flags, address, pass, pfile, pmname, lazy);
 
     case DB_UNTIE:
         /* Order is:
@@ -198,7 +192,7 @@ gdbm_main_entry(VA_ALIST1(int cmd))
 
 /**/
 static int
-zgtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pprompt, char *pmname, char *lazy, int delete)
+zgtie_cmd(int flags, char *address, char *pass, char *pfile, char *pmname, char *lazy)
 {
     GDBM_FILE dbf = NULL;
     int read_write = GDBM_SYNC, pmflags = PM_REMOVABLE;
@@ -214,7 +208,7 @@ zgtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
         return 1;
     }
 
-    if (rdonly) {
+    if (flags & DB_FLAG_RONLY) {
         read_write |= GDBM_READER;
         pmflags |= PM_READONLY;
     } else {
@@ -265,7 +259,7 @@ zgtie_cmd(char *address, int rdonly, int zcache, char *pass, char *pfile, int pp
     dbf_carrier->fdesc = gdbm_fdesc(dbf);
     dbf_carrier->dbf = dbf;
     dbf_carrier->use_cache = 1;
-    if (zcache) {
+    if (flags & DB_FLAG_ZERO) {
         dbf_carrier->use_cache = 0;
     }
     if (lazy) {

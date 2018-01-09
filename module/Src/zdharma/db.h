@@ -27,3 +27,10 @@
 #define DB_KEY_TYPE_SET 5
 #define DB_KEY_TYPE_ZSET 6
 #define DB_KEY_TYPE_HASH 7
+
+/* Flags for no-argument options */
+#define DB_FLAG_RONLY 1
+#define DB_FLAG_ZERO 2
+#define DB_FLAG_DELETE 4
+#define DB_FLAG_NOCONNECT 8
+#define DB_FLAG_PASSPROMPT 16

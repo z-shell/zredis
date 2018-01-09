@@ -57,8 +57,10 @@ DbBackendEntryPoint Out_FoundBe = NULL;
 static struct builtin bintab[] = {
                                   /* h - help, d - backend type, r - read-only, a/f - address/file,
                                    * l - load password from terminal, p - password as argument,
-                                   * P - password from file, z - zero read-cache, D - delete on unset */
-                                  BUILTIN("ztie", 0, bin_ztie, 0, -1, 0, "hrlzDf:d:a:p:P:L:", NULL),
+                                   * P - password from file, z - zero read-cache, D - delete on unset
+                                   * S - lazy mode will not even connect
+                                   */
+                                  BUILTIN("ztie", 0, bin_ztie, 0, -1, 0, "hrlzDSf:d:a:p:P:L:", NULL),
                                   BUILTIN("zuntie", 0, bin_zuntie, 0, -1, 0, "uh", NULL),
                                   BUILTIN("ztaddress", 0, bin_ztaddress, 0, -1, 0, "h", NULL),
                                   BUILTIN("ztclear", 0, bin_ztclear, 0, -1, 0, "h", NULL),
@@ -147,7 +149,7 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
 {
     char *pmname;
     char *address = NULL, *pass = NULL, *pfile = NULL, *lazy = NULL;
-    int rdonly = 0, zcache = 0, pprompt = 0, delete = 0;
+    int flags = 0;
 
     /* Check options */
 
@@ -190,16 +192,12 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
 
     /* Read-only */
     if (OPT_ISSET(ops,'r')) {
-        rdonly = 1;
-    } else {
-        rdonly = 0;
+        flags |= DB_FLAG_RONLY;
     }
 
     /* Zero-cache */
     if (OPT_ISSET(ops,'z')) {
-        zcache = 1;
-    } else {
-        zcache = 0;
+        flags |= DB_FLAG_ZERO;
     }
 
     /* Password */
@@ -214,9 +212,7 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
 
     /* Password load request */
     if (OPT_ISSET(ops,'l')) {
-        pprompt = 1;
-    } else {
-        pprompt = 0;
+        flags |= DB_FLAG_PASSPROMPT;
     }
 
     /* Lazy binding */
@@ -226,9 +222,12 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
 
     /* Delete on unset */
     if (OPT_ISSET(ops,'D')) {
-        delete = 1;
-    } else {
-        delete = 0;
+        flags |= DB_FLAG_DELETE;
+    }
+
+    /* Skip connecting in lazy mode */
+    if (OPT_ISSET(ops,'S')) {
+        flags |= DB_FLAG_NOCONNECT;
     }
 
     BackendNode node = NULL;
@@ -245,7 +244,7 @@ bin_ztie(char *nam, char **args, Options ops, UNUSED(int func))
         return 1;
     }
 
-    return be(DB_TIE, address, rdonly, zcache, pass, pfile, pprompt, pmname, lazy, delete);
+    return be(DB_TIE, flags, address, pass, pfile, pmname, lazy);
 }
 /* }}} */
 /* FUNCTION: bin_zuntie {{{ */
@@ -785,6 +784,7 @@ ztie_usage()
     fprintf(stdout, " -P:       path to file with database-password\n");
     fprintf(stdout, " -L:       lazy binding - provide type of key to create if it doesn't exist "
                     "(string, set, zset, hash, list)\n");
+    fprintf(stdout, " -S:       skip connecting to database in lazy binding\n");
     fprintf(stdout, " -D:       delete key on unset of the parameter ([/key] in the address has to be used)\n");
     fprintf(stdout, "\nThe {parameter_name} - choose name for the created database-bound parameter\n");
     fflush(stdout);
