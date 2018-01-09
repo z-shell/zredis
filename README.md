@@ -40,7 +40,9 @@ field1 value1 field2 value2
 field1 field2
 % echo $hset  # values are output by default
 value1 value2
+
 % ztie -d db/redis -a "127.0.0.1/3/LIST" -L list lst # Lazy binding, will create list-key on write
+                                                     # -L {type}, obtains Redis type name like zset, hash, string
 % echo ${(t)lst}  # (t) – display type of Zsh variable
 array-special
 % lst=( ${(k)hset} )  # Copying hash keys into list
@@ -98,6 +100,10 @@ database. If option `-D` is given to `ztie` when binding to concrete key in data
 caused by automatic Zsh scoping actions, cause the corresponding key to be deleted. `zuntie` never deletes
 from database.
 
+More: in Redis, removing all elements from a set, list, etc. means the same as deletion. So you can delete
+all datatypes except string, by doing `variable=()`. For string you can unset key in whole-database mapped
+hash: `unset 'wholedb[key]'`.
+
 ## Compiling modules
 
 The Zsh modules provided by the plugin will build automatically (`hiredis` library is needed). You can
@@ -120,6 +126,15 @@ ztclear my_hashset_var key  # Also for types: whole-db mapping, zset
 ```
 
 To disable the cache, pass `-z` ("zero-cache") option to ztie.
+
+# News
+* 2018-01-09
+  - New option to `ztie`: `-S`, which used in conjunction with `-L` (lazy binding) causes database connection
+    to be defered until first use of variable. Standard lazy binding means: key isn't required to exist.
+
+* 2018-01-08
+  - New option to `ztie`: `-D`, which causes mapped database key to be deleted on `unset` of the tied
+    variable. Up to this moment this behavior was the default.
 
 ## Mapping Of Redis Types To Zsh Data Structures
 ### Database string keys -> Zsh hash
