@@ -1514,8 +1514,10 @@ redis_str_setfn(Param pm, char *val)
 
     if (!retry && (!rc || (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)))) {
         retry = 1;
-        if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
-            goto retry;
+        if (val || !yes_unsetting || gsu_ext->unset_deletes) {
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
+                goto retry;
+        }
     } else if (retry && (!rc || (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)))) {
         zwarn("Aborting (no connection)");
     }
