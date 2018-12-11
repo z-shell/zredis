@@ -34,12 +34,16 @@ zredis_compile() {
     zstyle -s ":plugin:zredis" cflags cf || cf="-Wall -O2 -g"
     zstyle -s ":plugin:zredis" ldflags ldf || ldf="-L/usr/local/lib"
 
+    autoload is-at-least
+
     (
         local build=1
         zmodload zsh/system && { zsystem flock -t 1 "${ZREDIS_REPO_DIR}/module/configure.ac" || build=0; }
         if (( build )); then
             builtin cd "${ZREDIS_REPO_DIR}/module"
-            CPPFLAGS="$cppf" CFLAGS="$cf" LDFLAGS="$ldf" ./configure
+            command touch Src/zdharma/{zredis,zgdbm}.c
+            is-at-least zsh-5.6.1-dev-1 && local macro="-DZREDIS_ZSH_262_DEV_1=1" || local macro="-DZREDIS_ZSH_262_DEV_1=0"
+            CPPFLAGS="$cppf" CFLAGS="$cf${macro:+ $macro}" LDFLAGS="$ldf" ./configure --enable-gdbm
             command make clean
             command make
 

@@ -1791,6 +1791,72 @@ struct tieddata {
     int joinchar;		/* character used to join arrays */
 };
 
+#if ZREDIS_ZSH_262_DEV_1
+/* flags for parameters */
+
+/* parameter types */
+#define PM_SCALAR       0       /* scalar                                   */
+#define PM_ARRAY        (1<<0)  /* array                                    */
+#define PM_INTEGER      (1<<1)  /* integer                                  */
+#define PM_EFLOAT       (1<<2)  /* double with %e output                    */
+#define PM_FFLOAT       (1<<3)  /* double with %f output                    */
+#define PM_HASHED       (1<<4)  /* association                              */
+
+#define PM_TYPE(X) \
+  (X & (PM_SCALAR|PM_INTEGER|PM_EFLOAT|PM_FFLOAT|PM_ARRAY|PM_HASHED))
+
+#define PM_LEFT         (1<<5)  /* left justify, remove leading blanks      */
+#define PM_RIGHT_B      (1<<6)  /* right justify, fill with leading blanks  */
+#define PM_RIGHT_Z      (1<<7)  /* right justify, fill with leading zeros   */
+#define PM_LOWER        (1<<8)  /* all lower case                           */
+
+/* The following are the same since they *
+ * both represent -u option to typeset   */
+#define PM_UPPER        (1<<9)  /* all upper case                           */
+#define PM_UNDEFINED    (1<<9)  /* undefined (autoloaded) shell function    */
+
+#define PM_READONLY     (1<<10) /* readonly                                 */
+#define PM_TAGGED       (1<<11) /* tagged                                   */
+#define PM_EXPORTED     (1<<12) /* exported                                 */
+#define PM_ABSPATH_USED (1<<12) /* (function): loaded using absolute path   */
+
+/* The following are the same since they *
+ * both represent -U option to typeset   */
+#define PM_UNIQUE       (1<<13) /* remove duplicates                        */
+#define PM_UNALIASED    (1<<13) /* (function) do not expand aliases when autoloading   */
+
+#define PM_HIDE         (1<<14) /* Special behaviour hidden by local        */
+#define PM_CUR_FPATH    (1<<14) /* (function): can use $fpath with filename */
+#define PM_HIDEVAL      (1<<15) /* Value not shown in `typeset' commands    */
+#define PM_WARNNESTED   (1<<15) /* (function): non-recursive WARNNESTEDVAR  */
+#define PM_TIED         (1<<16) /* array tied to colon-path or v.v.         */
+#define PM_TAGGED_LOCAL (1<<16) /* (function): non-recursive PM_TAGGED      */
+
+/* Remaining flags do not correspond directly to command line arguments */
+#define PM_DONTIMPORT_SUID (1<<17) /* do not import if running setuid */
+#define PM_LOADDIR      (1<<17) /* (function) filename gives load directory */
+#define PM_SINGLE       (1<<18) /* special can only have a single instance  */
+#define PM_ANONYMOUS    (1<<18) /* (function) anonymous function            */
+#define PM_LOCAL        (1<<19) /* this parameter will be made local        */
+#define PM_KSHSTORED    (1<<19) /* (function) stored in ksh form              */
+#define PM_SPECIAL      (1<<20) /* special builtin parameter                */
+#define PM_ZSHSTORED    (1<<20) /* (function) stored in zsh form              */
+#define PM_RO_BY_DESIGN (1<<21) /* to distinguish from specials that can be
+                                   made read-only by the user               */
+#define PM_READONLY_SPECIAL (PM_SPECIAL|PM_READONLY|PM_RO_BY_DESIGN)
+#define PM_DONTIMPORT   (1<<22) /* do not import this variable              */
+#define PM_RESTRICTED   (1<<23) /* cannot be changed in restricted mode     */
+#define PM_UNSET        (1<<24) /* has null value                           */
+#define PM_REMOVABLE    (1<<25) /* special can be removed from paramtab     */
+#define PM_AUTOLOAD     (1<<26) /* autoloaded from module                   */
+#define PM_NORESTORE    (1<<27) /* do not restore value of local special    */
+#define PM_AUTOALL      (1<<27) /* autoload all features in module
+                                 * when loading: valid only if PM_AUTOLOAD
+                                 * is also present.
+                                 */
+#define PM_HASHELEM     (1<<28) /* is a hash-element */
+#define PM_NAMEDDIR     (1<<29) /* has a corresponding nameddirtab entry    */
+#else
 /* flags for parameters */
 
 /* parameter types */
@@ -1852,6 +1918,7 @@ struct tieddata {
 				 */
 #define PM_HASHELEM     (1<<29) /* is a hash-element */
 #define PM_NAMEDDIR     (1<<30) /* has a corresponding nameddirtab entry    */
+#endif
 
 /* The option string corresponds to the first of the variables above */
 #define TYPESET_OPTSTR "aiEFALRZlurtxUhHTkz"

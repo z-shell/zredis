@@ -42,7 +42,7 @@
 
 /* MACROS {{{ */
 #ifndef PM_UPTODATE
-#define PM_UPTODATE     (1<<19) /* Parameter has up-to-date data (e.g. loaded from DB) */
+#define PM_UPTODATE     (PM_LOADDIR) /* Parameter has up-to-date data (e.g. loaded from DB) */
 #endif
 /* }}} */
 /* DECLARATIONS {{{ */
