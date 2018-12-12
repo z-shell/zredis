@@ -7,8 +7,8 @@
 # to ~/.zshrc.
 #
 
-0="${(%):-%N}" # this gives immunity to functionargzero being unset
-ZREDIS_REPO_DIR="${0%/*}"
+0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+ZREDIS_REPO_DIR="${0:h}"
 ZREDIS_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/zredis"
 
 #
@@ -17,7 +17,7 @@ ZREDIS_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/zredis"
 # 2. Not having fpath already updated (that would equal: using other plugin manager)
 #
 
-if [[ -z "$ZPLG_CUR_PLUGIN" && "${fpath[(r)$ZREDIS_REPO_DIR]}" != $ZREDIS_REPO_DIR ]]; then
+if [[ ( ${+LOADED_PLUGINS} = 0 || ${LOADED_PLUGINS[-1]} != */zredis ) && -z "${fpath[(r)${0:h}]}" ]]; then
     fpath+=( "$ZREDIS_REPO_DIR" )
 fi
 
