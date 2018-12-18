@@ -178,4 +178,10 @@ errors1+=(
 
     # Possibly lost due to pointer tricks of sds library
     "* / paramsubst / * / getvaluearr / redis_arrlist_getfn / redisCommand / * / sdsMakeRoomFor / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "* / execcmd_exec / * / execbuiltin / bin_ztie / redis_main_entry / type / redisCommand / * / sdsempty / *"
+
+    # Possibly lost due to pointer tricks of sds library
+    "execbuiltin / bin_ztie / redis_main_entry / type / redisCommand / * / sdscatlen / *"
 )
