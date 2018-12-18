@@ -9,7 +9,7 @@ errors1+=(
 
     # As above
     # 2,744 (16 direct, 2,728 indirect) bytes in 1 blocks are definitely lost in loss record 524 of 542
-    "zsh_main / setupvals / gettimeofday / *"
+    "* / zsh_main / setupvals / gettimeofday / *"
 
     # Typical addvars effect. Memory leak report
     # 104 bytes in 12 blocks are definitely lost in loss record 412 of 562
@@ -55,6 +55,45 @@ errors1+=(
     "* / execbuiltin / bin_zuntie / redis_main_entry / * / unsetparam_pm / * / redis_hash_untie / zsh_db_filter_arr / *"
     # Strange (optimization?), but report can be without redis_hash_untie
     "* / execbuiltin / bin_zuntie / redis_main_entry / * / unsetparam_pm / redis_hash_unsetfn / zsh_db_filter_arr / *"
+
+    # calloc-error after getpwuid
+    "* / zsh_main / * / getpwuid / *"
+
+    # malloc after ttyname
+    "* / zsh_main / * / ttyname / *"
+
+    # malloc after setlocale
+    "* / zsh_main / * / setlocale / *"
+
+    # OS X related error (a calloc after fork())
+    "* / execcmd_fork / * / fork / * / calloc"
+
+    # OS X related error (a calloc after fork())
+    "* / zfork / * / fork / * / calloc"
+
+    # OS X related error (a calloc after dlopen())
+    "* / bin_zmodload / * / do_load_module / * / dlopen / * / calloc"
+
+    # OS X related error
+    "* / si_user_byuid / *"
+
+    # OS X related error
+    "* / dispatch_once_f / *"
+
+    # OS X related error
+    "* / xpc_pipe_routine / *"
+
+    # OS X related error
+    "* / libdispatch_init / *"
+
+    # OS X related error
+    "* / _dyld_objc_notify_register / *"
+
+    # OS X related error
+    "* / libSystem_initializer / *"
+
+    # OS X related error
+    "* / bootstrap_look_up2 / *"
 
     #
     # Possibly lost
