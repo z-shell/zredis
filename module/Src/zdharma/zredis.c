@@ -43,7 +43,6 @@ static int connect(redisContext **rc, const char* password, const char *host, in
 static int type(redisContext **rc, int *fdesc, const char *redis_host_port, const char *password, char *key, size_t key_len);
 static int type_from_string(const char *string, int len);
 static int is_tied(Param pm);
-static void zrzset_usage();
 static int reconnect(redisContext **rc, int *fdesc, const char *hostspec, const char *password);
 static int auth(redisContext **rc, const char *password);
 static int is_tied_cmd(char *pmname);
@@ -147,6 +146,7 @@ static const struct gsu_array_ext arrlist_gsu_ext =
 /* ARRAY: builtin {{{ */
 static struct builtin bintab[] = {
     BUILTIN("zrzset", 0, bin_zrzset, 0, 1, 0, "h", NULL),
+    BUILTIN("zrpush", 0, bin_zrpush, 0, -1, 0, "h", NULL),
 };
 /* }}} */
 /* ARRAY: other {{{ */
@@ -2405,6 +2405,190 @@ bin_zrzset(char *nam, char **args, Options ops, UNUSED(int func))
     return 1;
 }
 /* }}} */
+/* FUNCTION: bin_zrpush {{{ */
+
+/**/
+static int
+bin_zrpush(char *nam, char **args, Options ops, UNUSED(int func))
+{
+    Param pm;
+    int i, type, argcount = 0;
+    const char *which_side, *pmname;
+    char **arg_traverse;
+
+    if (OPT_ISSET(ops,'h')) {
+        zrpush_usage();
+        return 0;
+    }
+
+    which_side = *args++;
+
+    if (!which_side) {
+        zwarnnam(nam, "at least 3 aruments needed, see -h");
+        return 1;
+    }
+    if (strcmp(which_side, "r") && strcmp(which_side, "l")) {
+        zwarnnam(nam, "the first argument should be `l' or 'r' (for LPUSH or RPUSH), see -h");
+        return 1;
+    }
+
+    pmname = *args++;
+
+    if (!pmname) {
+        zwarnnam(nam, "a list parameter name (to be pushed to) is required");
+        return 1;
+    }
+
+    arg_traverse = args;
+    while (*arg_traverse ++) {
+        ++ argcount;
+    }
+
+    pm = (Param) paramtab->getnode(paramtab, pmname);
+    if(!pm) {
+        zwarnnam(nam, "no such parameter: %s", pmname);
+        return 1;
+    }
+
+    /* if there's '[' as the argument after param name */
+    if (args[0] && args[0][0] == '[' && args[0][1] == '\0') {
+        /* If there is unfollowed ']' or no further argument */
+        if (!args[1] || (args[1] && args[1][0] == ']' && args[1][1] == '\0' && !args[2])) {
+            /* Then we have:
+             * zrpush l/r mylist [
+             * zrpush l/r mylist [ ]
+             */
+            zwarnnam(nam, "no input element(s) given (1), not pushing (aborting), see -h");
+            return 1;
+        }
+        type = 1;
+        ++args;
+        --argcount;
+    } else if (args[0])  {
+        type = 2;
+    } else {
+        zwarnnam(nam, "no input element(s) given (2), not pushing (aborting), see -h");
+        return 1;
+    }
+
+    if (pm->gsu.h == &redis_hash_gsu) {
+        zwarnnam(nam, "`%s' is a main-storage hash, aborting", pmname);
+    } else if(pm->gsu.s->getfn == &redis_str_getfn) {
+        zwarnnam(nam, "`%s' is a string parameter, aborting", pmname);
+    } else if(pm->gsu.a->getfn == &redis_arrset_getfn) {
+        zwarnnam(nam, "`%s' is a set (array) parameter, aborting", pmname);
+    } else if(pm->gsu.h == &hash_zset_gsu) {
+        zwarnnam(nam, "`%s' is a zset (hash) parameter, aborting", pmname);
+    } else if(pm->gsu.h == &hash_hset_gsu) {
+        zwarnnam(nam, "`%s' is a hset (hash) parameter, aborting", pmname);
+    } else if(pm->gsu.a->getfn == &redis_arrlist_getfn) {
+        char *key;
+	int retry = 0;
+        size_t key_len;
+        redisContext *rc;
+        redisReply *reply = NULL;
+        struct gsu_array_ext *gsu_ext;
+
+        gsu_ext = (struct gsu_array_ext *) pm->gsu.a;
+        key = gsu_ext->key;
+        key_len = gsu_ext->key_len;
+
+retry:
+	rc = gsu_ext->rc;
+
+	if (rc) {
+            /* Skip trailing ']' */
+            if ( 1 == type && args[argcount-1][0] == ']' && args[argcount-1][1] == '\0' ) {
+                -- argcount;
+            }
+
+	    char **v_args = malloc((argcount+2) * sizeof(char*));
+	    size_t *v_args_lenghts = malloc((argcount+2) * sizeof(size_t));
+            if (!v_args || !v_args_lenghts)
+               return 2;
+
+            /* First argument: RPUSH or LPUSH */
+	    v_args[0] = (char*) malloc(sizeof(char)*strlen("RPUSH"));
+	    v_args_lenghts[0] = strlen("RPUSH");
+            if (!v_args[0])
+                return 2;
+	    memcpy(v_args[0], which_side[0] == 'l' ? "LPUSH" : "RPUSH", strlen("RPUSH"));
+
+            /* Second argument: the redis-db key of the list */
+	    v_args[1] = (char*) malloc(sizeof(char)*key_len);
+	    v_args_lenghts[1] = key_len;
+            if (!v_args_lenghts[0])
+                return 2;
+	    memcpy(v_args[1], key, key_len);
+
+            /* Append given # of values */
+	    for (i=0; i<argcount; ++i) {
+		int argsidx = 2 + i;
+                int umlen = 0;
+                char *umval;
+
+                umval = zsh_db_unmetafy_zalloc(args[i], &umlen);
+                if (!umval)
+                    return 2;
+		v_args[argsidx] = malloc(sizeof(char)*umlen);
+                if (!v_args[argsidx])
+                    return 2;
+		memcpy(v_args[argsidx], umval, umlen);
+		v_args_lenghts[argsidx] = umlen;
+
+                /* Free */
+                zsh_db_set_length(umval, umlen);
+                zsfree(umval);
+	    }
+
+            /* Run the command */
+	    reply = redisCommandArgv(rc, argcount+2, (const char**)v_args, v_args_lenghts);
+
+	    /* Detect disconnection */
+	    if (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+		if (reply) {
+		    freeReplyObject(reply);
+		    reply = NULL;
+		}
+		if (retry) {
+		    zwarn("Aborting (no connection)");
+		    return 1;
+		}
+		retry = 1;
+		if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
+		    goto retry;
+		else
+		    return 1;
+	    }
+
+            /* Detect wrong / lack of answer */
+	    if (reply == NULL || reply->type != REDIS_REPLY_INTEGER) {
+		zwarn("Error 15 occured (redis communication), database and tied list not updated");
+		if (reply) {
+		    freeReplyObject(reply);
+		    reply = NULL;
+		}
+		goto retry;
+	    }
+        }
+
+        /* Detect disconnection */
+        if (!rc || rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
+            if (retry) {
+                zwarn("Aborting (no connection)");
+                return 1;
+            }
+            retry = 1;
+            if(reconnect(&gsu_ext->rc, &gsu_ext->fdesc, gsu_ext->redis_host_port, gsu_ext->password))
+                goto retry;
+        }
+    } else {
+        zwarnnam(nam, "not a tied zredis parameter: `%s', no changes done", pmname);
+    }
+
+    return 0;
+}
+/* }}} */
 
 /************ HSET HASH ELEM *************/
 
@@ -3532,11 +3716,25 @@ is_tied(Param pm)
 /* }}} */
 /* FUNCTION: zrzset_usage {{{ */
 
+/**/
 static void
 zrzset_usage()
 {
     fprintf(stdout, "Usage: zrzset {tied-param-name}\n");
     fprintf(stdout, "Output: $reply array, to hold elements of the sorted set\n");
+    fflush(stdout);
+}
+/* }}} */
+/* FUNCTION: zrpush_usage {{{ */
+
+/**/
+static void
+zrpush_usage()
+{
+    fprintf(stdout, "Usage: zrpush {l|r} {tied-param-name} {value}\n");
+    fprintf(stdout, "Usage: zrpush {l|r} {tied-param-name} [ {value1} {value2} ... ]\n");
+    fprintf(stdout, "Usage: zrpush {l|r} {tied-param-name} {value1} {value2} ...\n");
+    fprintf(stdout, "The function LPUSHes or RPUSHes given element(s) onto the list {tied-param-name}\n");
     fflush(stdout);
 }
 /* }}} */
