@@ -465,35 +465,52 @@ while read -p line; do
     for key in ${(onk)filters[@]}; do
         pat=${filters[$key]}
         if [[ "$line" = $~pat ]]; then
+            # Is it 6-Info line of Valgrind text occurring? It looks like the
+            # 5-Error line, however additional constraints make it a 6-Info
+            # line. See $filters association above
             if [[ $key = *Error && ( $line = $~reachable_pat || "$blank_seen" -eq "0" ) ]]; then
                 key="6-Info"
             fi
 
+            # Is it a blank line of Valgrind text occuring? It terminates the block
             if [[ "$key" = *Blank ]]; then
                 blank_seen=1
                 process_block $block
+                # Start a new block of Valgrind text
                 block=( "${key}/$line" )
+            # Is it an Error line of Valgrind text occuring after Summary line?
+            # It terminates the block
             elif [[ "$prev_matched" = *Summary && "$key" = *Error ]]; then
                 process_block $block
+                # Start a new block of Valgrind text
                 block=( "${key}/$line" )
             else
+                # Build the block of Valgrind text, remembering type of each
+                # line added to the block (the ${key}/-prefix)
                 block+=( "${key}/$line" )
             fi
 
+            # Unmatched block is terminated by a match (if we are here then we
+            # have a match) - process it
             if [[ "$prev_matched" = *Unmatched ]]; then
                 process_umblock $umblock
                 umblock=()
             fi
 
+            # Mark that the for loop found a type of the processed line: $key
             matched="$key"
             break
         fi
     done
+
+    # Build also a block from unmatched (unrecognized) Valgrind text (if there
+    # was no match in last for-loop run, i.e. if [[ -z $matched ]])
     if [[ -z "$matched" ]]; then
         matched="Unmatched"
         umblock+=( "$line" )
     fi
 
+    # Remember the type of the now previous line
     prev_matched="$matched"
 done
 # }}}
