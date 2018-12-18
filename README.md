@@ -129,6 +129,9 @@ ztclear my_hashset_var key  # Also for types: whole-db mapping, zset
 To disable the cache, pass `-z` ("zero-cache") option to ztie.
 
 ## News
+* 2018-12-18
+  - Hash set operation (i.e. `hsh=( a b ...)`) has been greately optimized for over-internet tied hash parameters.
+
 * 2018-01-09
   - New option to `ztie`: `-S`, which used in conjunction with `-L` (lazy binding) causes database connection
     to be defered until first use of variable. Standard lazy binding means: key isn't required to exist.
