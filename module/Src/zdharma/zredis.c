@@ -2728,7 +2728,7 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
     char *main_key, *key, *content;
     size_t main_key_len, key_len, content_len, i;
     redisContext *rc;
-    redisReply *reply = NULL, *reply2 = NULL, *entry = NULL;
+    redisReply *reply = NULL;
     struct gsu_scalar_ext *gsu_ext;
     int retry;
 
@@ -2743,9 +2743,10 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
     main_key = gsu_ext->key;
     main_key_len = gsu_ext->key_len;
 
-    /* PRUNE */
+    /* PRUNE - deleting a hset doesn't have any
+     * difference from deleting all its keys */
     if (rc) {
-        reply = redisCommand(rc, "HKEYS %b", main_key, (size_t) main_key_len);
+        reply = redisCommand(rc, "DEL %b", main_key, (size_t) main_key_len);
         if (reply == NULL || reply->type != REDIS_REPLY_ARRAY) {
             zwarn("Error 5 occured (redis communication), database and tied hash not updated");
             if (reply) {
@@ -2753,29 +2754,6 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
                 reply = NULL;
             }
             goto do_retry;
-        }
-
-        for (i = 0; i < reply->elements; i++) {
-            entry = reply->element[i];
-            if (NULL == entry || entry->type != REDIS_REPLY_STRING) {
-                if (entry && entry->str && entry->len > 0) {
-                    zwarn("Error 6 when replacing database (element %d, message: %s)", i+1, entry->str);
-                } else {
-                    zwarn("Error 6 when replacing database (element %d)", i+1);
-                }
-                continue;
-            }
-
-            /* HDEL myhset myfield */
-            reply2 = redisCommand(rc, "HDEL %b %b", main_key, (size_t) main_key_len, entry->str, (size_t) entry->len);
-            if (NULL == reply2 || reply2->type != REDIS_REPLY_INTEGER) {
-                zwarn("Error 7 when replacing database");
-                continue;
-            }
-            freeReplyObject(reply2);
-            reply2 = NULL;
-            if (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF))
-                break;
         }
     }
 
