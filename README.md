@@ -129,6 +129,12 @@ ztclear my_hashset_var key  # Also for types: whole-db mapping, zset
 To disable the cache, pass `-z` ("zero-cache") option to ztie.
 
 ## News
+* 2018-12-19
+  - The builtin `zrpush` can have the param-name argument skipped – if it's called for the second
+    time, meaning that a new special (but writeable) parameter has been set – `$zredis_last`. It
+    holds the param-name used in the 1st call and will be used in place of the `{pm-name}` argument.
+    The short call is then to look like the following: `zrpush {l|r} [ {val1} {val2} ... ]`.
+
 * 2018-12-18
   - New builtin `zrpush {l|r} {pm-name} [ {val1} {val2} ... ]` that in an optimized manner pushes
     the given elements `{val1} {val2}`, etc. onto the front or back (i.e. `l|r`, left or right,
