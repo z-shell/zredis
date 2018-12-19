@@ -355,7 +355,7 @@
  ztie -d db/redis -f $db1 dbase
  dbase[testkey]=value1
  fun() { while read line; do echo $line; done }
- eval "dbase[testkey]=value2" | fun
+ { eval "dbase[testkey]=value2" | fun } 2>&1
  echo $dbase[testkey]
  ztclear dbase testkey
  echo $dbase[testkey]
@@ -368,7 +368,7 @@
  dbase[testkey]=value1
  echo $dbase[testkey]
  fun() { while read line; do echo $line; done }
- eval "dbase[testkey]=value2" | fun
+ { eval "dbase[testkey]=value2" | fun } 2>&1
  echo $dbase[testkey]
  zuntie dbase
 0:Test store in forked Zsh, with -z passthrough
