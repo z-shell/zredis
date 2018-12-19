@@ -56,6 +56,9 @@ errors1+=(
     # Strange (optimization?), but report can be without redis_hash_untie
     "* / execbuiltin / bin_zuntie / redis_main_entry / * / unsetparam_pm / redis_hash_unsetfn / zsh_db_filter_arr / *"
 
+    # vsprintf_l definitely lost memory
+    "* / vsprintf_l / * / malloc"
+
     # calloc-error after getpwuid
     "* / zsh_main / * / getpwuid / *"
 
