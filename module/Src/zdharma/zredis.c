@@ -154,10 +154,12 @@ static struct builtin bintab[] = {
     { name, PM_ARRAY | PM_READONLY, (void *) var, NULL,  NULL, NULL, NULL }
 
 /* Holds names of all tied parameters */
-char **zredis_tied;
+char **zredis_tied, *zredis_last;
+size_t zredis_last_size;
 
 static struct paramdef patab[] = {
     ROARRPARAMDEF("zredis_tied", &zredis_tied),
+    STRPARAMDEF("zredis_last", &zredis_last),
 };
 /* }}} */
 
@@ -2412,7 +2414,7 @@ static int
 bin_zrpush(char *nam, char **args, Options ops, UNUSED(int func))
 {
     Param pm;
-    int i, type, argcount = 0;
+    int i, zrlast_used = 0, type, argcount = 0;
     const char *which_side, *pmname;
     char **arg_traverse;
 
@@ -2432,11 +2434,24 @@ bin_zrpush(char *nam, char **args, Options ops, UNUSED(int func))
         return 1;
     }
 
-    pmname = *args++;
-
+    pmname = *args;
     if (!pmname) {
         zwarnnam(nam, "a list parameter name (to be pushed to) is required");
+        zwarnnam(nam, "it can be also immediate element(s) to push (via [ a b c ... ]");
+        zwarnnam(nam, "syntax). In such case the parameter name is taken from $zredis_last");
+        zwarnnam(nam, "special (but writeable) parameter");
         return 1;
+    }
+    if ( pmname && ( pmname[0] != '[' || pmname[1] != '\0' ) ) {
+        args++;
+    } else if(pmname) {
+        pmname = zredis_last;
+        zrlast_used = 1;
+        if ( !pmname || pmname[0] == '\0' ) {
+            zwarnnam(nam, "zrpush short-syntax used (i.e. no parameter-name, but immediate");
+            zwarnnam(nam, "[ a b ... ] input elements), but $zredis_last parameter is empty");
+            return 1;
+        }
     }
 
     arg_traverse = args;
@@ -2449,6 +2464,8 @@ bin_zrpush(char *nam, char **args, Options ops, UNUSED(int func))
         zwarnnam(nam, "no such parameter: %s", pmname);
         return 1;
     }
+    if (0 != strcmp(pmname, zredis_last))
+        zrupdate_zredis_last(pmname, strlen(pmname)+1);
 
     /* if there's '[' as the argument after param name */
     if (args[0] && args[0][0] == '[' && args[0][1] == '\0') {
@@ -3426,6 +3443,9 @@ int
 boot_(UNUSED(Module m))
 {
     zredis_tied = zshcalloc((1) * sizeof(char *));
+    zredis_last = zshcalloc((1) * sizeof(char));
+    zredis_last[0]='\0';
+    zredis_last_size = 1;
     zsh_db_register_backend("db/redis", redis_main_entry);
     return 0;
 }
@@ -3767,7 +3787,10 @@ zrpush_usage()
     fprintf(stdout, "Usage: zrpush {l|r} {tied-param-name} {value}\n");
     fprintf(stdout, "Usage: zrpush {l|r} {tied-param-name} [ {value1} {value2} ... ]\n");
     fprintf(stdout, "Usage: zrpush {l|r} {tied-param-name} {value1} {value2} ...\n");
-    fprintf(stdout, "The function LPUSHes or RPUSHes given element(s) onto the list {tied-param-name}\n");
+    fprintf(stdout, "Usage: zrpush {l|r} [ {value1} {value2} ... ]\n");
+    fprintf(stdout, "The function LPUSHes or RPUSHes given element(s) onto the list\n");
+    fprintf(stdout, "{tied-param-name}. The last form takes the param-name from the special\n");
+    fprintf(stdout, "(but writeable) parameter `$zredis_last'.\n");
     fflush(stdout);
 }
 /* }}} */
@@ -3849,6 +3872,20 @@ int zrfreearray_size_t(size_t **s)
     free((void*)*s);
     *s = NULL;
     return retval;
+}
+/* }}} */
+/* FUNCTION: zrupdate_zredis_last {{{ */
+/**/
+int zrupdate_zredis_last(const char *new_value, size_t size) {
+    char *new_zredis_last;
+    new_zredis_last = (char *) zshcalloc(sizeof(char)*size);
+    if (!new_zredis_last)
+        return 1;
+    zfree(zredis_last, zredis_last_size);
+    zredis_last = new_zredis_last;
+    zredis_last_size = size;
+    memcpy(zredis_last, new_value, size);
+    return 0;
 }
 /* }}} */
 #else
