@@ -130,7 +130,10 @@ To disable the cache, pass `-z` ("zero-cache") option to ztie.
 
 ## News
 * 2018-12-18
-  - Hash set operation (i.e. `hsh=( a b ...)`) has been greately optimized for over-internet tied hash parameters.
+  - New builtin `zrpush {l|r} {pm-name} [ {val1} {val2} ... ]` that in an optimized manner pushes
+    the given elements `{val1} {val2}`, etc. onto the front or back (i.e. `l|r`, left or right,
+    head or tail) of the list tied to param `{pm-name}`.
+  - Hash-**set** operation (i.e. `hsh=( a b ...)`) has been greately optimized for over-internet tied hash parameters.
 
 * 2018-01-09
   - New option to `ztie`: `-S`, which used in conjunction with `-L` (lazy binding) causes database connection
