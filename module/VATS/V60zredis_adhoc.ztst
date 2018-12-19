@@ -26,9 +26,20 @@
 #1:Test for reversed if(!rc_carrier) check, i.e. simulated out of memory (zset)
 #>(eval):1: Out of memory when allocating common data structure (2)
 
- ztie -d db/redis -f $db2 -r -L hash voidhash 2>&1
-1:Test for reversed if(!rc_carrier) check, i.e. simulated out of memory (hash)
->(eval):1: Out of memory when allocating common data structure (3)
+# ztie -d db/redis -f $db2 -r -L hash voidhash 2>&1
+#1:Test for reversed if(!rc_carrier) check, i.e. simulated out of memory (hash)
+#>(eval):1: Out of memory when allocating common data structure (3)
+
+ ztie -d db/redis -f $db1/list -L list mylist 2>&1
+ zrpush r mylist R2 R1
+ zrpush l mylist L1 L2
+ print -rl "${(o)mylist[@]}"
+ zuntie mylist
+0:The new builtin zrpush
+>L1
+>L2
+>R1
+>R2
 
 %clean
 
