@@ -68,6 +68,15 @@ errors1+=(
     # malloc after setlocale
     "* / zsh_main / * / setlocale / *"
 
+    # malloc after currentlocale
+    "* / currentlocale / * / malloc"
+
+    # calloc after getlogin_basic
+    "* / getlogin_basic / * / calloc"
+
+    # malloc after fgetc
+    "* / fgetc / * / malloc"
+
     # OS X related error (a calloc after fork())
     "* / execcmd_fork / * / fork / * / calloc"
 
