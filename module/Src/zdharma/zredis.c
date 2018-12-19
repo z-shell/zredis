@@ -2502,24 +2502,41 @@ retry:
                 -- argcount;
             }
 
-	    char **v_args = malloc((argcount+2) * sizeof(char*));
-	    size_t *v_args_lenghts = malloc((argcount+2) * sizeof(size_t));
-            if (!v_args || !v_args_lenghts)
-               return 2;
+	    char **v_args = malloc((argcount+3) * sizeof(char*));
+            if (!v_args)
+                return 2;
+            v_args[0] = NULL; /* end marker for zrfreearray */
+
+	    size_t *v_args_lenghts = (size_t *) malloc((argcount+3) * sizeof(size_t));
+            if (!v_args_lenghts) {
+                zrfreearray(&v_args);
+                return 2;
+            }
+            v_args_lenghts[0] = 0; /* end marker for zrfreearray_size_t */
 
             /* First argument: RPUSH or LPUSH */
 	    v_args[0] = (char*) malloc(sizeof(char)*strlen("RPUSH"));
-	    v_args_lenghts[0] = strlen("RPUSH");
-            if (!v_args[0])
+            if (!v_args[0]) {
+                zrfreearray_size_t(&v_args_lenghts);
+                zrfreearray(&v_args);
                 return 2;
+            }
 	    memcpy(v_args[0], which_side[0] == 'l' ? "LPUSH" : "RPUSH", strlen("RPUSH"));
+	    v_args_lenghts[0] = strlen("RPUSH");
+            v_args[1] = NULL; /* end marker for zrfreearray */
+            v_args_lenghts[1] = 0; /* end marker for zrfreearray_size_t */
 
             /* Second argument: the redis-db key of the list */
 	    v_args[1] = (char*) malloc(sizeof(char)*key_len);
-	    v_args_lenghts[1] = key_len;
-            if (!v_args_lenghts[0])
+            if (!v_args[1]) {
+                zrfreearray_size_t(&v_args_lenghts);
+                zrfreearray(&v_args);
                 return 2;
+            }
 	    memcpy(v_args[1], key, key_len);
+	    v_args_lenghts[1] = key_len;
+            v_args[2] = NULL; /* end marker for zrfreearray */
+            v_args_lenghts[2] = 0; /* end marker for zrfreearray_size_t */
 
             /* Append given # of values */
 	    for (i=0; i<argcount; ++i) {
@@ -2527,14 +2544,26 @@ retry:
                 int umlen = 0;
                 char *umval;
 
+                /* Unmetafy, get length */
                 umval = zsh_db_unmetafy_zalloc(args[i], &umlen);
-                if (!umval)
+                if (!umval) {
+                    zrfreearray_size_t(&v_args_lenghts);
+                    zrfreearray(&v_args);
                     return 2;
+                }
+
+                /* Allocate space and copy the unmetafied string */
 		v_args[argsidx] = malloc(sizeof(char)*umlen);
-                if (!v_args[argsidx])
+                if (!v_args[argsidx]) {
+                    zsh_db_set_length(umval, umlen); zsfree(umval);
+                    zrfreearray_size_t(&v_args_lenghts);
+                    zrfreearray(&v_args);
                     return 2;
+                }
 		memcpy(v_args[argsidx], umval, umlen);
+                v_args[argsidx+1] = NULL; /* end marker for zrfreearray */
 		v_args_lenghts[argsidx] = umlen;
+                v_args_lenghts[argsidx+1] = 0; /* end marker for zrfreearray_size_t */
 
                 /* Free */
                 zsh_db_set_length(umval, umlen);
@@ -2543,6 +2572,10 @@ retry:
 
             /* Run the command */
 	    reply = redisCommandArgv(rc, argcount+2, (const char**)v_args, v_args_lenghts);
+
+            /* Free the already used input data */
+            zrfreearray_size_t(&v_args_lenghts);
+            zrfreearray(&v_args);
 
 	    /* Detect disconnection */
 	    if (rc->err & (REDIS_ERR_IO | REDIS_ERR_EOF)) {
@@ -3789,7 +3822,35 @@ get_from_hash(Param pm, const char *key)
     return val_pm->gsu.s->getfn(val_pm);
 }
 /* }}} */
-
+/* FUNCTION: zrfreearray {{{ */
+/**/
+int zrfreearray(char ***s)
+{
+    char **ss = *s;
+    int retval = 0;
+    while (*ss) {
+	free((void*)*ss++);
+        retval = 1;
+    }
+    free((void*)*s);
+    *s = NULL;
+    return retval;
+}
+/* }}} */
+/* FUNCTION: zrfreearray_size_t {{{ */
+/**/
+int zrfreearray_size_t(size_t **s)
+{
+    size_t *ss = *s;
+    int retval = 0;
+    if (*ss) {
+        retval=1;
+    }
+    free((void*)*s);
+    *s = NULL;
+    return retval;
+}
+/* }}} */
 #else
 # error no hiredis library after it was correctly detected (by configure script)
 #endif /* have hiredis */
