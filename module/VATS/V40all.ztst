@@ -361,6 +361,7 @@
  echo $dbase[testkey]
  zuntie dbase
 0:Test store in forked Zsh
+>(eval):1: Not connected, retrying... Success
 >value1
 >value2
 
@@ -373,6 +374,7 @@
  zuntie dbase
 0:Test store in forked Zsh, with -z passthrough
 >value1
+>(eval):1: Not connected, retrying... Success
 >value2
 
  ztie -d db/redis -f $db1 dbase

@@ -223,12 +223,13 @@
  ztie -d db/redis -f $db1 aset
  aset=( value1 )
  fun() { while read line; do echo $line; done }
- eval "aset=( value2 )" | fun
+ { eval "aset=( value2 )" | fun } 2>&1
  echo $aset
  ztclear aset
  echo $aset
  zuntie aset
 0:Test store in forked Zsh
+>(eval):1: Not connected, retrying... Success
 >value1
 >value2
 
@@ -236,10 +237,11 @@
  aset=( value1 )
  echo $aset
  fun() { while read line; do echo $line; done }
- eval "aset=( value2 )" | fun
+ { eval "aset=( value2 )" | fun } 2>&1
  echo $aset
 0:Test store in forked Zsh, with -z passthrough
 >value1
+>(eval):1: Not connected, retrying... Success
 >value2
 
 %clean

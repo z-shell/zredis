@@ -222,12 +222,13 @@
  ztie -d db/redis -f $db1 alist
  alist=( value1 )
  fun() { while read line; do echo $line; done }
- eval "alist=( value2 )" | fun
+ { eval "alist=( value2 )" | fun; } 2>&1
  echo $alist
  ztclear alist
  echo $alist
  zuntie alist
 0:Test store in forked Zsh
+>(eval):1: Not connected, retrying... Success
 >value1
 >value2
 
@@ -235,10 +236,11 @@
  alist=( value1 )
  echo $alist
  fun() { while read line; do echo $line; done }
- eval "alist=( value2 )" | fun
+ { eval "alist=( value2 )" | fun; } 2>&1
  echo $alist
 0:Test store in forked Zsh, with -z passthrough
 >value1
+>(eval):1: Not connected, retrying... Success
 >value2
 
  ztie -d db/redis -f $db1/list -L list mylist 2>&1

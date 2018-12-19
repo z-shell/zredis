@@ -3,10 +3,10 @@
 # vim:ft=zsh:sw=2:sts=2:et
 
 #
-# /bin/sh stage, load configuration to obtain $zsh_bin
+# /bin/sh (e.g. the limited dash shell) stage, load configuration to obtain
+# $zsh_control_bin and to restart the script with the configured control binary
 #
 
-# This barely works
 SH_ZERO_DIR=${0%/zsh-valgrind-parse.cmd}
 
 [ -z "$ZSHV_TCONF_FILE" ] && ZSHV_TCONF_FILE="vtest.conf"
