@@ -217,12 +217,13 @@
  ztie -d db/redis -f $db1 string
  string=value1
  fun() { while read line; do echo $line; done }
- eval "string=value2" | fun
+ { eval "string=value2" | fun } 2>&1
  echo $string
  ztclear string
  echo $string
  zuntie string
 0:Test store in forked Zsh
+>(eval):1: Not connected, retrying... Success
 >value1
 >value2
 
@@ -230,10 +231,11 @@
  string=value1
  echo $string
  fun() { while read line; do echo $line; done }
- eval "string=value2" | fun
+ { eval "string=value2" | fun } 2>&1
  echo $string
 0:Test store in forked Zsh, with -z passthrough
 >value1
+>(eval):1: Not connected, retrying... Success
 >value2
 
 %clean
