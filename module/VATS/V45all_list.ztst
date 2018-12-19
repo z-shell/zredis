@@ -241,6 +241,17 @@
 >value1
 >value2
 
+ ztie -d db/redis -f $db1/list -L list mylist 2>&1
+ zrpush r mylist R2 R1
+ zrpush l mylist L1 L2
+ print -rl "${(o)mylist[@]}"
+ zuntie mylist
+0:The `zrpush' builtin
+>L1
+>L2
+>R1
+>R2
+
 %clean
 
  redis-cli -n 10 flushdb
