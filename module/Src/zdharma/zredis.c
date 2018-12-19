@@ -2981,8 +2981,12 @@ redis_hash_hset_setfn(Param pm, HashTable ht)
      * difference from deleting all its keys */
     if (rc) {
         reply = redisCommand(rc, "DEL %b", main_key, (size_t) main_key_len);
-        if (reply == NULL || reply->type != REDIS_REPLY_ARRAY) {
-            zwarn("Error 5 occured (redis communication), database and tied hash not updated");
+        if (reply == NULL || reply->type != REDIS_REPLY_INTEGER) {
+            if (reply) {
+                zwarn("Error 5 occured (redis communication, reply != 0), database and tied hash not updated");
+            } else {
+                zwarn("Error 5 occured (redis communication, reply == 0), database and tied hash not updated");
+            }
             if (reply) {
                 freeReplyObject(reply);
                 reply = NULL;
