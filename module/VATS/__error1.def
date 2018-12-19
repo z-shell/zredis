@@ -100,90 +100,13 @@ errors1+=(
     #
 
     # Possibly lost due to pointer tricks of sds library
-    "* / addvars / assignsparam / assignstrvalue / redis_setfn / redisCommand / * / sdsempty / *"
+    "** / sdsMakeRoomFor / *"
 
     # Possibly lost due to pointer tricks of sds library
-    "* / addvars / assignsparam / assignstrvalue / redis_setfn / redisCommand / * / sdsMakeRoomFor / *"
+    "* / redisCommand / * / sdsempty / *"
 
     # Possibly lost due to pointer tricks of sds library
-    "* / stringsubst / paramsubst / getstrvalue / redis_getfn / redisCommand / * / sdsMakeRoomFor / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / prefork / stringsubst / paramsubst / getstrvalue / redis_str_getfn / redisCommand / * / sdsempty / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / stringsubst / paramsubst / getstrvalue / redis_str_getfn / redisCommand / * / sdsMakeRoomFor / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / addvars / assignsparam / assignstrvalue / redis_str_setfn / redisCommand / * / sdsempty / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / bin_ztie / redis_main_entry / zrtie_cmd* / type / redisCommand / * / sdsMakeRoomFor / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / addvars / assignsparam / * / redis_hset_setfn / redisCommand / * / sdsMakeRoomFor / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / addvars / assignsparam / * / redis_hset_setfn / redisCommand / * / sdsempty / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / getarg / getstrvalue / redis_hset_getfn / redisCommand / * / sdsMakeRoomFor / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / addvars / assignsparam / * / redis_zset_setfn / redisCommand / * / sdsempty / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / addvars / assignsparam / * / redis_zset_setfn / redisCommand / * / sdsMakeRoomFor / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / getindex / * / getstrvalue / redis_zset_getfn / redisCommand / * / sdsMakeRoomFor / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / execbuiltin / bin_zrzset / redisCommand / * / sdsempty / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / execbuiltin / bin_zrzset / redisCommand / * / sdsMakeRoomFor / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / addvars / assignaparam / setarrvalue / redis_arrset_setfn / redisCommand / * / sdsempty / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / addvars / assignaparam / setarrvalue / redis_arrset_setfn / redisCommand / * / sdsMakeRoomFor / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / prefork / stringsubst / * / getarrvalue / * / redis_arrset_getfn / redisCommand / * / sdsempty / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    # Revealed on Ubuntu 14.04.4, GCC 4.8.4
-    "* / stringsubst / * / getarrvalue / * / redis_arrset_getfn / redisCommand / * / sdsempty / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / paramsubst / * / getvaluearr / redis_arrset_getfn / redisCommand / * / sdsMakeRoomFor / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / addvars / assignaparam / setarrvalue / redis_arrlist_setfn / redisCommand / * / sdsMakeRoomFor / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / addvars / assignaparam / setarrvalue / redis_arrlist_setfn / redisCommand / * / sdsempty / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / paramsubst / * / getvaluearr / redis_arrlist_getfn / redisCommand / * / sdsMakeRoomFor / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / prefork / stringsubst / paramsubst / * / getvaluearr / redis_arrlist_getfn / redisCommand / * / sdsempty / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    # Revealed on Ubuntu 14.04.4, GCC 4.8.4
-    "* / stringsubst / paramsubst / * / getvaluearr / redis_arrlist_getfn / redisCommand / * / sdsempty / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / paramsubst / * / getvaluearr / redis_arrlist_getfn / redisCommand / * / sdsMakeRoomFor / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "* / execcmd_exec / * / execbuiltin / bin_ztie / redis_main_entry / type / redisCommand / * / sdsempty / *"
-
-    # Possibly lost due to pointer tricks of sds library
-    "execbuiltin / bin_ztie / redis_main_entry / type / redisCommand / * / sdscatlen / *"
+    "* / redisCommand / * / sdscatlen / *"
 
     # Possibly lost due to pointer tricks of sds library
     "* / createIntegerObject / calloc"
