@@ -29,10 +29,11 @@ fi
 
 zredis_compile() {
     # Get CPPFLAGS, CFLAGS, LDFLAGS
-    local cppf cf ldf
+    local cppf cf ldf cfgopts
     zstyle -s ":plugin:zredis" cppflags cppf || cppf="-I/usr/local/include"
     zstyle -s ":plugin:zredis" cflags cf || cf="-Wall -O2 -g"
     zstyle -s ":plugin:zredis" ldflags ldf || ldf="-L/usr/local/lib"
+    zstyle -s ":plugin:zredis" configure_opts cfgopts || cfgopts=""
 
     autoload is-at-least
 
@@ -45,7 +46,7 @@ zredis_compile() {
             builtin cd "${ZREDIS_REPO_DIR}/module"
             command touch Src/zdharma/{zredis,zgdbm}.c
             is-at-least zsh-5.6.1-dev-1 && local macro="-DZREDIS_ZSH_262_DEV_1=1" || local macro="-DZREDIS_ZSH_262_DEV_1=0"
-            CPPFLAGS="$cppf" CFLAGS="$cf${macro:+ $macro}" LDFLAGS="$ldf" ./configure --enable-gdbm
+            CPPFLAGS="$cppf" CFLAGS="$cf${macro:+ $macro}" LDFLAGS="$ldf" ./configure --enable-gdbm ${=cfgopts}
             command make clean
             command make
 
