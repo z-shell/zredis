@@ -1,3 +1,6 @@
+setopt localoptions localtraps
+trap 'return 1' INT TERM
+
 # Get CPPFLAGS, CFLAGS, LDFLAGS
 local cppf cf ldf cfgopts
 zstyle -s ":plugin:zredis" cppflags cppf || cppf="-I/usr/local/include"
