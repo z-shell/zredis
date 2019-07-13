@@ -23,41 +23,11 @@ fi
 
 [[ -z "${fg_bold[green]}" ]] && builtin autoload -Uz colors && colors
 
+autoload zredis_compile
+
 #
 # Compile the module
 #
-
-zredis_compile() {
-    # Get CPPFLAGS, CFLAGS, LDFLAGS
-    local cppf cf ldf cfgopts
-    zstyle -s ":plugin:zredis" cppflags cppf || cppf="-I/usr/local/include"
-    zstyle -s ":plugin:zredis" cflags cf || cf="-Wall -O2 -g"
-    zstyle -s ":plugin:zredis" ldflags ldf || ldf="-L/usr/local/lib"
-    zstyle -s ":plugin:zredis" configure_opts cfgopts || cfgopts=""
-
-    autoload is-at-least
-
-    builtin print -n "${fg_bold[magenta]}zdharma${reset_color}/${fg_bold[yellow]}zredis${reset_color} is building"
-    (
-        local build=1
-        zmodload zsh/system && { zsystem flock -t 1 "${ZREDIS_REPO_DIR}/module/configure.ac" || build=0; }
-        if (( build )); then
-            print "..."
-            builtin cd "${ZREDIS_REPO_DIR}/module"
-            command touch Src/zdharma/{zredis,zgdbm}.c
-            is-at-least zsh-5.6.1-dev-1 && local macro="-DZREDIS_ZSH_262_DEV_1=1" || local macro="-DZREDIS_ZSH_262_DEV_1=0"
-            CPPFLAGS="$cppf" CFLAGS="$cf${macro:+ $macro}" LDFLAGS="$ldf" ./configure --enable-gdbm ${=cfgopts}
-            command make clean
-            command make
-
-            local ts="$EPOCHSECONDS"
-            [[ -z "$ts" ]] && ts=$( date +%s )
-            builtin echo "$ts" >! "${ZREDIS_REPO_DIR}/module/COMPILED_AT"
-        else
-            print " on other terminal..."
-        fi
-    )
-}
 
 if [ ! -e "${ZREDIS_REPO_DIR}/module/Src/zdharma/db.so" ]; then
     zredis_compile
