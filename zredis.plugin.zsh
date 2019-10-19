@@ -8,6 +8,8 @@
 #
 
 0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+0="${${(M)0:#/*}:-$PWD/$0}"
+
 ZREDIS_REPO_DIR="${0:h}"
 ZREDIS_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/zredis"
 
@@ -17,7 +19,7 @@ ZREDIS_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/zredis"
 # 2. Not having fpath already updated (that would equal: using other plugin manager)
 #
 
-if [[ ( ${+LOADED_PLUGINS} = 0 || ${LOADED_PLUGINS[-1]} != */zredis ) && -z "${fpath[(r)${0:h}]}" ]]; then
+if [[ ( ${+zsh_loaded_plugins} = 0 || ${zsh_loaded_plugins[-1]} != */zredis ) && -z "${fpath[(r)${0:h}]}" ]]; then
     fpath+=( "$ZREDIS_REPO_DIR" )
 fi
 
