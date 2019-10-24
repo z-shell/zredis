@@ -34,14 +34,17 @@ Zsh binary module written in C interfacing with `redis` database via `Zshell`
 `variables` mapped to `keys` or the whole `database`.
 
 ```SystemVerilog
+# Create a hash `HASHSET' using the standard cli tool, with 2 keys
 % redis-cli -n 3 hmset HASHSET field1 value1 field2 value2
+
 # Bind the shell variable `hset' onto the hash `HASHSET' in the database 127.0.0.1/3
 % ztie -d db/redis -a "127.0.0.1/3/HASHSET" hset
-% echo ${(kv)hset}  # (kv) – keys and values of Zsh hash
+
+% echo ${(kv)hset}    # (kv) – keys and values of Zsh hash
 field1 value1 field2 value2
 % echo ${(k)hset}
 field1 field2
-% echo $hset  # values are output by default
+% echo $hset          # in Zsh when accesing a hash the values are output by default
 value1 value2
 
 % ztie -d db/redis -a "127.0.0.1/3/LIST" -L list lst # Lazy binding, will create list-key on write
