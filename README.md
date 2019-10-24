@@ -31,7 +31,7 @@
 # Zredis
 
 Zsh binary module written in C interfacing with `redis` database via `Zshell`
-`variables` mapped to `keys` or whole `database`.
+`variables` mapped to `keys` or the whole `database`.
 
 ```SystemVerilog
 % redis-cli -n 3 hmset HASHSET field1 value1 field2 value2
