@@ -35,7 +35,8 @@ Zsh binary module written in C interfacing with `redis` database via `Zshell`
 
 ```SystemVerilog
 # Create a hash `HASHSET' using the standard cli tool, holding 2 keys
-% redis-cli -n 3 hmset HASHSET field1 value1 field2 value2
+% redis-cli -n 3 hmset HASHSET field1 value1 \
+                                field2 value2
 
 # Bind the shell variable `hset' onto the hash `HASHSET' in the database 127.0.0.1/3
 % ztie -d db/redis -a "127.0.0.1/3/HASHSET" hset
