@@ -35,16 +35,16 @@ Zsh binary module written in C interfacing with `redis` database via `Zshell`
 
 ```SystemVerilog
 # Create a hash `HASHSET' using the standard cli tool, holding 2 keys
-% redis-cli -n 3 hmset HASHSET field1 value1 \
-                                field2 value2
+% redis-cli -n 3 hmset HASHSET key1 value1 \
+                                key2 value2
 
 # Bind the shell variable `hset' onto the hash `HASHSET' in the database 127.0.0.1/3
 % ztie -d db/redis -a "127.0.0.1/3/HASHSET" hset
 
 % echo ${(kv)hset}    # (kv) – keys and values of Zsh hash
-field1 value1 field2 value2
+key1 value1 key2 value2
 % echo ${(k)hset}
-field1 field2
+key1 key2
 % echo $hset          # in Zsh when accesing a hash the values are output by default
 value1 value2
 
@@ -55,10 +55,10 @@ value1 value2
 array-special
 % lst=( ${(k)hset} )  # Copying hash keys into list
 % echo $lst
-field1 field2
+key1 key2
 % redis-cli -n 3 lrange LIST 0 -1   # Test the value of `LIST' using the standard cli tool
-1) "field1"
-2) "field2"
+1) "key1"
+2) "key2"
 ```
 ## Rationale
 
@@ -72,10 +72,10 @@ of one hash to another one is needed, what `redis-cli` invocations are needed? W
 % echo ${(kv)hset2}
 other data
 % echo ${(kv)hset1}
-field1 value1 field2 value2
+key1 value1 key2 value2
 % hset2=( "${(kv)hset1[@]}" )
 % echo ${(kv)hset2}
-field1 value1 field2 value2
+key1 value1 key2 value2
 ```
 
 The `"${(kv)hset1[@]}"` construct guarantees that empty elements (keys or values) will
