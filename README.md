@@ -45,13 +45,14 @@ field1 field2
 value1 value2
 
 % ztie -d db/redis -a "127.0.0.1/3/LIST" -L list lst # Lazy binding, will create list-key on write
-                                                     # -L {type}, obtains Redis type name like zset, hash, string
-% echo ${(t)lst}  # (t) – display type of Zsh variable
+                                                     # -L {type}, obtains Redis type name like `zset',
+                                                     # `hash', `string', etc.
+% echo ${(t)lst}      # (t) – display type of Zsh variable
 array-special
 % lst=( ${(k)hset} )  # Copying hash keys into list
 % echo $lst
 field1 field2
-% redis-cli -n 3 lrange LIST 0 -1
+% redis-cli -n 3 lrange LIST 0 -1   # Test the value of `LIST' using the standard cli tool
 1) "field1"
 2) "field2"
 ```
