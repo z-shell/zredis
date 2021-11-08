@@ -139,7 +139,7 @@ To disable the cache, pass `-z` ("zero-cache") option to ztie.
 
 ## News
 
-* 2018-12-19
+- 2018-12-19
   - The builtin `zrpush` can have the param-name argument skipped – if it's called for the second
     time, meaning that a new special (but writeable) parameter has been set – `$zredis_last`. It
     holds the param-name used in the 1st call and will be used in place of the `{pm-name}` argument.
