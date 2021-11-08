@@ -1,0 +1,37 @@
+# Tests for the zdharma/redis module
+
+%prep
+
+ module_path=( `pwd`/Modules )
+ modname="zdharma/zredis"
+ db1="127.0.0.1:6379/10"
+ db2="127.0.0.1/11"
+ if ! zmodload $modname ; then
+   ZTST_unimplemented="can't load $modname module for testing"
+ fi
+ redis-cli -n 10 flushdb
+ redis-cli -n 11 flushdb
+
+%test
+
+ local -a dbase
+ dbase=( fromarray )
+ () {
+     local -a dbase
+     zrtie -d db/redis -f $db1 dbase
+     echo ${(t)dbase}
+     zruntie dbase
+ }
+ echo $dbase[1]
+ zrtie -d db/redis -f $db1 dbase
+ echo "Can connect:" $dbase[a]
+ zruntie dbase
+0:Test of automatic untie (use of local scope) and of scoping
+>association-local-special
+>fromarray
+>Can connect: b
+
+%clean
+
+ redis-cli -n 10 flushdb
+ redis-cli -n 11 flushdb

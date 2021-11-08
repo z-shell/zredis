@@ -1,0 +1,31 @@
+# Tests for the zdharma/redis module
+
+%prep
+
+ module_path=( `pwd`/Modules )
+ modname="zdharma/zredis"
+ db1="127.0.0.1:6379/10"
+ db2="127.0.0.1/11"
+ if ! zmodload $modname ; then
+   ZTST_unimplemented="can't load $modname module for testing"
+ fi
+ redis-cli -n 10 flushdb
+ redis-cli -n 11 flushdb
+
+%test
+
+ zrtie -d db/redis -f $db1 dbase
+ dbase[testkey]=value1
+ fun() { while read line; do echo $line; done }
+ eval "dbase[testkey]=value2" | fun
+ echo $dbase[testkey]
+ zredisclear dbase testkey
+ echo $dbase[testkey]
+0:Test store in forked Zsh
+>value1
+>value2
+
+%clean
+
+ redis-cli -n 10 flushdb
+ redis-cli -n 11 flushdb

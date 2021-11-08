@@ -1,0 +1,7 @@
+name=zdharma/db
+link=dynamic
+load=no
+
+autofeatures="b:ztie b:zuntie b:ztaddress b:ztclear"
+
+objects="db.o"

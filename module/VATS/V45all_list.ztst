@@ -1,0 +1,260 @@
+# Tests for the zdharma/redis module
+
+%prep
+
+ module_path=( `pwd`/Modules )
+ modname1="zdharma/db"
+ modname2="zdharma/zredis"
+ db1="127.0.0.1:6379/10/mylist"
+ db2="127.0.0.1/11/mylist"
+ if ! zmodload $modname1 ; then
+   VATS_unimplemented="can't load $modname1 module for testing"
+ fi
+ if ! zmodload $modname2 ; then
+   VATS_unimplemented="can't load $modname2 module for testing"
+ fi
+ redis-cli -n 10 flushdb
+ redis-cli -n 10 rpush mylist first 2>/dev/null 1>&2
+ redis-cli -n 11 flushdb
+ redis-cli -n 11 rpush mylist first 2>/dev/null 1>&2
+
+%test
+
+ ztie -d db/redis -f $db1 alist
+ echo $alist
+ alist=( testdata )
+ zuntie alist
+ ztie -r -d db/redis -f $db1 alist
+ echo $alist
+ zuntie -u alist
+ echo $zredis_tied ${#zredis_tied}
+0:store key in database 1
+>first
+>testdata
+>0
+
+ ztie -d db/redis -f $db2 alist
+ echo $alist
+ alist=( testdata )
+ zuntie alist
+ unset alist
+ ztie -d db/redis -f $db2 alist
+ echo $alist
+ zuntie alist
+ echo $zredis_tied ${#zredis_tied}
+0:store key in database 2
+>first
+>testdata
+>0
+
+ ztie -d db/redis -f $db1 -D alist2
+ unset 'alist2'
+ ztie -d db/redis -f $db1 alist 2>&1
+ echo $alist
+ echo $zredis_tied ${#zredis_tied}
+0:remove key from database 1 (different variables)
+>(eval):3: Key doesn't exist: `mylist', use -L {type} for lazy binding
+>
+>0
+
+ ztie -d db/redis -f $db1 -L list alist
+ alist=( testdata )
+ zuntie alist
+ ztie -d db/redis -f $db1 alist
+ echo $alist
+ zuntie alist
+ ztie -d db/redis -f $db1 -D alist
+ unset 'alist'
+ ztie -r -d db/redis -f $db1 alist 2>&1
+ echo $zredis_tied ${#zredis_tied}
+0:store & remove key from database (the same variables)
+>testdata
+>(eval):9: Key doesn't exist: `mylist', use -L {type} for lazy binding
+>0
+
+ redis-cli -n 10 rpush mylist first second 2>/dev/null 1>&2
+ redis-cli -n 11 rpush mylist first2 second2 2>/dev/null 1>&2
+ ztie -d db/redis -f $db1 alist
+ ztie -d db/redis -f $db2 alist2
+ echo -E "${(qq@)alist2}"
+ alist2=( $alist )
+ zuntie alist
+ zuntie alist2
+ ztie -d db/redis -f $db1 alist
+ ztie -d db/redis -f $db2 alist2
+ echo -E "${(qq@)alist}"
+ echo -E "${(qq@)alist2}"
+ zuntie alist
+ zuntie alist2
+ echo $zredis_tied ${#zredis_tied}
+0:store a key fetching other key
+>'testdata' 'first2' 'second2'
+>'first' 'second'
+>'first' 'second'
+>0
+
+ ztie -d db/redis -f $db2 -D alist2
+ val=( $alist2 )
+ unset alist2
+ echo $val
+ ztie -d db/redis -f $db2 alist2 2>&1
+ echo $zredis_tied ${#zredis_tied}
+0:unset key that was fetched
+>first second
+>(eval):5: Key doesn't exist: `mylist', use -L {type} for lazy binding
+>0
+
+ ztie -d db/redis -f ${db1%/*}/1000/mylist alist 2>/dev/null; ret=$?
+ echo $zredis_tied ${#zredis_tied}
+ return $ret
+1:read-only open non-existent database
+>0
+
+ ztie -d db/redis -f $db1 alist
+ echo ${(t)alist}
+ zuntie alist
+0:Type of tied parameter
+>array-special
+
+ typeset -g alist
+ ztie -d db/redis -f $db1 alist
+ echo ${(t)alist}
+ zuntie alist
+0:Type of tied parameter, with preceding typeset -g
+>array-special
+
+ local alist
+ ztie -d db/redis -f $db1 alist
+ echo ${(t)alist}
+ zuntie alist
+0:Type of tied parameter, with local parameter already existing
+>array-local-special
+
+ local alist
+ alist=( from_start )
+ () {
+     local alist
+     ztie -d db/redis -f $db1 alist
+     echo ${(t)alist}
+ }
+ echo $alist
+ ztie -d db/redis -f $db1 alist
+ echo "Can connect:" $alist
+ zuntie alist
+0:Test of automatic untie (use of local scope) and of scoping
+>array-local-special
+>from_start
+>Can connect: first second
+
+ echo First $zredis_tied ${#zredis_tied}
+ ztie -d db/redis -f $db1 alist
+ echo $zredis_tied ${#zredis_tied}
+ ztie -d db/redis -f $db2 -L list alist2
+ echo $zredis_tied ${#zredis_tied}
+ zuntie alist
+ echo $zredis_tied ${#zredis_tied}
+ zuntie alist2
+ echo $zredis_tied ${#zredis_tied}
+0:zredis_tied parameter
+>First 0
+>alist 1
+>alist alist2 2
+>alist2 1
+>0
+
+ unset zredis_tied 2>/dev/null
+1:unset of read-only zredis_tied parameter
+
+ ztie -d db/redis -f $db1 alist
+ alist=( 漢字 )
+ echo $alist
+ zuntie alist
+ ztie -r -d db/redis -f $db1 alist
+ echo $alist
+ zuntie -u alist
+0:Unicode test
+>漢字
+>漢字
+
+ val="ab"$'\0'"ef"
+ ztie -d db/redis -f $db1 alist
+ alist=( $val )
+ [[ $alist[1] = "ab"$'\0'"ef" ]] && echo correct
+ zuntie alist
+ ztie -d db/redis -f $db1 alist
+ [[ $alist[1] = "ab"$'\0'"ef" ]] && echo correct
+ zuntie alist
+0:Metafication of $'\0'
+>correct
+>correct
+
+ ztie -d db/redis -f $db1 -L list alist
+ ztie -d db/redis -f $db2 -L list alist2
+ alist=( "漢字" )
+ echo $alist
+ zuntie alist
+ ztie -d db/redis -f $db1 alist
+ echo $alist
+ zuntie alist
+ key="ab"$'\0'"ef"
+ alist2=( $key )
+ zuntie alist2
+ ztie -d db/redis -f $db2 alist2
+ [[ "$alist2" = "$key" ]] && echo correct
+ zuntie alist2
+0:Unicode & metafication test
+>漢字
+>漢字
+>correct
+
+ ztie -d db/redis -f $db1 alist
+ ztaddress alist
+ [[ $REPLY = "127.0.0.1:6379/10/mylist" ]] && echo correct
+ zuntie alist
+ ztie -d db/redis -f $db2 alist
+ ztaddress alist
+ [[ $REPLY = "127.0.0.1/11/mylist" ]] && echo correct
+ zuntie alist
+0:ztaddress builtin
+>correct
+>correct
+
+ ztie -d db/redis -f $db1 alist
+ alist=( value1 )
+ fun() { while read line; do echo $line; done }
+ { eval "alist=( value2 )" | fun; } 2>&1
+ echo $alist
+ ztclear alist
+ echo $alist
+ zuntie alist
+0:Test store in forked Zsh
+>(eval):1: Not connected, retrying... Success
+>value1
+>value2
+
+ ztie -z -d db/redis -f $db1 alist
+ alist=( value1 )
+ echo $alist
+ fun() { while read line; do echo $line; done }
+ { eval "alist=( value2 )" | fun; } 2>&1
+ echo $alist
+0:Test store in forked Zsh, with -z passthrough
+>value1
+>(eval):1: Not connected, retrying... Success
+>value2
+
+ ztie -d db/redis -f $db1/list -L list mylist 2>&1
+ zrpush r mylist R2 R1
+ zrpush l mylist L1 L2
+ print -rl "${(o)mylist[@]}"
+ zuntie mylist
+0:The `zrpush' builtin
+>L1
+>L2
+>R1
+>R2
+
+%clean
+
+ redis-cli -n 10 flushdb
+ redis-cli -n 11 flushdb
