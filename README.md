@@ -21,15 +21,15 @@
     - [Redis list -> Zsh array](#redis-list---zsh-array)
     - [Redis string key -> Zsh string](#redis-string-key---zsh-string)
 - [Installation](#installation)
-    - [Zinit](#zinit)
-    - [Antigen](#antigen)
-    - [Oh-My-Zsh](#oh-my-zsh)
-    - [Zgen](#zgen)
+  - [Zinit](#zinit)
+  - [Antigen](#antigen)
+  - [Oh-My-Zsh](#oh-my-zsh)
+  - [Zgen](#zgen)
 - [Zredis Zstyles](#zredis-zstyles)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-# Introduction
+## Introduction
 
 Zsh binary module written in C interfacing with `redis` database via `Zshell`
 `variables` mapped to `keys` or the whole `database`.
@@ -62,7 +62,7 @@ key1 key2
 2) "key2"
 ```
 
-## Rationale
+### Rationale
 
 Building commands for `redis-cli` quickly becomes inadequate. For example, if copying
 of one hash to another one is needed, what `redis-cli` invocations are needed? With
@@ -103,7 +103,7 @@ Output: $reply array, to hold elements of the sorted set
 a b c d e f g h i j k l m n o p q r s t u v w x y z A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
 ```
 
-## Deleting From Database
+### Deleting From Database
 
 Unsetting the first type of mapped variable (Zsh hash -> whole database) doesn't cause a deletion from
 database. If option `-D` is given to `ztie` when binding to concrete key in database, then unsets, also
@@ -114,7 +114,7 @@ More: in Redis, removing all elements from a set, list, etc. means the same as d
 all datatypes except string, by doing `variable=()`. For string you can unset key in whole-database mapped
 hash: `unset 'wholedb[key]'`.
 
-## Compiling modules
+### Compiling modules
 
 The Zsh modules provided by the plugin will build automatically (`hiredis` library is needed). You can
 start more than 1 shell, only the first one will be compiling. If a developer commits a new timestamp to
@@ -122,7 +122,7 @@ start more than 1 shell, only the first one will be compiling. If a developer co
 first, so check for recompilation is fast). I do this when I add tested features or fixes. You can
 recompile the modules yourself by invoking Zsh function `zredis_compile`.
 
-## Cache
+### Cache
 
 By default, reads are cached. If a tied variable is read for the first time,
 then database is accessed. For the second read there's no database access.
@@ -137,7 +137,7 @@ ztclear my_hashset_var key  # Also for types: whole-db mapping, zset
 
 To disable the cache, pass `-z` ("zero-cache") option to ztie.
 
-## News
+### News
 
 - 2018-12-19
   - The builtin `zrpush` can have the param-name argument skipped – if it's called for the second
@@ -159,9 +159,9 @@ To disable the cache, pass `-z` ("zero-cache") option to ztie.
   - New option to `ztie`: `-D`, which causes mapped database key to be deleted on `unset` of the tied
     variable. Up to this moment this behavior was the default.
 
-## Mapping Of Redis Types To Zsh Data Structures
+### Mapping Of Redis Types To Zsh Data Structures
 
-### Database string keys -> Zsh hash
+#### Database string keys -> Zsh hash
 
 Redis can store strings at given keys, using `SET` command. `Zredis` maps those to hash array
 (like Zsh `gdbm` module):
@@ -176,7 +176,7 @@ redis
 key1 value1 key2 value2
 ```
 
-### Redis hash -> Zsh hash
+#### Redis hash -> Zsh hash
 
 By appending `/NAME` to the `host-spec` (`-f` option), one can select single
 key of type `HASH` and map it to `Zsh` hash:
@@ -195,7 +195,7 @@ value2
 key1 value1
 ```
 
-### Redis set -> Zsh array
+#### Redis set -> Zsh array
 
 Can clear single elements by assigning `()` to array element. Can overwrite
 whole set by assigning via `=( ... )` to set, and delete set from database
@@ -219,7 +219,7 @@ value2 value3 value1
 (empty list or set)
 ```
 
-### Redis sorted set -> Zsh hash
+#### Redis sorted set -> Zsh hash
 
 This variant maps `zset` as hash - keys are set elements, values are ranks.
 `zrzset` call outputs elements sorted according to the rank:
@@ -236,7 +236,7 @@ a 1
 b a
 ```
 
-### Redis list -> Zsh array
+#### Redis list -> Zsh array
 
 There is no analogue of `zrzset` call because `Zsh` array already has correct order:
 
@@ -256,7 +256,7 @@ value1 value2 value3
 3) "3"
 ```
 
-### Redis string key -> Zsh string
+#### Redis string key -> Zsh string
 
 Single keys in main Redis storage are bound to `Zsh` string variables:
 
@@ -278,7 +278,7 @@ value2
 "value2"
 ```
 
-# Installation
+## Installation
 
 **The plugin is "standalone"**, which means that only sourcing it is needed. So to
 install, unpack `zredis` somewhere and add
@@ -315,7 +315,7 @@ cloning the plugin for you automatically the next time you start zsh.
 Add `zgen load z-shell/zredis` to your .zshrc file in the same place you're doing
 your other `zgen load` calls in.
 
-# Zredis Zstyles
+## Zredis Zstyles
 
 The values being set are the defaults. Change the values before loading `zredis` plugin.
 
