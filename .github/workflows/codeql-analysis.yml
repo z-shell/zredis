@@ -27,7 +27,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install zsh -yq
       - name: 🏗 Build
         run: |
-          CPPFLAGS="$cppf" CFLAGS="$cf${macro:+ $macro}" LDFLAGS="$ldf" ./module/configure --enable-gdbm ${=cfgopts}
+          CPPFLAGS="$cppf" CFLAGS="$cf${macro:+ $macro}" LDFLAGS="$ldf" ./module/configure --enable-gdbm --without-tcsetpgrp ${=cfgopts}
           command make -C module clean
           command make -C module
         shell: zsh {0}
