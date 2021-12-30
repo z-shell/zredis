@@ -25,11 +25,13 @@ jobs:
         uses: github/codeql-action/init@v1
       - name: 🏗 Dependencies
         run: sudo apt-get update && sudo apt-get install zsh -yq
-      - name: 🏗 Build
+      - name: 🏗 Configure
         run: |
           CPPFLAGS="$cppf" CFLAGS="$cf${macro:+ $macro}" LDFLAGS="$ldf" ./module/configure --enable-gdbm --without-tcsetpgrp ${=cfgopts}
-          command make -C module
+          command make -C module all
         shell: zsh {0}
+      - name: 🏗 Build
+        run: command make -C module all
 #      - name: 🏗 Autobuild
 #        uses: github/codeql-action/autobuild@v1
       - name: 🚀 Perform CodeQL Analysis
