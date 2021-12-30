@@ -28,7 +28,6 @@ jobs:
       - name: 🏗 Configure
         run: |
           CPPFLAGS="$cppf" CFLAGS="$cf${macro:+ $macro}" LDFLAGS="$ldf" ./module/configure --enable-gdbm --without-tcsetpgrp ${=cfgopts}
-          command make -C module all
         shell: zsh {0}
       - name: 🏗 Build
         run: command make -C module all
