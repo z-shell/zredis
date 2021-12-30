@@ -28,7 +28,6 @@ jobs:
       - name: 🏗 Build
         run: |
           CPPFLAGS="$cppf" CFLAGS="$cf${macro:+ $macro}" LDFLAGS="$ldf" ./module/configure --enable-gdbm --without-tcsetpgrp ${=cfgopts}
-          command make -C module clean
           command make -C module
         shell: zsh {0}
 #      - name: 🏗 Autobuild
