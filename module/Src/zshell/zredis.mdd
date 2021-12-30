@@ -1,4 +1,4 @@
-name=zdharma/zredis
+name=zshell/zredis
 link='if test "x$ac_cv_lib_hiredis_redisConnect" = xyes && test "x$ac_cv_header_hiredis_hiredis_h" = xyes; then
   echo dynamic
 else

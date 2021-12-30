@@ -10,14 +10,14 @@ zstyle -s ":plugin:zredis" configure_opts cfgopts || cfgopts=""
 
 autoload is-at-least
 
-builtin print -n "${fg_bold[magenta]}z-shell${reset_color}/${fg_bold[yellow]}zredis${reset_color} is building"
+builtin print -n "${fg_bold[magenta]}zshell${reset_color}/${fg_bold[yellow]}zredis${reset_color} is building"
 (
     local build=1
     zmodload zsh/system && { zsystem flock -t 1 "${ZREDIS_REPO_DIR}/module/configure.ac" || build=0; }
     if (( build )); then
         print "..."
         builtin cd "${ZREDIS_REPO_DIR}/module"
-        command touch Src/z-shell/{zredis,zgdbm}.c
+        command touch Src/zshell/{zredis,zgdbm}.c
         is-at-least zsh-5.6.1-dev-1 && local macro="-DZREDIS_ZSH_262_DEV_1=1" || local macro="-DZREDIS_ZSH_262_DEV_1=0"
         CPPFLAGS="$cppf" CFLAGS="$cf${macro:+ $macro}" LDFLAGS="$ldf" ./configure --enable-gdbm ${=cfgopts}
         command make clean

@@ -4,9 +4,6 @@
 ![ZSH 5.0.0](https://img.shields.io/badge/zsh-v5.0.0-orange.svg?style=flat-square)
 [![Zredis](https://img.shields.io/badge/zredis-0.93-green.svg)](https://github.com/z-shell/zredis/releases)
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
 - [Introduction](#introduction)
   - [Rationale](#rationale)
   - [Deleting From Database](#deleting-from-database)
@@ -26,8 +23,6 @@
   - [Oh-My-Zsh](#oh-my-zsh)
   - [Zgen](#zgen)
 - [Zredis Zstyles](#zredis-zstyles)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Introduction
 
