@@ -29,9 +29,7 @@ jobs:
         run: |
           CPPFLAGS="$cppf" CFLAGS="$cf${macro:+ $macro}" LDFLAGS="$ldf" ./module/configure --enable-gdbm --without-tcsetpgrp ${=cfgopts}
         shell: zsh {0}
-      - name: 🏗 Build
-        run: command make -C module all
-#      - name: 🏗 Autobuild
-#        uses: github/codeql-action/autobuild@v1
+      - name: 🏗 Autobuild
+        uses: github/codeql-action/autobuild@v1
       - name: 🚀 Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v1
