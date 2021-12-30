@@ -120,19 +120,19 @@ module/Src/Builtins/*.mdhs
 module/Src/Builtins/*.mdh.tmp
 module/Src/Builtins/rlimits.h
 
-module/Src/z-shell/Makefile.in
-module/Src/z-shell/*.export
-module/Src/z-shell/so_locations
-module/Src/z-shell/*.pro
-module/Src/z-shell/*.epro
-module/Src/z-shell/*.syms
-module/Src/z-shell/*.mdh
-module/Src/z-shell/*.mdhi
-module/Src/z-shell/*.mdhs
-module/Src/z-shell/*.mdh.tmp
-module/Src/z-shell/errnames.c
-module/Src/z-shell/errcount.h
-module/Src/z-shell/curses_keys.h
+module/Src/zshell/Makefile.in
+module/Src/zshell/*.export
+module/Src/zshell/so_locations
+module/Src/zshell/*.pro
+module/Src/zshell/*.epro
+module/Src/zshell/*.syms
+module/Src/zshell/*.mdh
+module/Src/zshell/*.mdhi
+module/Src/zshell/*.mdhs
+module/Src/zshell/*.mdh.tmp
+module/Src/zshell/errnames.c
+module/Src/zshell/errcount.h
+module/Src/zshell/curses_keys.h
 
 .ycm_extra_conf.py
 module/COMPILED_AT
