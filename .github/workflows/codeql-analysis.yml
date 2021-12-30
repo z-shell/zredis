@@ -23,11 +23,14 @@ jobs:
         uses: actions/checkout@v2
       - name: 🏗 Initialize CodeQL
         uses: github/codeql-action/init@v1
+      - name: 🏗 Dependencies
+        run: sudo apt-get update && sudo apt-get install zsh -yq
       - name: 🏗 Build
         run: |
           CPPFLAGS="$cppf" CFLAGS="$cf${macro:+ $macro}" LDFLAGS="$ldf" ./module/configure --enable-gdbm ${=cfgopts}
           command make -C module clean
           command make -C module
+        shell: zsh {0}
 #      - name: 🏗 Autobuild
 #        uses: github/codeql-action/autobuild@v1
       - name: 🚀 Perform CodeQL Analysis
