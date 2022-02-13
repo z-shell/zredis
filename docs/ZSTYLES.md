@@ -1,4 +1,3 @@
-
 ## Zredis Zstyles
 
 The values being set are the defaults. Change the values before loading zredis plugin.
