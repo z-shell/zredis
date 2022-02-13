@@ -1,3 +1,13 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Valgrind automatic tests suite (VATS) for Zsh](#valgrind-automatic-tests-suite-vats-for-zsh)
+  - [Fundamental test-configuration](#fundamental-test-configuration)
+  - [Remaining test-configuration](#remaining-test-configuration)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Valgrind automatic tests suite (VATS) for Zsh
 
 ## Fundamental test-configuration

@@ -26,7 +26,7 @@
 
 subdir = VATS
 dir_top = ..
-SUBDIRS = 
+SUBDIRS =
 
 @VERSION_MK@
 

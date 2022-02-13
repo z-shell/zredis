@@ -39,22 +39,22 @@ mod_export int incmdpos;
 int aliasspaceflag;
 
 /* != 0 if we are in the middle of a [[ ... ]] */
- 
+
 /**/
 mod_export int incond;
- 
+
 /* != 0 if we are after a redirection (for ctxtlex only) */
- 
+
 /**/
 mod_export int inredir;
- 
+
 /* != 0 if we are about to read a case pattern */
- 
+
 /**/
 int incasepat;
- 
+
 /* != 0 if we just read a newline */
- 
+
 /**/
 int isnewlin;
 
@@ -78,7 +78,7 @@ mod_export int intypeset;
 
 /**/
 struct heredocs *hdocs;
- 
+
 
 #define YYERROR(O)  { tok = LEXERR; ecused = (O); return 0; }
 #define YYERRORV(O) { tok = LEXERR; ecused = (O); return; }
@@ -92,7 +92,7 @@ struct heredocs *hdocs;
 	    } while(0)
 
 
-/* 
+/*
  * Word code.
  *
  * The parser now produces word code, reducing memory consumption compared
@@ -223,7 +223,7 @@ struct heredocs *hdocs;
  * sublists is that they can be executed faster, see exec.c. In the
  * parser, the test if a list can be simplified is done quite simply
  * by passing a int* around which gets set to non-zero if the thing
- * just parsed is `cmplx', i.e. may need to be run by forking or 
+ * just parsed is `cmplx', i.e. may need to be run by forking or
  * some such.
  *
  * In each of the above, strings are encoded as one word code. For empty
@@ -242,7 +242,7 @@ struct heredocs *hdocs;
  * arrays all point to the same memory block.
  *
  *
- * To make things even faster in future versions, we could not only 
+ * To make things even faster in future versions, we could not only
  * test if the strings contain tokens, but instead what kind of
  * expansions need to be done on strings. In the execution code we
  * could then use these flags for a specialized version of prefork()
@@ -2947,7 +2947,7 @@ init_eprog(void)
  * host the file was created on and once for the other byte-order. The
  * header describes where the beginning of the `other' version is and it
  * is up to the shell reading the file to decide which version it needs.
- * This is done by checking if the first word is FD_MAGIC (then the 
+ * This is done by checking if the first word is FD_MAGIC (then the
  * shell reading the file has the same byte order as the one that created
  * the file) or if it is FD_OMAGIC, then the `other' version has to be
  * read.
@@ -3106,7 +3106,7 @@ bin_zcompile(char *nam, char **args, Options ops, UNUSED(int func))
     queue_signals();
     ret = ((OPT_ISSET(ops,'c') || OPT_ISSET(ops,'a')) ?
 	   build_cur_dump(nam, dump, args + 1, OPT_ISSET(ops,'m'), map,
-			  (OPT_ISSET(ops,'c') ? 1 : 0) | 
+			  (OPT_ISSET(ops,'c') ? 1 : 0) |
 			  (OPT_ISSET(ops,'a') ? 2 : 0)) :
 	   build_dump(nam, dump, args + 1, OPT_ISSET(ops,'U'), map, flags));
     unqueue_signals();
@@ -3520,7 +3520,7 @@ zwcstat(char *filename, struct stat *buf)
     if (stat(filename, buf)) {
 #ifdef HAVE_FSTAT
         FuncDump f;
-    
+
 	for (f = dumps; f; f = f->next) {
 	    if (!strncmp(filename, f->filename, strlen(f->filename)) &&
 		!fstat(f->fd, buf))

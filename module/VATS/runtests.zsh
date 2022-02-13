@@ -63,7 +63,7 @@ if [[ "$tkind" = nopossiblylost* ]]; then
   valargs=( "--leak-check=full" "--show-possibly-lost=no" )
   test_type_msg "leaks, nopossiblylost"
 elif [[ "$tkind" = error* ]]; then
-  valargs=() 
+  valargs=()
   test_type_msg "only errors (no leaks)"
 elif [[ "$tkind" = leak* ]]; then
   valargs=( "--leak-check=full" )

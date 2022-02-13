@@ -312,7 +312,7 @@ VATS_diff() {
     ;;
   esac
   shift
-      
+
   if (( diff_pat )); then
     local -a diff_lines1 diff_lines2
     integer failed i
@@ -343,7 +343,7 @@ VATS_diff() {
 
   return "$diff_ret"
 }
-    
+
 VATS_test() {
   local last match mbegin mend found substlines
   local diff_out diff_err

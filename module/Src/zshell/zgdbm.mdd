@@ -1,4 +1,4 @@
-name=zdharma/zgdbm
+name=zshell/zgdbm
 link='if test "x$ac_cv_lib_gdbm_gdbm_open" = xyes && test "x$ac_cv_header_gdbm_h" = xyes; then
   echo dynamic
 else

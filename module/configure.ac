@@ -465,7 +465,7 @@ dnl Gross hack for ReliantUNIX - GCC does not understand getconf options
 dnl For now just disable LFS in this case
 dnl Any takers?
 if test "$host" = mips-sni-sysv4 && test -n "$GCC"; then
-  : 
+  :
 else
   AC_SYS_LARGEFILE
 fi
@@ -732,7 +732,7 @@ if test x$zsh_cv_header_termios_h_tiocgwinsz = xno; then
     AC_DEFINE(GWINSZ_IN_SYS_IOCTL)
   fi
 fi
- 
+
 AH_TEMPLATE([WINSIZE_IN_PTEM],
 [Define if your should include sys/stream.h and sys/ptem.h.])
 AC_CACHE_CHECK(for streams headers including struct winsize,
@@ -1831,7 +1831,7 @@ if test x$zsh_cv_rlim_t_is_longer = xyes; then
 #endif
 #include <stdio.h>
 #include <sys/resource.h>
-main() { 
+main() {
   struct rlimit r;
   char buf[20];
   r.rlim_cur = 0;
@@ -2242,7 +2242,7 @@ if test x$ac_cv_header_sys_select_h != xyes; then
   AC_CACHE_CHECK(for select() in <sys/socket.h>,
   zsh_cv_header_socket_h_select_proto,
   [AC_TRY_COMPILE([#include <sys/socket.h>], [fd_set fd;],
-  zsh_cv_header_socket_h_select_proto=yes, 
+  zsh_cv_header_socket_h_select_proto=yes,
   zsh_cv_header_socket_h_select_proto=no)])
   if test x$zsh_cv_header_socket_h_select_proto = xyes; then
     AC_DEFINE(SELECT_IN_SYS_SOCKET_H)
@@ -2806,7 +2806,7 @@ char *argv[];
 {
 	char b[4];
 	int i = open(argv[0],O_RDONLY);
-	if(i == -1) 
+	if(i == -1)
 		exit(1); /* fail */
 	if(read(i,b,4)==4 && b[0]==127 && b[1]=='E' && b[2]=='L' && b[3]=='F')
 		exit(0); /* succeed (yes, it's ELF) */
@@ -2934,7 +2934,7 @@ char *argv[];
       export LIBRARY_PATH="$LIBRARY_PATH:%A/"
     ;;
     *-haiku*)
-      # 
+      #
     ;;
   esac
 
@@ -3239,7 +3239,7 @@ AH_TOP([/***** begin user configuration section *****/
 
 /* Define this if you use "suspended" instead of "stopped" */
 #define USE_SUSPENDED 1
- 
+
 /* The default history buffer size in lines */
 #define DEFAULT_HISTSIZE 30
 

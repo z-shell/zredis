@@ -72,7 +72,7 @@ theme=(
     byat           $fg_no_bold[yellow]
     func           $fg_bold[blue]
     where_path     $fg_no_bold[red]
-    where_file     $fg_bold[white] 
+    where_file     $fg_bold[white]
     where_linenr   $fg_no_bold[magenta]
     summary_header $fg_bold[green]
     summary_body   $fg_no_bold[green]
