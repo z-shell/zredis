@@ -128,7 +128,7 @@ assert_yq \
         .uses ==
           "github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81" and
         .if ==
-          "github.event_name == '\''pull_request'\'' || (github.event_name == '\''workflow_dispatch'\'' && inputs.upload-results == false)" and
+          "github.event_name == '\''pull_request'\'' || (github.event_name == '\''workflow_dispatch'\'' && inputs.upload-results != '\''true'\'')" and
         .with.upload == "never" and
         .with.category == "/language:${{ matrix.language }}")] |
       length) == 1) and
