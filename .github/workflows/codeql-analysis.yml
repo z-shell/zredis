@@ -84,13 +84,13 @@ jobs:
 
       - name: Analyze without upload
         if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload-results != 'true')
-        uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         with:
           upload: never
           category: /language:${{ matrix.language }}
 
       - name: Analyze and upload
         if: github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.upload-results == true)
-        uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         with:
           category: /language:${{ matrix.language }}
